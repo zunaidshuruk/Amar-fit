@@ -109,4 +109,8 @@ object AccentTokens {
     fun dietChartAccent(isDark: Boolean): AccentColors = pointsAccent(isDark)
 
     fun recipeAccent(isDark: Boolean): AccentColors = heartRateAccent(isDark)
+
+    fun sleepAccent(isDark: Boolean): AccentColors = pointsAccent(isDark)
+
+    fun coachAccent(isDark: Boolean): AccentColors = waterAccent(isDark)
 }
