@@ -112,6 +112,11 @@ class AppRepository(
     
     suspend fun saveMetrics(metric: DailyMetric) {
         metricsDao.insertMetrics(metric)
+        try {
+            FirebaseManager.syncMetric(metric)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
     
     suspend fun checkAndAwardBadges(metric: DailyMetric) {
@@ -278,14 +283,29 @@ class AppRepository(
 
     suspend fun deleteFoodLog(foodLog: com.example.data.local.FoodLog) {
         metricsDao.deleteFoodLog(foodLog)
+        try {
+            FirebaseManager.deleteFoodLog(foodLog)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     suspend fun saveFoodLog(foodLog: com.example.data.local.FoodLog) {
         metricsDao.insertFoodLog(foodLog)
+        try {
+            FirebaseManager.syncFoodLog(foodLog)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     suspend fun updateFoodLog(foodLog: com.example.data.local.FoodLog) {
         metricsDao.updateFoodLog(foodLog)
+        try {
+            FirebaseManager.syncFoodLog(foodLog)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     suspend fun analyzeFoodText(foodText: String): String = withContext(Dispatchers.IO) {

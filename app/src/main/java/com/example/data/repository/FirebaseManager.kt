@@ -51,6 +51,17 @@ object FirebaseManager {
         }
     }
 
+    fun deleteFoodLog(log: FoodLog) {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            db.collection("users").document(user.uid)
+                .collection("diet_logs").document(log.id.toString())
+                .delete()
+        }
+    }
+
     suspend fun pullDataOnLogin(userDao: UserDao, metricsDao: MetricsDao) {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser
