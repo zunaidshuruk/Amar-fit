@@ -7,11 +7,13 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,6 +36,9 @@ import java.util.Date
 
 @Composable
 fun WorkoutScreen(viewModel: ShasthoViewModel) {
+    val profile by viewModel.userProfile.collectAsState()
+    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+
     val workoutPlan by viewModel.workoutPlan.collectAsState()
     val isLoading by viewModel.isLoadingWorkout.collectAsState()
     val savedWorkouts by viewModel.savedWorkouts.collectAsState()
@@ -42,6 +47,17 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
     var selectedSavedWorkout by remember { mutableStateOf<SavedWorkout?>(null) }
     var showSaveDialog by remember { mutableStateOf(false) }
     var workoutTitle by remember { mutableStateOf("") }
+
+    val bodyTextColor = if (isDark) {
+        android.graphics.Color.parseColor("#E2E8F0")
+    } else {
+        android.graphics.Color.parseColor("#1E293B")
+    }
+    val linkTextColor = if (isDark) {
+        android.graphics.Color.parseColor("#93C5FD")
+    } else {
+        android.graphics.Color.parseColor("#3B82F6")
+    }
     
     val context = LocalContext.current
     LaunchedEffect(Unit) {
@@ -53,13 +69,14 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
         if (selectedSavedWorkout != null) {
             SavedWorkoutDetailView(
                 workout = selectedSavedWorkout!!,
+                isDark = isDark,
                 onBack = { selectedSavedWorkout = null }
             )
         } else {
@@ -67,7 +84,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 text = "Workouts",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(top = 16.dp, bottom = 16.dp)
             )
 
@@ -75,19 +92,25 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
                 Button(
                     onClick = { selectedTab = 0 },
-                    colors = ButtonDefaults.buttonColors(containerColor = if (selectedTab == 0) Orange500 else Slate200),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (selectedTab == 0) Orange500 else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (selectedTab == 0) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
                     modifier = Modifier.weight(1f).padding(end = 4.dp),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("AI Workouts", color = if (selectedTab == 0) Color.White else Slate500)
+                    Text("AI Workouts", color = if (selectedTab == 0) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Button(
                     onClick = { selectedTab = 1 },
-                    colors = ButtonDefaults.buttonColors(containerColor = if (selectedTab == 1) Orange500 else Slate200),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (selectedTab == 1) Orange500 else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (selectedTab == 1) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
                     modifier = Modifier.weight(1f).padding(start = 4.dp),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("Saved", color = if (selectedTab == 1) Color.White else Slate500)
+                    Text("Saved", color = if (selectedTab == 1) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
@@ -96,7 +119,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 Text(
                     text = "Personalized routines based on your profile",
                     fontSize = 14.sp,
-                    color = Slate500,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 24.dp)
                 )
                 
@@ -121,7 +144,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 } else if (workoutPlan != null) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                         shape = RoundedCornerShape(20.dp)
                     ) {
@@ -133,15 +156,15 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                             AndroidView(
                                 factory = { ctx ->
                                     TextView(ctx).apply {
-                                        setTextColor(android.graphics.Color.parseColor("#1E293B")) // Slate800
                                         textSize = 16f
                                         setLineSpacing(0f, 1.3f)
                                         autoLinkMask = Linkify.WEB_URLS
                                         linksClickable = true
-                                        setLinkTextColor(android.graphics.Color.parseColor("#3B82F6")) // Blue500
                                     }
                                 },
                                 update = { textView ->
+                                    textView.setTextColor(bodyTextColor)
+                                    textView.setLinkTextColor(linkTextColor)
                                     textView.text = workoutPlan
                                     LinkifyCompat.addLinks(textView, Linkify.WEB_URLS)
                                 }
@@ -169,15 +192,14 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                     text = "Core Protocol Practices",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
                 ProtocolPracticeCard(
                     title = "Physical Exercise & HIIT",
                     description = "High-Intensity Interval Training to deplete glycogen stores and boost growth hormone.",
                     icon = Icons.Default.FitnessCenter,
-                    color = OrangeBg,
-                    accent = Orange700,
+                    accent = AccentTokens.caloriesAccent(isDark),
                     videoQuery = "Keto HIIT workout 20 min"
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -185,8 +207,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                     title = "Hormonal Health & Sun",
                     description = "Morning sunlight exposure to regulate circadian rhythm and optimize Vitamin D / Cortisol balance.",
                     icon = Icons.Default.WbSunny,
-                    color = IndigoBg,
-                    accent = Indigo700,
+                    accent = AccentTokens.pointsAccent(isDark),
                     videoQuery = "Morning sunlight circadian rhythm optimization"
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -194,20 +215,19 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                     title = "Breathwork & Meditation",
                     description = "Diaphragmatic breathing to activate the parasympathetic nervous system and reduce cortisol.",
                     icon = Icons.Default.SelfImprovement,
-                    color = Emerald50,
-                    accent = Emerald700,
+                    accent = AccentTokens.stepsAccent(isDark),
                     videoQuery = "Wim Hof method breathing tutorial"
                 )
             } else {
                 // Saved View
                 if (savedWorkouts.isEmpty()) {
                     Box(modifier = Modifier.fillMaxWidth().padding(top = 40.dp), contentAlignment = Alignment.Center) {
-                        Text("No saved workouts yet.", color = Slate500)
+                        Text("No saved workouts yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 } else {
                     savedWorkouts.forEach { workout ->
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                             modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).clickable { selectedSavedWorkout = workout },
                             shape = RoundedCornerShape(20.dp)
@@ -218,11 +238,11 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(workout.title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                    Text(workout.title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                     Text(
                                         SimpleDateFormat("MMM dd, yyyy").format(Date(workout.createdAt)), 
                                         fontSize = 12.sp, 
-                                        color = Slate500
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                                 IconButton(onClick = { viewModel.deleteWorkout(workout) }) {
@@ -270,16 +290,27 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
 }
 
 @Composable
-fun SavedWorkoutDetailView(workout: SavedWorkout, onBack: () -> Unit) {
+fun SavedWorkoutDetailView(workout: SavedWorkout, isDark: Boolean, onBack: () -> Unit) {
+    val bodyTextColor = if (isDark) {
+        android.graphics.Color.parseColor("#E2E8F0")
+    } else {
+        android.graphics.Color.parseColor("#1E293B")
+    }
+    val linkTextColor = if (isDark) {
+        android.graphics.Color.parseColor("#93C5FD")
+    } else {
+        android.graphics.Color.parseColor("#3B82F6")
+    }
+
     Column {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 16.dp)) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = TextPrimary)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
             }
-            Text(text = workout.title, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            Text(text = workout.title, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
         }
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
         ) {
@@ -287,15 +318,15 @@ fun SavedWorkoutDetailView(workout: SavedWorkout, onBack: () -> Unit) {
                 AndroidView(
                     factory = { ctx ->
                         TextView(ctx).apply {
-                            setTextColor(android.graphics.Color.parseColor("#1E293B"))
                             textSize = 16f
                             setLineSpacing(0f, 1.3f)
                             autoLinkMask = Linkify.WEB_URLS
                             linksClickable = true
-                            setLinkTextColor(android.graphics.Color.parseColor("#3B82F6"))
                         }
                     },
                     update = { textView ->
+                        textView.setTextColor(bodyTextColor)
+                        textView.setLinkTextColor(linkTextColor)
                         textView.text = workout.content
                         LinkifyCompat.addLinks(textView, Linkify.WEB_URLS)
                     }
@@ -306,13 +337,19 @@ fun SavedWorkoutDetailView(workout: SavedWorkout, onBack: () -> Unit) {
 }
 
 @Composable
-fun ProtocolPracticeCard(title: String, description: String, icon: ImageVector, color: Color, accent: Color, videoQuery: String) {
+fun ProtocolPracticeCard(
+    title: String,
+    description: String,
+    icon: ImageVector,
+    accent: AccentColors,
+    videoQuery: String
+) {
     val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(color)
+            .background(accent.bg)
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -322,15 +359,15 @@ fun ProtocolPracticeCard(title: String, description: String, icon: ImageVector, 
                 modifier = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color.White),
+                    .background(MaterialTheme.colorScheme.surface),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = accent)
+                Icon(icon, contentDescription = null, tint = accent.onBg)
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(text = title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
-                Text(text = description, fontSize = 12.sp, color = Slate600, lineHeight = 16.sp, modifier = Modifier.padding(top = 4.dp))
+                Text(text = title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = accent.onBg)
+                Text(text = description, fontSize = 12.sp, color = accent.onBg, lineHeight = 16.sp, modifier = Modifier.padding(top = 4.dp))
             }
         }
         Spacer(modifier = Modifier.width(12.dp))
@@ -339,9 +376,9 @@ fun ProtocolPracticeCard(title: String, description: String, icon: ImageVector, 
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=${Uri.encode(videoQuery)}"))
                 context.startActivity(intent)
             },
-            modifier = Modifier.background(Color.White, RoundedCornerShape(12.dp))
+            modifier = Modifier.background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
         ) {
-            Icon(Icons.Default.PlayArrow, contentDescription = "Watch", tint = accent)
+            Icon(Icons.Default.PlayArrow, contentDescription = "Watch", tint = accent.onBg)
         }
     }
 }
