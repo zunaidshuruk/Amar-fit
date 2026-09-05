@@ -111,11 +111,18 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             modifier = Modifier.padding(innerPadding)
           ) {
             composable("auth") {
-              com.example.presentation.auth.AuthScreen(onNavigateToOnboarding = {
-                navController.navigate("onboarding") {
-                  popUpTo("auth") { inclusive = true }
+              com.example.presentation.auth.AuthScreen(
+                onNavigateToOnboarding = {
+                  navController.navigate("onboarding") {
+                    popUpTo("auth") { inclusive = true }
+                  }
+                },
+                onNavigateToDashboard = {
+                  navController.navigate("dashboard") {
+                    popUpTo("auth") { inclusive = true }
+                  }
                 }
-              })
+              )
             }
 
             composable("onboarding") {

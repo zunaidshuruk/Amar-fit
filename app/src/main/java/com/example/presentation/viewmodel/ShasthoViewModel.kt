@@ -35,11 +35,13 @@ import java.util.Locale
 class ShasthoViewModel(application: Application) : AndroidViewModel(application) {
     private val database = AppDatabase.getDatabase(application)
 
-    fun syncDataOnLogin(onComplete: () -> Unit) {
+    fun syncDataOnLogin(onComplete: (Boolean) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.syncDataOnLogin()
+            val profile = repository.userProfile.firstOrNull()
+            val hasValidProfile = profile != null && profile.age > 0
             withContext(Dispatchers.Main) {
-                onComplete()
+                onComplete(hasValidProfile)
             }
         }
     }

@@ -37,7 +37,7 @@ import android.widget.Toast
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AuthScreen(viewModel: com.example.presentation.viewmodel.ShasthoViewModel = androidx.lifecycle.viewmodel.compose.viewModel(), onNavigateToOnboarding: () -> Unit) {
+fun AuthScreen(viewModel: com.example.presentation.viewmodel.ShasthoViewModel = androidx.lifecycle.viewmodel.compose.viewModel(), onNavigateToOnboarding: () -> Unit, onNavigateToDashboard: () -> Unit = {}) {
     val context = LocalContext.current
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -185,9 +185,13 @@ fun AuthScreen(viewModel: com.example.presentation.viewmodel.ShasthoViewModel = 
                         auth.signInWithEmailAndPassword(email, password)
                             .addOnCompleteListener { task ->
                                 if (task.isSuccessful) {
-                                    viewModel.syncDataOnLogin {
+                                    viewModel.syncDataOnLogin { hasProfile ->
                                         isLoading = false
-                                        onNavigateToOnboarding()
+                                        if (hasProfile) {
+                                            onNavigateToDashboard()
+                                        } else {
+                                            onNavigateToOnboarding()
+                                        }
                                     }
                                 } else {
                                     isLoading = false
@@ -198,9 +202,13 @@ fun AuthScreen(viewModel: com.example.presentation.viewmodel.ShasthoViewModel = 
                         auth.createUserWithEmailAndPassword(email, password)
                             .addOnCompleteListener { task ->
                                 if (task.isSuccessful) {
-                                    viewModel.syncDataOnLogin {
+                                    viewModel.syncDataOnLogin { hasProfile ->
                                         isLoading = false
-                                        onNavigateToOnboarding()
+                                        if (hasProfile) {
+                                            onNavigateToDashboard()
+                                        } else {
+                                            onNavigateToOnboarding()
+                                        }
                                     }
                                 } else {
                                     isLoading = false

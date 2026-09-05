@@ -103,6 +103,11 @@ class AppRepository(
 
     suspend fun saveUserProfile(profile: UserProfile) {
         userDao.insertProfile(profile)
+        try {
+            FirebaseManager.syncProfile(profile)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
     
     suspend fun saveMetrics(metric: DailyMetric) {

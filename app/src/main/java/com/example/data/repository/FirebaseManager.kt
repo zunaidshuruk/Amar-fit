@@ -22,14 +22,22 @@ object FirebaseManager {
         }
     }
     
-    fun syncProfile(profile: UserProfile) {
+    suspend fun syncProfile(profile: UserProfile): Boolean {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser
         if (user != null) {
             val db = FirebaseFirestore.getInstance()
-            db.collection("users").document(user.uid)
-                .set(profile, SetOptions.merge())
+            return try {
+                db.collection("users").document(user.uid)
+                    .set(profile, SetOptions.merge())
+                    .await()
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
         }
+        return false
     }
 
     fun syncFoodLog(log: FoodLog) {
