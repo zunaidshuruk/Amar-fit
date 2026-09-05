@@ -74,7 +74,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     fun logout(onComplete: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-        viewModelScope.launch(Dispatchers.IO) {
             com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
             database.clearAllTables()
             _weeklyInsights.value = null
@@ -90,7 +89,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             withContext(Dispatchers.Main) {
                 onComplete()
             }
-        }
         }
     }
 

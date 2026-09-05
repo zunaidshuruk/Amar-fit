@@ -27,7 +27,14 @@ android {
       keyPassword = System.getenv("KEY_PASSWORD")
     }
   }
-  buildTypes {
+  
+    sourceSets {
+        getByName("androidTest") {
+            assets.srcDirs(files("$projectDir/schemas"))
+        }
+    }
+
+    buildTypes {
     release {
       isCrunchPngs = false
       isMinifyEnabled = false
@@ -59,6 +66,11 @@ secrets {
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
 // Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
@@ -123,5 +135,7 @@ dependencies {
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   debugImplementation(libs.androidx.compose.ui.tooling)
   "ksp"(libs.androidx.room.compiler)
+  testImplementation(libs.androidx.room.testing)
+  androidTestImplementation(libs.androidx.room.testing)
   "ksp"(libs.moshi.kotlin.codegen)
 }

@@ -1,0 +1,51 @@
+package com.example
+
+import androidx.room.testing.MigrationTestHelper
+import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.example.data.local.AppDatabase
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import java.io.IOException
+
+@RunWith(AndroidJUnit4::class)
+class MigrationTest {
+
+    private val TEST_DB = "migration-test"
+
+    @get:Rule
+    val helper: MigrationTestHelper = MigrationTestHelper(
+        InstrumentationRegistry.getInstrumentation(),
+        AppDatabase::class.java.canonicalName,
+        FrameworkSQLiteOpenHelperFactory()
+    )
+
+    @Test
+    @Throws(IOException::class)
+    fun migrate12To13() {
+        var db = helper.createDatabase(TEST_DB, 12)
+
+        // Insert some data in version 12
+        db.execSQL("INSERT INTO user_profile (id, name, age, dateOfBirth, gender, heightCm, weightKg, dietaryRestrictions, healthGoals, dailyCalorieLimit, dailyWaterLimitLiters, currentStreak, points, badges, lastActiveDate, isDarkMode, notificationsEnabled, remindersEnabled, selectedLanguage) VALUES (1, 'Test User', 25, '2000-01-01', 'Male', 180.0, 75.0, 'None', 'Fit', 2000, 2.0, 0, 0, '', '2023-01-01', 0, 1, 1, 'English')")
+
+        // Prepare for the next version.
+        db.close()
+
+        // Re-open the database with version 13 and provide MIGRATION_12_13 as the migration process.
+        db = helper.runMigrationsAndValidate(TEST_DB, 13, true, AppDatabase.MIGRATION_12_13)
+
+        // Query to check if the new column exists and has the default value 0 (false)
+        val cursor = db.query("SELECT onboardingCompleted, name FROM user_profile WHERE id = 1")
+        assert(cursor.moveToFirst())
+        
+        val onboardingCompletedIndex = cursor.getColumnIndex("onboardingCompleted")
+        val nameIndex = cursor.getColumnIndex("name")
+        
+        assert(cursor.getInt(onboardingCompletedIndex) == 0)
+        assert(cursor.getString(nameIndex) == "Test User")
+        
+        cursor.close()
+    }
+}
