@@ -33,26 +33,104 @@ import com.example.ui.theme.TextPrimary
 
 import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.ui.platform.LocalContext
-import android.widget.Toast
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AuthScreen(viewModel: com.example.presentation.viewmodel.ShasthoViewModel = androidx.lifecycle.viewmodel.compose.viewModel(), onNavigateToOnboarding: () -> Unit, onNavigateToDashboard: () -> Unit = {}) {
+fun AuthScreen(
+    viewModel: com.example.presentation.viewmodel.ShasthoViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    authViewModel: com.example.presentation.auth.AuthViewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = com.example.presentation.auth.AuthViewModelFactory()),
+    onNavigateToOnboarding: () -> Unit,
+    onNavigateToDashboard: () -> Unit = {}
+) {
     val context = LocalContext.current
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLogin by remember { mutableStateOf(true) }
     var showLanguageMenu by remember { mutableStateOf(false) }
     var selectedLanguage by remember { mutableStateOf("English") }
-    var isLoading by remember { mutableStateOf(false) }
-    val auth: FirebaseAuth? = remember { 
-        try {
-            FirebaseAuth.getInstance()
-        } catch (e: Exception) {
-            null
+    
+    val uiState by authViewModel.uiState.collectAsState()
+    val isLoading = uiState is com.example.presentation.auth.AuthUiState.Loading
+    var showEmailNotFoundDialog by remember { mutableStateOf(false) }
+    var showErrorDialog by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(uiState) {
+        when (val state = uiState) {
+            is com.example.presentation.auth.AuthUiState.Authenticated -> {
+                viewModel.syncDataOnLogin { hasProfile ->
+                    authViewModel.resetState()
+                    if (hasProfile) {
+                        onNavigateToDashboard()
+                    } else {
+                        onNavigateToOnboarding()
+                    }
+                }
+            }
+            is com.example.presentation.auth.AuthUiState.EmailNotFound -> {
+                showEmailNotFoundDialog = true
+            }
+            is com.example.presentation.auth.AuthUiState.InvalidCredentials -> {
+                android.widget.Toast.makeText(context, "Invalid email or password", android.widget.Toast.LENGTH_LONG).show()
+                authViewModel.resetState()
+            }
+            is com.example.presentation.auth.AuthUiState.ValidationError -> {
+                android.widget.Toast.makeText(context, state.msg, android.widget.Toast.LENGTH_LONG).show()
+                authViewModel.resetState()
+            }
+            is com.example.presentation.auth.AuthUiState.Error -> {
+                showErrorDialog = state.msg
+            }
+            else -> {}
         }
     }
     
+    if (showEmailNotFoundDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showEmailNotFoundDialog = false
+                authViewModel.resetState()
+            },
+            title = { Text("Account Not Found") },
+            text = { Text("No account exists with this email. Would you like to sign up instead?") },
+            confirmButton = {
+                TextButton(onClick = { 
+                    showEmailNotFoundDialog = false
+                    isLogin = false
+                    authViewModel.resetState()
+                }) {
+                    Text("Sign Up")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showEmailNotFoundDialog = false
+                    authViewModel.resetState()
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showErrorDialog != null) {
+        AlertDialog(
+            onDismissRequest = { 
+                showErrorDialog = null 
+                authViewModel.resetState()
+            },
+            title = { Text("Authentication Error") },
+            text = { Text(showErrorDialog ?: "An unknown error occurred.") },
+            confirmButton = {
+                TextButton(onClick = { 
+                    showErrorDialog = null
+                    authViewModel.resetState()
+                }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
     val isBn = selectedLanguage == "বাংলা (Bengali)"
     val txtWelcome = if (isBn) (if (isLogin) "আবার স্বাগতম" else "অ্যাকাউন্ট তৈরি করুন") else (if (isLogin) "Welcome back" else "Create an account")
     val txtEmail = if (isBn) "ইমেইল" else "Email"
@@ -172,49 +250,10 @@ fun AuthScreen(viewModel: com.example.presentation.viewmodel.ShasthoViewModel = 
             
             Button(
                 onClick = { 
-                    if (email.isBlank() || password.isBlank()) {
-                        Toast.makeText(context, "Please enter email and password", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    if (auth == null) {
-                        Toast.makeText(context, "Firebase is not configured. Please upload google-services.json.", Toast.LENGTH_LONG).show()
-                        return@Button
-                    }
-                    isLoading = true
                     if (isLogin) {
-                        auth.signInWithEmailAndPassword(email, password)
-                            .addOnCompleteListener { task ->
-                                if (task.isSuccessful) {
-                                    viewModel.syncDataOnLogin { hasProfile ->
-                                        isLoading = false
-                                        if (hasProfile) {
-                                            onNavigateToDashboard()
-                                        } else {
-                                            onNavigateToOnboarding()
-                                        }
-                                    }
-                                } else {
-                                    isLoading = false
-                                    Toast.makeText(context, "Login failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
-                                }
-                            }
+                        authViewModel.signIn(email, password)
                     } else {
-                        auth.createUserWithEmailAndPassword(email, password)
-                            .addOnCompleteListener { task ->
-                                if (task.isSuccessful) {
-                                    viewModel.syncDataOnLogin { hasProfile ->
-                                        isLoading = false
-                                        if (hasProfile) {
-                                            onNavigateToDashboard()
-                                        } else {
-                                            onNavigateToOnboarding()
-                                        }
-                                    }
-                                } else {
-                                    isLoading = false
-                                    Toast.makeText(context, "Sign up failed: ${task.exception?.message}", Toast.LENGTH_LONG).show()
-                                }
-                            }
+                        authViewModel.signUp(email, password)
                     }
                 },
                 modifier = Modifier
