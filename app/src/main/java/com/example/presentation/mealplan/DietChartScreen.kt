@@ -22,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -39,6 +41,13 @@ fun DietChartScreen(viewModel: ShasthoViewModel) {
     val isGenerating by viewModel.isGeneratingDiet.collectAsState()
     val shoppingList by viewModel.shoppingList.collectAsState()
     val savedCharts by viewModel.savedDietCharts.collectAsState()
+
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        viewModel.syncErrorEvent.collect { message ->
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        }
+    }
 
     var selectedTab by remember { mutableStateOf(0) } // 0 = New, 1 = Saved
     var selectedSavedChart by remember { mutableStateOf<SavedDietChart?>(null) }

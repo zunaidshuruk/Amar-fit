@@ -533,6 +533,9 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
 
 
+    private val _syncErrorEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val syncErrorEvent: SharedFlow<String> = _syncErrorEvent.asSharedFlow()
+
     val savedDietCharts: StateFlow<List<com.example.data.local.SavedDietChart>> = repository.getAllSavedCharts()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
         
@@ -541,25 +544,34 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     fun saveDietChart(name: String, content: String, shoppingList: String) {
         viewModelScope.launch {
-            repository.saveDietChart(
+            val success = repository.saveDietChart(
                 com.example.data.local.SavedDietChart(
                     name = name,
                     chartContent = content,
                     shoppingList = shoppingList
                 )
             )
+            if (!success) {
+                _syncErrorEvent.emit("Saved locally, but couldn't sync to the cloud — check your connection")
+            }
         }
     }
     
     fun updateSavedDietChart(chart: com.example.data.local.SavedDietChart) {
         viewModelScope.launch {
-            repository.saveDietChart(chart)
+            val success = repository.saveDietChart(chart)
+            if (!success) {
+                _syncErrorEvent.emit("Saved locally, but couldn't sync to the cloud — check your connection")
+            }
         }
     }
     
     fun deleteSavedDietChart(chart: com.example.data.local.SavedDietChart) {
         viewModelScope.launch {
-            repository.deleteDietChart(chart)
+            val success = repository.deleteDietChart(chart)
+            if (!success) {
+                _syncErrorEvent.emit("Deleted locally, but couldn't sync to the cloud — check your connection")
+            }
         }
     }
 
@@ -621,13 +633,19 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 title = title,
                 content = content
             )
-            repository.saveWorkout(workout)
+            val success = repository.saveWorkout(workout)
+            if (!success) {
+                _syncErrorEvent.emit("Saved locally, but couldn't sync to the cloud — check your connection")
+            }
         }
     }
 
     fun deleteWorkout(workout: com.example.data.local.SavedWorkout) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.deleteWorkout(workout)
+            val success = repository.deleteWorkout(workout)
+            if (!success) {
+                _syncErrorEvent.emit("Deleted locally, but couldn't sync to the cloud — check your connection")
+            }
         }
     }
 }

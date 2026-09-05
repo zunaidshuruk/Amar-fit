@@ -571,25 +571,25 @@ class AppRepository(
 
 
     fun getAllSavedCharts() = savedDietChartDao.getAllSavedCharts()
-    suspend fun saveDietChart(chart: com.example.data.local.SavedDietChart) {
+    suspend fun saveDietChart(chart: com.example.data.local.SavedDietChart): Boolean {
         savedDietChartDao.insertChart(chart)
-        FirebaseManager.syncSavedDietChart(chart)
+        return FirebaseManager.syncSavedDietChart(chart)
     }
 
-    suspend fun deleteDietChart(chart: com.example.data.local.SavedDietChart) {
+    suspend fun deleteDietChart(chart: com.example.data.local.SavedDietChart): Boolean {
         savedDietChartDao.deleteChart(chart)
-        FirebaseManager.deleteSavedDietChart(chart)
+        return FirebaseManager.deleteSavedDietChart(chart)
     }
     
     fun getAllSavedWorkouts() = savedWorkoutDao.getAllSavedWorkouts()
     
-    suspend fun saveWorkout(workout: com.example.data.local.SavedWorkout) {
+    suspend fun saveWorkout(workout: com.example.data.local.SavedWorkout): Boolean {
         savedWorkoutDao.insertWorkout(workout)
-        FirebaseManager.syncSavedWorkout(workout)
+        return FirebaseManager.syncSavedWorkout(workout)
     }
     
-    suspend fun deleteWorkout(workout: com.example.data.local.SavedWorkout) {
+    suspend fun deleteWorkout(workout: com.example.data.local.SavedWorkout): Boolean {
         savedWorkoutDao.deleteWorkout(workout)
-        FirebaseManager.deleteSavedWorkout(workout)
+        return FirebaseManager.deleteSavedWorkout(workout)
     }
 }

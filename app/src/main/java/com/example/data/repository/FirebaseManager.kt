@@ -95,64 +95,76 @@ object FirebaseManager {
         }
     }
 
-    suspend fun syncSavedDietChart(chart: SavedDietChart) {
+    suspend fun syncSavedDietChart(chart: SavedDietChart): Boolean {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser
         if (user != null) {
             val db = FirebaseFirestore.getInstance()
-            try {
+            return try {
                 db.collection("users").document(user.uid)
                     .collection("saved_diet_charts").document(chart.cloudId)
                     .set(chart, SetOptions.merge()).await()
+                true
             } catch (e: Exception) {
                 e.printStackTrace()
+                false
             }
         }
+        return false
     }
 
-    suspend fun deleteSavedDietChart(chart: SavedDietChart) {
+    suspend fun deleteSavedDietChart(chart: SavedDietChart): Boolean {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser
         if (user != null) {
             val db = FirebaseFirestore.getInstance()
-            try {
+            return try {
                 db.collection("users").document(user.uid)
                     .collection("saved_diet_charts").document(chart.cloudId)
                     .delete().await()
+                true
             } catch (e: Exception) {
                 e.printStackTrace()
+                false
             }
         }
+        return false
     }
 
-    suspend fun syncSavedWorkout(workout: SavedWorkout) {
+    suspend fun syncSavedWorkout(workout: SavedWorkout): Boolean {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser
         if (user != null) {
             val db = FirebaseFirestore.getInstance()
-            try {
+            return try {
                 db.collection("users").document(user.uid)
                     .collection("saved_workouts").document(workout.cloudId)
                     .set(workout, SetOptions.merge()).await()
+                true
             } catch (e: Exception) {
                 e.printStackTrace()
+                false
             }
         }
+        return false
     }
 
-    suspend fun deleteSavedWorkout(workout: SavedWorkout) {
+    suspend fun deleteSavedWorkout(workout: SavedWorkout): Boolean {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser
         if (user != null) {
             val db = FirebaseFirestore.getInstance()
-            try {
+            return try {
                 db.collection("users").document(user.uid)
                     .collection("saved_workouts").document(workout.cloudId)
                     .delete().await()
+                true
             } catch (e: Exception) {
                 e.printStackTrace()
+                false
             }
         }
+        return false
     }
 
     suspend fun pullDataOnLogin(
