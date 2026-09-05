@@ -11,7 +11,7 @@ android {
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
   defaultConfig {
-    applicationId = "Amar.Fit"
+    applicationId = "com.aistudio.amarfit.app"
     minSdk = 26
     targetSdk = 36
     versionCode = 1
