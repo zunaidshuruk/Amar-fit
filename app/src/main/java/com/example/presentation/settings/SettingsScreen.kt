@@ -229,6 +229,7 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
                                         profilePictureUri = finalPhotoUrl
                                     } catch(e: Exception) {
                                         e.printStackTrace()
+                                        finalPhotoUrl = it.profilePictureUri
                                     }
                                 }
                                 val updated = it.copy(
