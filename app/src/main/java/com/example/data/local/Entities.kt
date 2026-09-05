@@ -8,6 +8,7 @@ data class UserProfile(
     @PrimaryKey val id: Int = 1,
     val name: String = "",
     val age: Int = 0,
+    val onboardingCompleted: Boolean = false,
     val dateOfBirth: String = "",
     val gender: String = "",
     val heightCm: Float = 0f,

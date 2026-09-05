@@ -91,25 +91,43 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         }
         
         val navController = rememberNavController()
-        val userProfile by viewModel.userProfile.collectAsState()
-        
-        val startDestination = if (userProfile == null) "auth" else "dashboard"
-        
-        Scaffold(
-          modifier = Modifier.fillMaxSize(),
-          containerColor = Background,
-          bottomBar = { 
-            val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-            if (currentRoute == "dashboard" || currentRoute == "chat" || currentRoute == "lifestyle" || currentRoute == "settings" || currentRoute == "coach" || currentRoute == "workout" || currentRoute == "foodlog") {
-              BottomNavBar(navController, currentRoute) 
+        var sessionChecked by remember { mutableStateOf(false) }
+        var initialRoute by remember { mutableStateOf("splash") }
+
+        LaunchedEffect(Unit) {
+            val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+            if (currentUser == null) {
+                viewModel.logout {}
+                initialRoute = "auth"
+                sessionChecked = true
+            } else {
+                viewModel.syncDataOnLogin { hasValidProfile ->
+                    initialRoute = if (hasValidProfile) "dashboard" else "onboarding"
+                    sessionChecked = true
+                }
             }
-          }
-        ) { innerPadding ->
-          NavHost(
-            navController = navController,
-            startDestination = startDestination,
-            modifier = Modifier.padding(innerPadding)
-          ) {
+        }
+
+        if (!sessionChecked) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Emerald600)
+            }
+        } else {
+            Scaffold(
+              modifier = Modifier.fillMaxSize(),
+              containerColor = Background,
+              bottomBar = { 
+                val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+                if (currentRoute == "dashboard" || currentRoute == "chat" || currentRoute == "lifestyle" || currentRoute == "settings" || currentRoute == "coach" || currentRoute == "workout" || currentRoute == "foodlog") {
+                  BottomNavBar(navController, currentRoute) 
+                }
+              }
+            ) { innerPadding ->
+              NavHost(
+                navController = navController,
+                startDestination = initialRoute,
+                modifier = Modifier.padding(innerPadding)
+              ) {
             composable("auth") {
               com.example.presentation.auth.AuthScreen(
                 onNavigateToOnboarding = {
@@ -175,11 +193,11 @@ class MainActivity : ComponentActivity(), SensorEventListener {
               ScannerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() })
             }
           }
+          }
         }
       }
     }
   }
-
   override fun onResume() {
     super.onResume()
     if (!isSensorRegistered) {

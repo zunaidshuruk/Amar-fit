@@ -338,6 +338,7 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
                     val profile = UserProfile(
                         name = name,
                         age = calculatedAge ?: 0,
+                        onboardingCompleted = true,
                         dateOfBirth = dateOfBirthStr,
                         gender = gender,
                         heightCm = calculatedHeightCm,

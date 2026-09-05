@@ -39,7 +39,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch(Dispatchers.IO) {
             repository.syncDataOnLogin()
             val profile = repository.userProfile.firstOrNull()
-            val hasValidProfile = profile != null && profile.age > 0
+            val hasValidProfile = profile != null && profile.onboardingCompleted
             withContext(Dispatchers.Main) {
                 onComplete(hasValidProfile)
             }
@@ -48,11 +48,23 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     fun logout(onComplete: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO) {
             com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
             database.clearAllTables()
+            _weeklyInsights.value = null
+            _chatHistory.value = listOf(
+                ChatMessage("Hi! I'm Amar-Fit AI. How can I help you?", false)
+            )
+            _scanResult.value = null
+            _coachAdvice.value = null
+            _workoutPlan.value = null
+            _dietChart.value = null
+            _shoppingList.value = null
+            _premiumRecipe.value = null
             withContext(Dispatchers.Main) {
                 onComplete()
             }
+        }
         }
     }
 
