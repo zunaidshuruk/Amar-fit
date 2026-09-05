@@ -31,8 +31,13 @@ import com.example.ui.theme.Slate100
 import com.example.ui.theme.Slate500
 import com.example.ui.theme.TextPrimary
 
-import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.ui.platform.LocalContext
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +48,7 @@ fun AuthScreen(
     onNavigateToDashboard: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLogin by remember { mutableStateOf(true) }
@@ -288,7 +294,31 @@ fun AuthScreen(
             Spacer(modifier = Modifier.height(16.dp))
             
             OutlinedButton(
-                onClick = { onNavigateToOnboarding() },
+                onClick = { 
+                    if (isLoading) return@OutlinedButton
+                    coroutineScope.launch {
+                        try {
+                            val googleIdOption = GetGoogleIdOption.Builder()
+                                .setFilterByAuthorizedAccounts(false)
+                                .setServerClientId(context.getString(R.string.default_web_client_id))
+                                .build()
+                                
+                            val request = GetCredentialRequest.Builder()
+                                .addCredentialOption(googleIdOption)
+                                .build()
+                                
+                            val credentialManager = CredentialManager.create(context)
+                            val result = credentialManager.getCredential(context = context, request = request)
+                            authViewModel.signInWithGoogle(result.credential)
+                        } catch (e: GetCredentialCancellationException) {
+                            authViewModel.resetState()
+                        } catch (e: GetCredentialException) {
+                            authViewModel.setCustomError(e.message ?: "Google Sign-In failed")
+                        } catch (e: Exception) {
+                            authViewModel.setCustomError(e.message ?: "Unknown error")
+                        }
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),

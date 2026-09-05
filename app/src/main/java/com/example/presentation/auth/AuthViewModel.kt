@@ -50,8 +50,23 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         }
     }
 
+    fun signInWithGoogle(credential: androidx.credentials.Credential) {
+        viewModelScope.launch {
+            _uiState.value = AuthUiState.Loading
+            when (val result = repository.signInWithGoogle(credential)) {
+                is AuthResult.Success -> _uiState.value = AuthUiState.Authenticated
+                is AuthResult.Error -> _uiState.value = AuthUiState.Error(result.message)
+                else -> _uiState.value = AuthUiState.Error("Unexpected error during Google sign-in")
+            }
+        }
+    }
+
     fun resetState() {
         _uiState.value = AuthUiState.Idle
+    }
+
+    fun setCustomError(msg: String) {
+        _uiState.value = AuthUiState.Error(msg)
     }
 
     private fun validate(email: String, password: String): Boolean {

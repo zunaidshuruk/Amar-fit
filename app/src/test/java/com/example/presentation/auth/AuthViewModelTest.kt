@@ -13,7 +13,11 @@ import org.junit.Test
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
 class AuthViewModelTest {
 
     private lateinit var viewModel: AuthViewModel
@@ -69,6 +73,21 @@ class AuthViewModelTest {
         viewModel.signIn("test@test.com", "123")
         assertTrue(viewModel.uiState.value is AuthUiState.ValidationError)
     }
+
+    @Test
+    fun `signInWithGoogle success emits Authenticated`() {
+        val fakeCredential = androidx.credentials.CustomCredential("fakeType", android.os.Bundle())
+        viewModel.signInWithGoogle(fakeCredential)
+        assertEquals(AuthUiState.Authenticated, viewModel.uiState.value)
+    }
+
+    @Test
+    fun `signInWithGoogle error emits Error`() {
+        repository.shouldReturnError = true
+        val fakeCredential = androidx.credentials.CustomCredential("fakeType", android.os.Bundle())
+        viewModel.signInWithGoogle(fakeCredential)
+        assertTrue(viewModel.uiState.value is AuthUiState.Error)
+    }
 }
 
 class FakeAuthRepository : AuthRepository {
@@ -86,6 +105,10 @@ class FakeAuthRepository : AuthRepository {
     }
 
     override suspend fun signUp(email: String, password: String): AuthResult {
+        return if (shouldReturnError) AuthResult.Error("Test Error") else AuthResult.Success
+    }
+
+    override suspend fun signInWithGoogle(credential: androidx.credentials.Credential): AuthResult {
         return if (shouldReturnError) AuthResult.Error("Test Error") else AuthResult.Success
     }
 }

@@ -15,6 +15,7 @@ sealed class AuthResult {
 interface AuthRepository {
     suspend fun signIn(email: String, password: String): AuthResult
     suspend fun signUp(email: String, password: String): AuthResult
+    suspend fun signInWithGoogle(credential: androidx.credentials.Credential): AuthResult
 }
 
 class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
@@ -45,6 +46,28 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
             AuthResult.Success
         } catch (e: Exception) {
             AuthResult.Error(e.message ?: "Unknown sign up error")
+        }
+    }
+
+    override suspend fun signInWithGoogle(credential: androidx.credentials.Credential): AuthResult {
+        return try {
+            if (credential is androidx.credentials.CustomCredential &&
+                credential.type == com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+            ) {
+                val googleIdTokenCredential = com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.createFrom(credential.data)
+                val firebaseCredential = com.google.firebase.auth.GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
+                auth.signInWithCredential(firebaseCredential).await()
+                
+                if (auth.currentUser != null) {
+                    AuthResult.Success
+                } else {
+                    AuthResult.Error("Google Sign-In succeeded, but no current user found.")
+                }
+            } else {
+                AuthResult.Error("Invalid Google credential type or not a custom credential.")
+            }
+        } catch (e: Exception) {
+            AuthResult.Error(e.message ?: "Unknown Google sign-in error")
         }
     }
 }
