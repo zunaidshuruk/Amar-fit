@@ -49,3 +49,6 @@ val Slate500 = Color(0xFF64748B)
 val Slate400 = Color(0xFF94A3B8)
 val Slate200 = Color(0xFFE2E8F0)
 val Slate100 = Color(0xFFF1F5F9)
+
+// Missing Indigo500 used in dark theme badges/points
+val Indigo500 = Color(0xFF6366F1)

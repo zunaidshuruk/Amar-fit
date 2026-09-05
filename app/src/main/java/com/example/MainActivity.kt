@@ -135,7 +135,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
             Scaffold(
               modifier = Modifier.fillMaxSize(),
-              containerColor = Background,
+              containerColor = MaterialTheme.colorScheme.background,
               topBar = {
                   if (isMainTab) {
                       TopAppBar(
@@ -151,7 +151,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                               val name = userProfile?.name ?: "Guest"
                               Column {
                                   Text(text = "HEALTH & DIET", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = Emerald700, letterSpacing = 1.sp)
-                                  Text(text = "$greeting, $name", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                  Text(text = "$greeting, $name", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
                               }
                           },
                           actions = {
@@ -184,7 +184,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                                           .padding(end = 8.dp)
                                           .size(36.dp)
                                           .clip(CircleShape)
-                                          .background(Color.White)
+                                          .background(MaterialTheme.colorScheme.surface)
                                           .border(1.dp, Slate200, CircleShape)
                                   ) {
                                       Icon(Icons.Default.Sync, contentDescription = "Sync Health Connect", tint = Emerald600, modifier = Modifier.size(20.dp))
@@ -220,7 +220,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                                   }
                               }
                           },
-                          colors = TopAppBarDefaults.topAppBarColors(containerColor = Background)
+                          colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
                       )
                   }
               },
@@ -229,8 +229,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                   Row(
                     modifier = Modifier
                       .fillMaxWidth()
-                      .background(Color.White)
-                      .border(1.dp, Slate100)
+                      .background(MaterialTheme.colorScheme.surface)
+                      .border(1.dp, MaterialTheme.colorScheme.outline)
                       .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceAround,
                     verticalAlignment = Alignment.CenterVertically

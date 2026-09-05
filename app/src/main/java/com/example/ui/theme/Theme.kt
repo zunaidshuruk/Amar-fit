@@ -18,32 +18,38 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.core.view.WindowCompat
 
+// Redesign Sprint 2 - Robust dark mode mappings
 private val DarkColorScheme =  darkColorScheme(
-      primary = Emerald500,
-      secondary = Emerald200,
-      tertiary = Orange500,
-      background = Slate900,
-      surface = Slate800,
-      onPrimary = Color.White,
-      onSecondary = Color.White,
-      onTertiary = Color.White,
-      onBackground = Color.White,
-      onSurface = Color.White
-  )
+    primary = Primary, // Deep forest green still primary identity
+    secondary = Secondary, // Leaf green identity
+    tertiary = Orange500,
+    background = Color(0xFF121212), // Material dark bg
+    surface = Color(0xFF1E1E1E), // Material dark surface
+    surfaceVariant = Color(0xFF2C2C2C), // Slightly lighter surface for accent tiles
+    onPrimary = Color.White,
+    onSecondary = Color.Black,
+    onTertiary = Color.Black,
+    onBackground = Color(0xFFE0E0E0),
+    onSurface = Color(0xFFE0E0E0),
+    onSurfaceVariant = Color(0xFFB0B0B0),
+    outline = Slate600
+)
 
-private val LightColorScheme =
-  lightColorScheme(
+private val LightColorScheme = lightColorScheme(
     primary = Primary,
     secondary = Secondary,
     tertiary = Orange500,
-    background = Background,
-    surface = Surface,
+    background = Background, // #F8F9FA
+    surface = Surface, // #FFFFFF
+    surfaceVariant = Color(0xFFF1F5F9), // Slate100 equivalent for generic soft surface
     onPrimary = Color.White,
-    onSecondary = TextPrimary,
+    onSecondary = Color.White,
     onTertiary = Color.White,
-    onBackground = TextPrimary,
-    onSurface = TextPrimary
-  )
+    onBackground = TextPrimary, // #1E1E1E
+    onSurface = TextPrimary,
+    onSurfaceVariant = Slate500,
+    outline = Slate200
+)
 
 val DefaultCardShape = RoundedCornerShape(20.dp)
 val DefaultCardElevation = 2.dp
@@ -53,7 +59,6 @@ val DefaultButtonHeight = 56.dp
 @Composable
 fun MyApplicationTheme(
   darkTheme: Boolean = false,
-  // Disabling dynamic color to ensure Bento Grid theme is visible
   dynamicColor: Boolean = false,
   content: @Composable () -> Unit,
 ) {
@@ -63,7 +68,6 @@ fun MyApplicationTheme(
         val context = LocalContext.current
         if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
       }
-
       darkTheme -> DarkColorScheme
       else -> LightColorScheme
     }
@@ -73,7 +77,7 @@ fun MyApplicationTheme(
     SideEffect {
       val window = (view.context as Activity).window
       window.statusBarColor = colorScheme.background.toArgb()
-      window.navigationBarColor = Color.White.toArgb()
+      window.navigationBarColor = colorScheme.background.toArgb()
       WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
       WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
     }
