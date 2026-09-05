@@ -1,0 +1,353 @@
+package com.example.presentation.settings
+
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.example.presentation.viewmodel.ShasthoViewModel
+import com.example.ui.theme.*
+
+import androidx.compose.ui.platform.LocalContext
+import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.SleepSessionRecord
+import androidx.health.connect.client.records.BloodPressureRecord
+import androidx.health.connect.client.records.BloodGlucoseRecord
+import androidx.health.connect.client.PermissionController
+import kotlinx.coroutines.launch
+import android.widget.Toast
+
+
+@Composable
+fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}, onLogout: () -> Unit = {}) {
+    val profile by viewModel.userProfile.collectAsState()
+
+    var name by remember { mutableStateOf("") }
+    var age by remember { mutableStateOf("") }
+    var weight by remember { mutableStateOf("") }
+    var height by remember { mutableStateOf("") }
+    var calorieLimit by remember { mutableStateOf("") }
+    var showSavedMessage by remember { mutableStateOf(false) }
+
+    var isDarkMode by remember { mutableStateOf(false) }
+    var notificationsEnabled by remember { mutableStateOf(true) }
+    var remindersEnabled by remember { mutableStateOf(true) }
+
+    var expandedLanguage by remember { mutableStateOf(false) }
+    val languages = listOf("English", "Bengali")
+    var selectedLanguage by remember { mutableStateOf(languages[0]) }
+
+    var profilePictureUri by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var isHealthConnectAvailable by remember { mutableStateOf(HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE) }
+    
+    val PERMISSIONS = setOf(
+        HealthPermission.getReadPermission(StepsRecord::class),
+        HealthPermission.getReadPermission(SleepSessionRecord::class),
+        HealthPermission.getReadPermission(BloodPressureRecord::class),
+        HealthPermission.getReadPermission(BloodGlucoseRecord::class),
+        HealthPermission.getReadPermission(androidx.health.connect.client.records.HeartRateRecord::class)
+    )
+
+    val requestPermissionLauncher = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) { granted ->
+        if (granted.containsAll(PERMISSIONS)) {
+            Toast.makeText(context, "Health Connect connected!", Toast.LENGTH_SHORT).show()
+            viewModel.syncWithHealthConnect(context)
+        } else {
+            Toast.makeText(context, "Permissions denied", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+
+    val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
+        profilePictureUri = uri?.toString()
+    }
+
+    LaunchedEffect(profile) {
+        if (profile != null) {
+            name = profile!!.name
+            age = profile!!.age.toString()
+            weight = profile!!.weightKg.toString()
+            height = profile!!.heightCm.toString()
+            calorieLimit = profile!!.dailyCalorieLimit.toString()
+            profilePictureUri = profile!!.profilePictureUri
+            isDarkMode = profile!!.isDarkMode
+            notificationsEnabled = profile!!.notificationsEnabled
+            remindersEnabled = profile!!.remindersEnabled
+            selectedLanguage = profile!!.selectedLanguage
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Background)
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .padding(horizontal = 16.dp)
+            .verticalScroll(rememberScrollState()).imePadding()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp, top = 24.dp)
+        ) {
+            IconButton(onClick = onNavigateBack) {
+                Icon(androidx.compose.material.icons.Icons.Default.ArrowBack, contentDescription = "Back", tint = Emerald900)
+            }
+            Text(
+                text = "Profile & Settings",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = Emerald900
+            )
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Profile Picture Selector
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape)
+                            .background(Slate100)
+                            .border(2.dp, Emerald500, CircleShape)
+                            .clickable { launcher.launch("image/*") },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (profilePictureUri.isNullOrEmpty()) {
+                            Icon(Icons.Default.CameraAlt, contentDescription = "Select Profile Picture", tint = Slate500, modifier = Modifier.size(40.dp))
+                        } else {
+                            AsyncImage(
+                                model = profilePictureUri,
+                                contentDescription = "Profile Picture",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = age,
+                        onValueChange = { age = it },
+                        label = { Text("Age") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = calorieLimit,
+                        onValueChange = { calorieLimit = it },
+                        label = { Text("Daily Calories") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = height,
+                        onValueChange = { height = it },
+                        label = { Text("Height (cm)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = weight,
+                        onValueChange = { weight = it },
+                        label = { Text("Weight (kg)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Button(
+                    onClick = {
+                        profile?.let {
+                            val updated = it.copy(
+                                name = name,
+                                age = age.toIntOrNull() ?: it.age,
+                                weightKg = weight.toFloatOrNull() ?: it.weightKg,
+                                heightCm = height.toFloatOrNull() ?: it.heightCm,
+                                dailyCalorieLimit = calorieLimit.toIntOrNull() ?: it.dailyCalorieLimit,
+                                profilePictureUri = profilePictureUri,
+                                isDarkMode = isDarkMode,
+                                notificationsEnabled = notificationsEnabled,
+                                remindersEnabled = remindersEnabled,
+                                selectedLanguage = selectedLanguage
+                            )
+                            viewModel.saveProfile(updated)
+                            showSavedMessage = true
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Emerald600)
+                ) {
+                    Text("Save Profile")
+                }
+
+                if (showSavedMessage) {
+                    Text("Profile updated successfully!", color = Emerald600, fontSize = 14.sp)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "App Settings",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Dark Mode", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Switch(
+                        checked = isDarkMode,
+                        onCheckedChange = { isDarkMode = it },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Emerald600, checkedTrackColor = Emerald200)
+                    )
+                }
+                Divider(color = Slate100)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Push Notifications", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Switch(
+                        checked = notificationsEnabled,
+                        onCheckedChange = { notificationsEnabled = it },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Emerald600, checkedTrackColor = Emerald200)
+                    )
+                }
+                Divider(color = Slate100)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Daily Reminders", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Switch(
+                        checked = remindersEnabled,
+                        onCheckedChange = { remindersEnabled = it },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Emerald600, checkedTrackColor = Emerald200)
+                    )
+                }
+                Divider(color = Slate100)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp).clickable { expandedLanguage = true },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Language", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(selectedLanguage, color = Slate500)
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = "Select Language", tint = Slate500)
+                    }
+                    DropdownMenu(
+                        expanded = expandedLanguage,
+                        onDismissRequest = { expandedLanguage = false }
+                    ) {
+                        languages.forEach { lang ->
+                            DropdownMenuItem(
+                                text = { Text(lang) },
+                                onClick = {
+                                    selectedLanguage = lang
+                                    expandedLanguage = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        
+                Divider(color = Slate100)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Health Connect", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        Text("Sync steps, sleep & vitals", fontSize = 12.sp, color = Slate500)
+                    }
+                    Button(
+                        onClick = {
+                            if (isHealthConnectAvailable) {
+                                requestPermissionLauncher.launch(PERMISSIONS)
+                            } else {
+                                Toast.makeText(context, "Health Connect is not available on this device", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Emerald600)
+                    ) {
+                        Text("Connect")
+                    }
+                }
+
+        Spacer(modifier = Modifier.height(100.dp))
+    }
+}

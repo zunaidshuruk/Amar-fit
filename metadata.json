@@ -1,0 +1,6 @@
+{
+  "name": "আমার Fit",
+  "description": "AI-powered health and diet tracker tailored for Bangladesh",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
