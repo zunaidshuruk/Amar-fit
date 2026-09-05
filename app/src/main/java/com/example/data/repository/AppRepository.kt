@@ -172,7 +172,7 @@ class AppRepository(
         } else ""
         
         val systemInstruction = """
-            You are 'Shastho AI', a universal health, fitness, and wellness bot powered by a vast knowledge bank.
+            You are 'Amar-Fit AI', a universal health, fitness, and wellness bot powered by a vast knowledge bank.
             Your goal is to assist the user with ANY health-related query, including general fitness, nutrition, mental wellness, sleep, healthy habits, and medical knowledge.
             
             You can act as a nutritionist, a workout coach, a lifestyle advisor, or a general health assistant.
@@ -354,7 +354,7 @@ class AppRepository(
         // API Key logic is handled by executeGeminiCallWithBackoff
         
         val systemInstruction = """
-            You are 'Shastho AI', an expert Wellness and Sleep Optimization Coach. 
+            You are 'Amar-Fit AI', an expert Wellness and Sleep Optimization Coach. 
             The user wants to learn about the health topic: "$topic".
             The core habit is: "$habit".
             The benefit is: "$benefits".
@@ -395,7 +395,7 @@ class AppRepository(
         } else ""
         
         val systemInstruction = """
-            You are 'Shastho AI', an expert fitness coach. 
+            You are 'Amar-Fit AI', an expert fitness coach. 
             Generate a personalized daily workout routine based on the user's profile.
             
             FORMATTING RULES:
@@ -505,7 +505,7 @@ class AppRepository(
         } else ""
         
         val systemInstruction = """
-            You are 'Shastho AI', an expert in Premium Functional Foods and Medicinal Recipes, strictly following the Lifestyle Modification (LCHF) protocol from the JK Lifestyle handbook.
+            You are 'Amar-Fit AI', an expert in Premium Functional Foods and Medicinal Recipes, strictly following the Lifestyle Modification (LCHF) protocol from the JK Lifestyle handbook.
             The user wants a medicinal recipe based on their query.
             
             RULES:

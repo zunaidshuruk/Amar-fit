@@ -1,14 +1,15 @@
 package com.example.presentation.onboarding
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,23 +22,81 @@ import androidx.compose.ui.unit.sp
 import com.example.data.local.UserProfile
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
     var name by remember { mutableStateOf("") }
-    var age by remember { mutableStateOf("") }
+    
+    // Birthday & Age logic
+    var showDatePicker by remember { mutableStateOf(false) }
+    var dobTimestamp by remember { mutableStateOf<Long?>(null) }
+    val datePickerState = rememberDatePickerState()
+
+    val calculatedAge = remember(dobTimestamp) {
+        if (dobTimestamp != null) {
+            val calendarDob = Calendar.getInstance().apply { timeInMillis = dobTimestamp!! }
+            val calendarNow = Calendar.getInstance()
+            var ageInt = calendarNow.get(Calendar.YEAR) - calendarDob.get(Calendar.YEAR)
+            if (calendarNow.get(Calendar.DAY_OF_YEAR) < calendarDob.get(Calendar.DAY_OF_YEAR)) {
+                ageInt--
+            }
+            ageInt.coerceAtLeast(0)
+        } else {
+            null
+        }
+    }
+
+    val dobString = remember(dobTimestamp) {
+        if (dobTimestamp != null) {
+            val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.US)
+            sdf.format(Date(dobTimestamp!!))
+        } else ""
+    }
+    
+    // Gender logic
     var gender by remember { mutableStateOf("Male") }
-    var height by remember { mutableStateOf("") }
+    var expandedGender by remember { mutableStateOf(false) }
+    val genderOptions = listOf("Male", "Female", "Other")
+
+    // Height logic
+    var heightFeet by remember { mutableStateOf("") }
+    var heightInches by remember { mutableStateOf("") }
+
     var weight by remember { mutableStateOf("") }
     
     val dietOptions = listOf("None", "Halal", "Vegan", "Vegetarian", "Keto", "Gluten-Free", "Other")
     var selectedDiets by remember { mutableStateOf(setOf<String>()) }
     var customDiet by remember { mutableStateOf("") }
-
+    
     val goalOptions = listOf("Lose weight", "Build muscle", "Stay healthy", "Improve sleep", "Other")
     var selectedGoals by remember { mutableStateOf(setOf<String>()) }
     var customGoal by remember { mutableStateOf("") }
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    dobTimestamp = datePickerState.selectedDateMillis
+                    showDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -48,7 +107,7 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
             .verticalScroll(rememberScrollState()).imePadding()
     ) {
         Text(
-            text = "Welcome to Shastho AI",
+            text = "Welcome to Amar-Fit AI",
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             color = Emerald900,
@@ -67,28 +126,63 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
             label = { Text("Name") },
             modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
         )
-
-        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        
+        // Birthday Input (Read-only + Trailing Icon)
+        Box(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
             OutlinedTextField(
-                value = age,
-                onValueChange = { age = it },
-                label = { Text("Age") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.weight(1f)
+                value = dobString,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(if (calculatedAge != null) "Birthday (Age: $calculatedAge)" else "Birthday (dd/mm/yy)") },
+                trailingIcon = { Icon(Icons.Default.DateRange, contentDescription = "Select Date") },
+                modifier = Modifier.fillMaxWidth()
             )
+            // Transparent overlay to capture clicks reliably
+            Box(modifier = Modifier.matchParentSize().clickable { showDatePicker = true })
+        }
+
+        // Gender Dropdown
+        ExposedDropdownMenuBox(
+            expanded = expandedGender,
+            onExpandedChange = { expandedGender = !expandedGender },
+            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+        ) {
             OutlinedTextField(
                 value = gender,
-                onValueChange = { gender = it },
+                onValueChange = {},
+                readOnly = true,
                 label = { Text("Gender") },
-                modifier = Modifier.weight(1f)
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedGender) },
+                modifier = Modifier.menuAnchor().fillMaxWidth()
             )
+            ExposedDropdownMenu(
+                expanded = expandedGender,
+                onDismissRequest = { expandedGender = false }
+            ) {
+                genderOptions.forEach { selectionOption ->
+                    DropdownMenuItem(
+                        text = { Text(selectionOption) },
+                        onClick = {
+                            gender = selectionOption
+                            expandedGender = false
+                        }
+                    )
+                }
+            }
         }
 
         Row(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(
-                value = height,
-                onValueChange = { height = it },
-                label = { Text("Height (cm)") },
+                value = heightFeet,
+                onValueChange = { heightFeet = it },
+                label = { Text("Feet") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1f)
+            )
+            OutlinedTextField(
+                value = heightInches,
+                onValueChange = { heightInches = it },
+                label = { Text("Inch") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f)
             )
@@ -126,6 +220,7 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
                 }
             }
         }
+
         if (selectedDiets.contains("Other")) {
             OutlinedTextField(
                 value = customDiet,
@@ -136,7 +231,6 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
         }
 
         Spacer(modifier = Modifier.height(8.dp))
-
         Text("Health Goals", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp, bottom = 8.dp))
         FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             goalOptions.forEach { option ->
@@ -152,6 +246,7 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
                 }
             }
         }
+
         if (selectedGoals.contains("Other")) {
             OutlinedTextField(
                 value = customGoal,
@@ -162,10 +257,14 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-
         Button(
             onClick = {
-                if (name.isNotBlank() && age.isNotBlank() && height.isNotBlank() && weight.isNotBlank()) {
+                val ageValue = calculatedAge
+                val ft = heightFeet.toIntOrNull()
+                val ins = heightInches.toIntOrNull() ?: 0
+                val kg = weight.toFloatOrNull()
+
+                if (name.isNotBlank() && ageValue != null && ft != null && kg != null) {
                     val finalDiets = selectedDiets.toMutableSet()
                     if (finalDiets.contains("Other") && customDiet.isNotBlank()) {
                         finalDiets.remove("Other")
@@ -176,13 +275,16 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
                         finalGoals.remove("Other")
                         finalGoals.add(customGoal)
                     }
+                    
+                    // Convert ft/in to cm
+                    val calculatedHeightCm = (ft * 30.48f) + (ins * 2.54f)
 
                     val profile = UserProfile(
                         name = name,
-                        age = age.toIntOrNull() ?: 25,
+                        age = ageValue,
                         gender = gender,
-                        heightCm = height.toFloatOrNull() ?: 170f,
-                        weightKg = weight.toFloatOrNull() ?: 70f,
+                        heightCm = calculatedHeightCm,
+                        weightKg = kg,
                         dietaryRestrictions = if (finalDiets.isEmpty()) "None" else finalDiets.joinToString(", "),
                         healthGoals = if (finalGoals.isEmpty()) "Stay healthy" else finalGoals.joinToString(", "),
                         dailyCalorieLimit = 2000,

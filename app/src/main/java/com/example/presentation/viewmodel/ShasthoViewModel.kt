@@ -112,7 +112,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     
     private val _chatHistory = MutableStateFlow<List<ChatMessage>>(
-        listOf(ChatMessage("Hello! I am Shastho AI, your universal health bot. Ask me anything about fitness, wellness, nutrition, or lifestyle!", false))
+        listOf(ChatMessage("Hello! I am Amar-Fit AI, your universal health bot. Ask me anything about fitness, wellness, nutrition, or lifestyle!", false))
     )
     val chatHistory: StateFlow<List<ChatMessage>> = _chatHistory.asStateFlow()
     
