@@ -3,6 +3,7 @@ package com.example.presentation.today
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -28,6 +29,15 @@ import com.example.ui.theme.*
 @Composable
 fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val profile by viewModel.userProfile.collectAsState()
+    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+
+    val streakAccent = AccentTokens.streakAccent(isDark = isDark)
+    val pointsAccent = AccentTokens.pointsAccent(isDark = isDark)
+    val badgesAccent = AccentTokens.badgesAccent(isDark = isDark)
+    val caloriesAccent = AccentTokens.caloriesAccent(isDark = isDark)
+    val stepsAccent = AccentTokens.stepsAccent(isDark = isDark)
+    val waterAccent = AccentTokens.waterAccent(isDark = isDark)
+
     val metrics by viewModel.todayMetrics.collectAsState()
     val todayFoodLogs by viewModel.todayFoodLogs.collectAsState()
     
@@ -62,14 +72,14 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     .weight(1f)
                     .shadow(2.dp, RoundedCornerShape(20.dp))
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Orange50)
+                    .background(streakAccent.bg)
                     .padding(12.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.LocalFireDepartment, contentDescription = "Streak", tint = Orange700)
+                    Icon(Icons.Default.LocalFireDepartment, contentDescription = "Streak", tint = streakAccent.onBg)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "$currentStreak Days", fontWeight = FontWeight.Bold, color = Orange700, fontSize = 14.sp)
+                    Text(text = "$currentStreak Days", fontWeight = FontWeight.Bold, color = streakAccent.onBg, fontSize = 14.sp)
                     Text(text = "Streak", fontSize = 10.sp, color = TextPrimary)
                 }
             }
@@ -79,14 +89,14 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     .weight(1f)
                     .shadow(2.dp, RoundedCornerShape(20.dp))
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Indigo50)
+                    .background(pointsAccent.bg)
                     .padding(12.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Star, contentDescription = "Points", tint = Indigo700)
+                    Icon(Icons.Default.Star, contentDescription = "Points", tint = pointsAccent.onBg)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "$points", fontWeight = FontWeight.Bold, color = Indigo700, fontSize = 14.sp)
+                    Text(text = "$points", fontWeight = FontWeight.Bold, color = pointsAccent.onBg, fontSize = 14.sp)
                     Text(text = "Points", fontSize = 10.sp, color = TextPrimary)
                 }
             }
@@ -96,14 +106,14 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     .weight(1f)
                     .shadow(2.dp, RoundedCornerShape(20.dp))
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Emerald50)
+                    .background(badgesAccent.bg)
                     .padding(12.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.EmojiEvents, contentDescription = "Badges", tint = Emerald700)
+                    Icon(Icons.Default.EmojiEvents, contentDescription = "Badges", tint = badgesAccent.onBg)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "${badges.size}", fontWeight = FontWeight.Bold, color = Emerald700, fontSize = 14.sp)
+                    Text(text = "${badges.size}", fontWeight = FontWeight.Bold, color = badgesAccent.onBg, fontSize = 14.sp)
                     Text(text = "Badges", fontSize = 10.sp, color = TextPrimary)
                 }
             }
@@ -116,20 +126,20 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 .fillMaxWidth()
                 .shadow(2.dp, RoundedCornerShape(20.dp))
                 .clip(RoundedCornerShape(20.dp))
-                .background(Orange50)
+                .background(caloriesAccent.bg)
                 .clickable { navController.navigate("nutrition") }
                 .padding(20.dp)
         ) {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.LocalFireDepartment, contentDescription = null, tint = Orange700, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.LocalFireDepartment, contentDescription = null, tint = caloriesAccent.onBg, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("Calories", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(text = "$totalCalories", fontSize = 36.sp, fontWeight = FontWeight.Bold, color = Orange700)
-                    Text(text = " / $calorieLimit kcal", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Orange700, modifier = Modifier.padding(bottom = 6.dp))
+                    Text(text = "$totalCalories", fontSize = 36.sp, fontWeight = FontWeight.Bold, color = caloriesAccent.onBg)
+                    Text(text = " / $calorieLimit kcal", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = caloriesAccent.onBg, modifier = Modifier.padding(bottom = 6.dp))
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 LinearProgressIndicator(
@@ -151,18 +161,18 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     .weight(1f)
                     .shadow(2.dp, RoundedCornerShape(20.dp))
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Emerald50)
+                    .background(stepsAccent.bg)
                     .clickable { showStepsOptionDialog = true }
                     .padding(20.dp)
             ) {
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.DirectionsWalk, contentDescription = null, tint = Emerald700, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.DirectionsWalk, contentDescription = null, tint = stepsAccent.onBg, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(text = "Steps", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = "$steps", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Emerald700)
+                    Text(text = "$steps", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = stepsAccent.onBg)
                 }
             }
             
@@ -172,20 +182,20 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     .weight(1f)
                     .shadow(2.dp, RoundedCornerShape(20.dp))
                     .clip(RoundedCornerShape(20.dp))
-                    .background(BlueBg)
+                    .background(waterAccent.bg)
                     .clickable { showWaterDialog = true }
                     .padding(20.dp)
             ) {
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.LocalDrink, contentDescription = null, tint = Blue700, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.LocalDrink, contentDescription = null, tint = waterAccent.onBg, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(text = "Water", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(verticalAlignment = Alignment.Bottom) {
-                        Text(text = String.format("%.1f", waterConsumed), fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Blue700)
-                        Text(text = " L", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Blue700, modifier = Modifier.padding(bottom = 4.dp))
+                        Text(text = String.format("%.1f", waterConsumed), fontSize = 28.sp, fontWeight = FontWeight.Bold, color = waterAccent.onBg)
+                        Text(text = " L", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = waterAccent.onBg, modifier = Modifier.padding(bottom = 4.dp))
                     }
                 }
             }
