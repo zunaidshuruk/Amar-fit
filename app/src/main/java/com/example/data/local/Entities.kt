@@ -2,6 +2,7 @@ package com.example.data.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity(tableName = "user_profile")
 data class UserProfile(
@@ -45,6 +46,7 @@ data class DailyMetric(
 @Entity(tableName = "food_logs")
 data class FoodLog(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val cloudId: String = UUID.randomUUID().toString(),
     val date: String = "",
     val name: String = "",
     val category: String = "",

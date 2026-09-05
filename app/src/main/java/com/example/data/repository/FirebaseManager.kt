@@ -79,7 +79,7 @@ object FirebaseManager {
         if (user != null) {
             val db = FirebaseFirestore.getInstance()
             db.collection("users").document(user.uid)
-                .collection("diet_logs").document(log.id.toString())
+                .collection("diet_logs").document(log.cloudId)
                 .set(log, SetOptions.merge())
         }
     }
@@ -90,7 +90,7 @@ object FirebaseManager {
         if (user != null) {
             val db = FirebaseFirestore.getInstance()
             db.collection("users").document(user.uid)
-                .collection("diet_logs").document(log.id.toString())
+                .collection("diet_logs").document(log.cloudId)
                 .delete()
         }
     }
@@ -188,7 +188,8 @@ object FirebaseManager {
                 for (doc in foodLogsSnap.documents) {
                     val log = doc.toObject(FoodLog::class.java)
                     if (log != null) {
-                        metricsDao.insertFoodLog(log)
+                        val resolvedLog = if (log.cloudId.isEmpty()) log.copy(cloudId = doc.id) else log
+                        metricsDao.insertFoodLog(resolvedLog)
                     }
                 }
 

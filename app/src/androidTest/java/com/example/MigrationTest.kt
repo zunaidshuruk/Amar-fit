@@ -84,4 +84,28 @@ class MigrationTest {
         assert(cursor.getString(0) == "Test Workout")
         cursor.close()
     }
+
+    @Test
+    @Throws(IOException::class)
+    fun migrate15To16() {
+        var db = helper.createDatabase(TEST_DB, 15)
+        // Insert some data in version 15
+        db.execSQL("INSERT INTO food_logs (id, date, name, category, calories, description, time, mealType) VALUES (1, '2026-09-05', 'Apple', 'Fruit', 95, 'Crisp apple', '12:00', 'Snack')")
+        db.close()
+
+        db = helper.runMigrationsAndValidate(TEST_DB, 16, true, AppDatabase.MIGRATION_15_16)
+
+        val cursor = db.query("SELECT cloudId, name, calories FROM food_logs WHERE id = 1")
+        assert(cursor.moveToFirst())
+
+        val cloudIdIndex = cursor.getColumnIndex("cloudId")
+        val nameIndex = cursor.getColumnIndex("name")
+        val caloriesIndex = cursor.getColumnIndex("calories")
+
+        assert(cursor.getString(cloudIdIndex) == "")
+        assert(cursor.getString(nameIndex) == "Apple")
+        assert(cursor.getInt(caloriesIndex) == 95)
+
+        cursor.close()
+    }
 }
