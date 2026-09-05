@@ -101,4 +101,12 @@ object AccentTokens {
             AccentColors(bg = BlueBg, onBg = Blue700)
         }
     }
+
+    fun foodLogAccent(isDark: Boolean): AccentColors = stepsAccent(isDark)
+
+    fun mealPlanAccent(isDark: Boolean): AccentColors = waterAccent(isDark)
+
+    fun dietChartAccent(isDark: Boolean): AccentColors = pointsAccent(isDark)
+
+    fun recipeAccent(isDark: Boolean): AccentColors = heartRateAccent(isDark)
 }

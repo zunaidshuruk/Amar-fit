@@ -322,7 +322,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 // MAIN TABS
                 composable(TabScreen.Today.route) { TodayScreen(viewModel, navController) }
                 composable(TabScreen.Fitness.route) { FitnessScreen(viewModel) }
-                composable(TabScreen.Nutrition.route) { NutritionScreen(navController) }
+                composable(TabScreen.Nutrition.route) { NutritionScreen(viewModel, navController) }
                 composable(TabScreen.Sleep.route) { SleepScreen(viewModel, navController) }
                 composable(TabScreen.Health.route) { HealthScreen(viewModel, navController) }
                 
