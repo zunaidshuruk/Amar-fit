@@ -1,5 +1,4 @@
 import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
-
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
@@ -8,21 +7,17 @@ plugins {
   alias(libs.plugins.secrets)
   alias(libs.plugins.google.services)
 }
-
 android {
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
-
   defaultConfig {
     applicationId = "Amar.Fit"
     minSdk = 26
     targetSdk = 36
     versionCode = 1
     versionName = "1.0"
-
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
-
   signingConfigs {
     create("release") {
       val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
@@ -31,23 +26,13 @@ android {
       keyAlias = "upload"
       keyPassword = System.getenv("KEY_PASSWORD")
     }
-    create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
-    }
   }
-
   buildTypes {
     release {
       isCrunchPngs = false
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
-    }
-    debug {
-      signingConfig = signingConfigs.getByName("debugConfig")
     }
   }
   compileOptions {
@@ -64,7 +49,6 @@ android {
     includeInBundle = true
   }
 }
-
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
 // to match the convention used in Web projects.
 secrets {
@@ -72,9 +56,7 @@ secrets {
   defaultPropertiesFileName = ".env.example"
   ignoreList.add("FIREBASE_APPCHECK_DEBUG_TOKEN")
 }
-
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
-
 // Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.
 dependencies {
@@ -108,7 +90,6 @@ dependencies {
   implementation(libs.firebase.ai)
   // Uncomment to use Firestore:
   implementation(libs.firebase.firestore)
-
   // Uncomment ALL FOUR of the following dependencies together to use Firebase Auth and Google
   // Sign-In via Credential Manager:
   implementation(libs.firebase.auth)
