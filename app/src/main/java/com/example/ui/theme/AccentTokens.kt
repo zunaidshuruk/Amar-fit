@@ -61,4 +61,44 @@ object AccentTokens {
             AccentColors(bg = Emerald50, onBg = Emerald700)
         }
     }
+
+    fun glucoseAccent(isDark: Boolean): AccentColors {
+        return if (isDark) {
+            AccentColors(bg = Color(0xFF1E1B4B), onBg = Indigo500)
+        } else {
+            AccentColors(bg = Indigo50, onBg = Indigo700)
+        }
+    }
+
+    fun weightAccent(isDark: Boolean): AccentColors {
+        return if (isDark) {
+            AccentColors(bg = Color(0xFF7C2D12), onBg = Color(0xFFFDBA74))
+        } else {
+            AccentColors(bg = Orange50, onBg = Orange700)
+        }
+    }
+
+    fun bmiAccent(isDark: Boolean): AccentColors {
+        return if (isDark) {
+            AccentColors(bg = Color(0xFF064E3B), onBg = Color(0xFF6EE7B7))
+        } else {
+            AccentColors(bg = Emerald50, onBg = Emerald700)
+        }
+    }
+
+    fun heartRateAccent(isDark: Boolean): AccentColors {
+        return if (isDark) {
+            AccentColors(bg = Red900, onBg = Color(0xFFFCA5A5))
+        } else {
+            AccentColors(bg = Red50, onBg = Red700)
+        }
+    }
+
+    fun bloodPressureAccent(isDark: Boolean): AccentColors {
+        return if (isDark) {
+            AccentColors(bg = Blue900, onBg = Color(0xFF93C5FD))
+        } else {
+            AccentColors(bg = BlueBg, onBg = Blue700)
+        }
+    }
 }
