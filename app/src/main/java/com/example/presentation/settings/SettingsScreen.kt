@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawing
@@ -17,9 +18,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -52,6 +53,7 @@ import android.widget.Toast
 @Composable
 fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}, onLogout: () -> Unit = {}) {
     val profile by viewModel.userProfile.collectAsState()
+    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
 
     var name by remember { mutableStateOf("") }
     var age by remember { mutableStateOf("") }
@@ -119,7 +121,7 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState()).imePadding()
@@ -129,19 +131,20 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp, top = 24.dp)
         ) {
             IconButton(onClick = onNavigateBack) {
-                Icon(androidx.compose.material.icons.Icons.Default.ArrowBack, contentDescription = "Back", tint = Emerald900)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
                 text = "Profile & Settings",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = Emerald900
+                color = MaterialTheme.colorScheme.onBackground
             )
         }
 
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(20.dp),
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -156,13 +159,13 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
                         modifier = Modifier
                             .size(100.dp)
                             .clip(CircleShape)
-                            .background(Slate100)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                             .border(2.dp, Emerald500, CircleShape)
                             .clickable { launcher.launch("image/*") },
                         contentAlignment = Alignment.Center
                     ) {
                         if (profilePictureUri.isNullOrEmpty()) {
-                            Icon(Icons.Default.CameraAlt, contentDescription = "Select Profile Picture", tint = Slate500, modifier = Modifier.size(40.dp))
+                            Icon(Icons.Default.CameraAlt, contentDescription = "Select Profile Picture", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(40.dp))
                         } else {
                             var decodedBitmap: androidx.compose.ui.graphics.ImageBitmap? = null
                             if (!profilePictureUri!!.startsWith("http") && !profilePictureUri!!.startsWith("content://")) {
@@ -323,13 +326,14 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
             text = "App Settings",
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 12.dp)
         )
 
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(20.dp),
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
@@ -337,52 +341,52 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Dark Mode", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Text("Dark Mode", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                     Switch(
                         checked = isDarkMode,
                         onCheckedChange = { isDarkMode = it },
                         colors = SwitchDefaults.colors(checkedThumbColor = Emerald600, checkedTrackColor = Emerald200)
                     )
                 }
-                Divider(color = Slate100)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Push Notifications", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Text("Push Notifications", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                     Switch(
                         checked = notificationsEnabled,
                         onCheckedChange = { notificationsEnabled = it },
                         colors = SwitchDefaults.colors(checkedThumbColor = Emerald600, checkedTrackColor = Emerald200)
                     )
                 }
-                Divider(color = Slate100)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Daily Reminders", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Text("Daily Reminders", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                     Switch(
                         checked = remindersEnabled,
                         onCheckedChange = { remindersEnabled = it },
                         colors = SwitchDefaults.colors(checkedThumbColor = Emerald600, checkedTrackColor = Emerald200)
                     )
                 }
-                Divider(color = Slate100)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp).clickable { expandedLanguage = true },
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Language", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Text("Language", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(selectedLanguage, color = Slate500)
-                        Icon(Icons.Default.ArrowDropDown, contentDescription = "Select Language", tint = Slate500)
+                        Text(selectedLanguage, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = "Select Language", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     DropdownMenu(
                         expanded = expandedLanguage,
@@ -403,15 +407,15 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
         }
 
         
-                Divider(color = Slate100)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("Health Connect", fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                        Text("Sync steps, sleep & vitals", fontSize = 12.sp, color = Slate500)
+                        Text("Health Connect", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
+                        Text("Sync steps, sleep & vitals", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Button(
                         onClick = {
