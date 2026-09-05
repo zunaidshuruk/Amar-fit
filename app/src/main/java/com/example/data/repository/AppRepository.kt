@@ -19,6 +19,10 @@ class AppRepository(
     private val savedDietChartDao: com.example.data.local.SavedDietChartDao
 ) {
 
+    suspend fun deleteAccount(): Boolean {
+        return FirebaseManager.deleteAccount()
+    }
+
     suspend fun syncDataOnLogin() {
         FirebaseManager.pullDataOnLogin(userDao, metricsDao)
     }

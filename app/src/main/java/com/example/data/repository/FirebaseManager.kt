@@ -11,6 +11,32 @@ import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 
 object FirebaseManager {
+    suspend fun deleteAccount(): Boolean {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            return try {
+                val uid = user.uid
+                val metricsSnap = db.collection("users").document(uid).collection("health_metrics").get().await()
+                for (doc in metricsSnap.documents) {
+                    db.collection("users").document(uid).collection("health_metrics").document(doc.id).delete().await()
+                }
+                val dietLogsSnap = db.collection("users").document(uid).collection("diet_logs").get().await()
+                for (doc in dietLogsSnap.documents) {
+                    db.collection("users").document(uid).collection("diet_logs").document(doc.id).delete().await()
+                }
+                db.collection("users").document(uid).delete().await()
+                user.delete().await()
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
+        return false
+    }
+
     fun syncMetric(metric: DailyMetric) {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser

@@ -23,6 +23,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.launch
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -71,7 +72,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
     enableEdgeToEdge()
     setContent {
-      MyApplicationTheme {
+      val userProfile by viewModel.userProfile.collectAsState()
+      MyApplicationTheme(darkTheme = userProfile?.isDarkMode ?: androidx.compose.foundation.isSystemInDarkTheme()) {
         val permissionState = rememberMultiplePermissionsState(
             permissions = listOf(
                 android.Manifest.permission.POST_NOTIFICATIONS,
@@ -325,10 +327,26 @@ fun BentoDashboard(viewModel: ShasthoViewModel, navController: NavHostController
         var isHealthConnectAvailable by remember { mutableStateOf(androidx.health.connect.client.HealthConnectClient.getSdkStatus(context) == androidx.health.connect.client.HealthConnectClient.SDK_AVAILABLE) }
         
         if (isHealthConnectAvailable) {
+          val coroutineScope = rememberCoroutineScope()
           IconButton(
             onClick = {
-              android.widget.Toast.makeText(context, "Syncing with Health Connect...", android.widget.Toast.LENGTH_SHORT).show()
-              viewModel.syncWithHealthConnect(context)
+              val healthConnectClient = androidx.health.connect.client.HealthConnectClient.getOrCreate(context)
+              val permissionsToRequest = setOf(
+                androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.StepsRecord::class),
+                androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.SleepSessionRecord::class),
+                androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.BloodPressureRecord::class),
+                androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.BloodGlucoseRecord::class),
+                androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.HeartRateRecord::class)
+              )
+              coroutineScope.launch {
+                  val granted = healthConnectClient.permissionController.getGrantedPermissions()
+                  if (granted.containsAll(permissionsToRequest)) {
+                      android.widget.Toast.makeText(context, "Syncing with Health Connect...", android.widget.Toast.LENGTH_SHORT).show()
+                      viewModel.syncWithHealthConnect(context)
+                  } else {
+                      android.widget.Toast.makeText(context, "Please connect Health Connect in Profile & Settings first", android.widget.Toast.LENGTH_LONG).show()
+                  }
+              }
             },
             modifier = Modifier
               .size(44.dp)

@@ -46,6 +46,32 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun deleteAccount(onComplete: (Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val success = repository.deleteAccount()
+            if (success) {
+                database.clearAllTables()
+                _weeklyInsights.value = null
+                _chatHistory.value = listOf(
+                    ChatMessage("Hi! I'm Amar-Fit AI. How can I help you?", false)
+                )
+                _scanResult.value = null
+                _coachAdvice.value = null
+                _workoutPlan.value = null
+                _dietChart.value = null
+                _shoppingList.value = null
+                _premiumRecipe.value = null
+                withContext(Dispatchers.Main) {
+                    onComplete(true)
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    onComplete(false)
+                }
+            }
+        }
+    }
+
     fun logout(onComplete: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
         viewModelScope.launch(Dispatchers.IO) {

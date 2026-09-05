@@ -43,6 +43,7 @@ import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.PermissionController
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import android.widget.Toast
 
 
@@ -54,8 +55,13 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
     var age by remember { mutableStateOf("") }
     var weight by remember { mutableStateOf("") }
     var height by remember { mutableStateOf("") }
+
     var calorieLimit by remember { mutableStateOf("") }
     var showSavedMessage by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
 
     var isDarkMode by remember { mutableStateOf(false) }
     var notificationsEnabled by remember { mutableStateOf(true) }
@@ -210,28 +216,48 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
                 Button(
                     onClick = {
                         profile?.let {
-                            val updated = it.copy(
-                                name = name,
-                                age = age.toIntOrNull() ?: it.age,
-                                weightKg = weight.toFloatOrNull() ?: it.weightKg,
-                                heightCm = height.toFloatOrNull() ?: it.heightCm,
-                                dailyCalorieLimit = calorieLimit.toIntOrNull() ?: it.dailyCalorieLimit,
-                                profilePictureUri = profilePictureUri,
-                                isDarkMode = isDarkMode,
-                                notificationsEnabled = notificationsEnabled,
-                                remindersEnabled = remindersEnabled,
-                                selectedLanguage = selectedLanguage
-                            )
                             coroutineScope.launch {
+                                isSaving = true
+                                var finalPhotoUrl = profilePictureUri
+                                val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                                if (currentUser != null && finalPhotoUrl != null && finalPhotoUrl.startsWith("content://")) {
+                                    try {
+                                        val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference.child("users/${currentUser.uid}/profile.jpg")
+                                        val uploadTask = storageRef.putFile(android.net.Uri.parse(finalPhotoUrl)).await()
+                                        val downloadUrl = storageRef.downloadUrl.await()
+                                        finalPhotoUrl = downloadUrl.toString()
+                                        profilePictureUri = finalPhotoUrl
+                                    } catch(e: Exception) {
+                                        e.printStackTrace()
+                                    }
+                                }
+                                val updated = it.copy(
+                                    name = name,
+                                    age = age.toIntOrNull() ?: it.age,
+                                    weightKg = weight.toFloatOrNull() ?: it.weightKg,
+                                    heightCm = height.toFloatOrNull() ?: it.heightCm,
+                                    dailyCalorieLimit = calorieLimit.toIntOrNull() ?: it.dailyCalorieLimit,
+                                    profilePictureUri = finalPhotoUrl,
+                                    isDarkMode = isDarkMode,
+                                    notificationsEnabled = notificationsEnabled,
+                                    remindersEnabled = remindersEnabled,
+                                    selectedLanguage = selectedLanguage
+                                )
                                 viewModel.saveProfile(updated)
                                 showSavedMessage = true
+                                isSaving = false
                             }
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Emerald600)
+                    colors = ButtonDefaults.buttonColors(containerColor = Emerald600),
+                    enabled = !isSaving
                 ) {
-                    Text("Save Profile")
+                    if (isSaving) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text("Save Profile")
+                    }
                 }
 
                 if (showSavedMessage) {
@@ -350,6 +376,65 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
                     }
                 }
 
+        Spacer(modifier = Modifier.height(32.dp))
+        Button(
+            onClick = { showLogoutDialog = true },
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Slate500)
+        ) {
+            Text("Log Out")
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = { showDeleteDialog = true },
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+        ) {
+            Text("Delete Account", color = Color.White)
+        }
         Spacer(modifier = Modifier.height(100.dp))
+    }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Log Out") },
+            text = { Text("Are you sure you want to log out?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLogoutDialog = false
+                    viewModel.logout { onLogout() }
+                }) {
+                    Text("Log Out")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Account") },
+            text = { Text("This will permanently delete your account and all data. Are you sure?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    viewModel.deleteAccount { success ->
+                        if (success) {
+                            onLogout()
+                        } else {
+                            Toast.makeText(context, "Please log out, log back in, and try deleting again immediately.", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }) {
+                    Text("Delete", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+            }
+        )
     }
 }
