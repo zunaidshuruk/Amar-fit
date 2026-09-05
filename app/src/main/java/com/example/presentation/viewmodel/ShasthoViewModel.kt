@@ -92,7 +92,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private val repository = AppRepository(database.userDao(), database.metricsDao(), database.savedDietChartDao())
+    private val repository = AppRepository(database.userDao(), database.metricsDao(), database.savedDietChartDao(), database.savedWorkoutDao())
 
     val userProfile = repository.userProfile.stateIn(
         scope = viewModelScope,
@@ -535,6 +535,9 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     val savedDietCharts: StateFlow<List<com.example.data.local.SavedDietChart>> = repository.getAllSavedCharts()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+        
+    val savedWorkouts: kotlinx.coroutines.flow.StateFlow<List<com.example.data.local.SavedWorkout>> = repository.getAllSavedWorkouts()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun saveDietChart(name: String, content: String, shoppingList: String) {
         viewModelScope.launch {
@@ -610,6 +613,21 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val response = repository.generatePremiumRecipe(query, userProfile.value)
             _premiumRecipe.value = response
             _isLoadingRecipe.value = false
+        }
+    }
+    fun saveWorkout(title: String, content: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val workout = com.example.data.local.SavedWorkout(
+                title = title,
+                content = content
+            )
+            repository.saveWorkout(workout)
+        }
+    }
+
+    fun deleteWorkout(workout: com.example.data.local.SavedWorkout) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteWorkout(workout)
         }
     }
 }

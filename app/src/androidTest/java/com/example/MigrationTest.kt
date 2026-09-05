@@ -12,7 +12,6 @@ import java.io.IOException
 
 @RunWith(AndroidJUnit4::class)
 class MigrationTest {
-
     private val TEST_DB = "migration-test"
 
     @get:Rule
@@ -26,10 +25,9 @@ class MigrationTest {
     @Throws(IOException::class)
     fun migrate12To13() {
         var db = helper.createDatabase(TEST_DB, 12)
-
         // Insert some data in version 12
         db.execSQL("INSERT INTO user_profile (id, name, age, dateOfBirth, gender, heightCm, weightKg, dietaryRestrictions, healthGoals, dailyCalorieLimit, dailyWaterLimitLiters, currentStreak, points, badges, lastActiveDate, isDarkMode, notificationsEnabled, remindersEnabled, selectedLanguage) VALUES (1, 'Test User', 25, '2000-01-01', 'Male', 180.0, 75.0, 'None', 'Fit', 2000, 2.0, 0, 0, '', '2023-01-01', 0, 1, 1, 'English')")
-
+        
         // Prepare for the next version.
         db.close()
 
@@ -46,6 +44,44 @@ class MigrationTest {
         assert(cursor.getInt(onboardingCompletedIndex) == 0)
         assert(cursor.getString(nameIndex) == "Test User")
         
+        cursor.close()
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun migrate13To14() {
+        var db = helper.createDatabase(TEST_DB, 13)
+        // Insert some data in version 13
+        db.execSQL("INSERT INTO saved_diet_charts (id, name, chartContent, shoppingList, createdAt) VALUES (1, 'Test Chart', 'Content', 'List', 123456789)")
+        db.close()
+        
+        db = helper.runMigrationsAndValidate(TEST_DB, 14, true, AppDatabase.MIGRATION_13_14)
+        
+        val cursor = db.query("SELECT cloudId, name FROM saved_diet_charts WHERE id = 1")
+        assert(cursor.moveToFirst())
+        
+        val cloudIdIndex = cursor.getColumnIndex("cloudId")
+        val nameIndex = cursor.getColumnIndex("name")
+        
+        assert(cursor.getString(cloudIdIndex) == "")
+        assert(cursor.getString(nameIndex) == "Test Chart")
+        
+        cursor.close()
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun migrate14To15() {
+        var db = helper.createDatabase(TEST_DB, 14)
+        db.close()
+        
+        db = helper.runMigrationsAndValidate(TEST_DB, 15, true, AppDatabase.MIGRATION_14_15)
+        
+        // Check if the table exists by inserting into it
+        db.execSQL("INSERT INTO saved_workouts (cloudId, title, content, createdAt) VALUES ('123-abc', 'Test Workout', 'Workout Content', 123456789)")
+        val cursor = db.query("SELECT title FROM saved_workouts WHERE cloudId = '123-abc'")
+        assert(cursor.moveToFirst())
+        assert(cursor.getString(0) == "Test Workout")
         cursor.close()
     }
 }

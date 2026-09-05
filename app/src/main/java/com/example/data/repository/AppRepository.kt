@@ -16,7 +16,8 @@ import com.example.presentation.viewmodel.ChatMessage
 class AppRepository(
     private val userDao: UserDao,
     private val metricsDao: MetricsDao,
-    private val savedDietChartDao: com.example.data.local.SavedDietChartDao
+    private val savedDietChartDao: com.example.data.local.SavedDietChartDao,
+    private val savedWorkoutDao: com.example.data.local.SavedWorkoutDao
 ) {
 
     suspend fun deleteAccount(): Boolean {
@@ -24,7 +25,7 @@ class AppRepository(
     }
 
     suspend fun syncDataOnLogin() {
-        FirebaseManager.pullDataOnLogin(userDao, metricsDao)
+        FirebaseManager.pullDataOnLogin(userDao, metricsDao, savedDietChartDao, savedWorkoutDao)
     }
 
     private suspend fun executeGeminiCallWithBackoff(request: GenerateContentRequest, maxRetries: Int = 3): GenerateContentResponse {
@@ -570,6 +571,25 @@ class AppRepository(
 
 
     fun getAllSavedCharts() = savedDietChartDao.getAllSavedCharts()
-    suspend fun saveDietChart(chart: com.example.data.local.SavedDietChart) = savedDietChartDao.insertChart(chart)
-    suspend fun deleteDietChart(chart: com.example.data.local.SavedDietChart) = savedDietChartDao.deleteChart(chart)
+    suspend fun saveDietChart(chart: com.example.data.local.SavedDietChart) {
+        savedDietChartDao.insertChart(chart)
+        FirebaseManager.syncSavedDietChart(chart)
+    }
+
+    suspend fun deleteDietChart(chart: com.example.data.local.SavedDietChart) {
+        savedDietChartDao.deleteChart(chart)
+        FirebaseManager.deleteSavedDietChart(chart)
+    }
+    
+    fun getAllSavedWorkouts() = savedWorkoutDao.getAllSavedWorkouts()
+    
+    suspend fun saveWorkout(workout: com.example.data.local.SavedWorkout) {
+        savedWorkoutDao.insertWorkout(workout)
+        FirebaseManager.syncSavedWorkout(workout)
+    }
+    
+    suspend fun deleteWorkout(workout: com.example.data.local.SavedWorkout) {
+        savedWorkoutDao.deleteWorkout(workout)
+        FirebaseManager.deleteSavedWorkout(workout)
+    }
 }

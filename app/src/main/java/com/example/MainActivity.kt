@@ -11,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -203,12 +205,29 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                                   contentAlignment = Alignment.Center
                               ) {
                                   if (!userProfile?.profilePictureUri.isNullOrEmpty()) {
-                                      AsyncImage(
-                                          model = userProfile?.profilePictureUri,
-                                          contentDescription = "Profile Picture",
-                                          modifier = Modifier.fillMaxSize(),
-                                          contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                                      )
+                                      var decodedBitmap: androidx.compose.ui.graphics.ImageBitmap? = null
+                                      if (!userProfile!!.profilePictureUri!!.startsWith("http") && !userProfile!!.profilePictureUri!!.startsWith("content://")) {
+                                          try {
+                                              val decodedBytes = android.util.Base64.decode(userProfile!!.profilePictureUri, android.util.Base64.DEFAULT)
+                                              decodedBitmap = android.graphics.BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)?.let { it.asImageBitmap() }
+                                          } catch (e: Exception) { }
+                                      }
+                                      
+                                      if (decodedBitmap != null) {
+                                          androidx.compose.foundation.Image(
+                                              bitmap = decodedBitmap,
+                                              contentDescription = "Profile Picture",
+                                              modifier = Modifier.fillMaxSize(),
+                                              contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                          )
+                                      } else {
+                                          AsyncImage(
+                                              model = userProfile?.profilePictureUri,
+                                              contentDescription = "Profile Picture",
+                                              modifier = Modifier.fillMaxSize(),
+                                              contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                          )
+                                      }
                                   } else {
                                       val initial = userProfile?.name?.firstOrNull()?.toString() ?: "G"
                                       Text(

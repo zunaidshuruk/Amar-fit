@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -25,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -162,12 +164,29 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
                         if (profilePictureUri.isNullOrEmpty()) {
                             Icon(Icons.Default.CameraAlt, contentDescription = "Select Profile Picture", tint = Slate500, modifier = Modifier.size(40.dp))
                         } else {
-                            AsyncImage(
-                                model = profilePictureUri,
-                                contentDescription = "Profile Picture",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
+                            var decodedBitmap: androidx.compose.ui.graphics.ImageBitmap? = null
+                            if (!profilePictureUri!!.startsWith("http") && !profilePictureUri!!.startsWith("content://")) {
+                                try {
+                                    val decodedBytes = android.util.Base64.decode(profilePictureUri, android.util.Base64.DEFAULT)
+                                    decodedBitmap = android.graphics.BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)?.let { it.asImageBitmap() }
+                                } catch (e: Exception) { }
+                            }
+                            
+                            if (decodedBitmap != null) {
+                                androidx.compose.foundation.Image(
+                                    bitmap = decodedBitmap,
+                                    contentDescription = "Profile Picture",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                AsyncImage(
+                                    model = profilePictureUri,
+                                    contentDescription = "Profile Picture",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
                         }
                     }
                 }
@@ -219,17 +238,48 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
                             coroutineScope.launch {
                                 isSaving = true
                                 var finalPhotoUrl = profilePictureUri
-                                val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
-                                if (currentUser != null && finalPhotoUrl != null && finalPhotoUrl.startsWith("content://")) {
+                                if (finalPhotoUrl != null && finalPhotoUrl.startsWith("content://")) {
                                     try {
-                                        val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference.child("users/${currentUser.uid}/profile.jpg")
-                                        val uploadTask = storageRef.putFile(android.net.Uri.parse(finalPhotoUrl)).await()
-                                        val downloadUrl = storageRef.downloadUrl.await()
-                                        finalPhotoUrl = downloadUrl.toString()
-                                        profilePictureUri = finalPhotoUrl
+                                        val uri = android.net.Uri.parse(finalPhotoUrl)
+                                        val inputStream = context.contentResolver.openInputStream(uri)
+                                        val originalBitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+                                        inputStream?.close()
+                                        
+                                        if (originalBitmap != null) {
+                                            val maxSize = 300
+                                            val ratio = maxSize.toFloat() / Math.max(originalBitmap.width, originalBitmap.height)
+                                            val resizedBitmap = if (ratio < 1) {
+                                                android.graphics.Bitmap.createScaledBitmap(originalBitmap, (originalBitmap.width * ratio).toInt(), (originalBitmap.height * ratio).toInt(), true)
+                                            } else {
+                                                originalBitmap
+                                            }
+                                            
+                                            var quality = 70
+                                            var base64String = ""
+                                            val out = java.io.ByteArrayOutputStream()
+                                            
+                                            do {
+                                                out.reset()
+                                                resizedBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, quality, out)
+                                                val bytes = out.toByteArray()
+                                                base64String = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                                                quality -= 10
+                                            } while (bytes.size > 300 * 1024 && quality > 10)
+                                            
+                                            if (base64String.length * 2 > 800 * 1024) {
+                                                throw Exception("Image is still too large after compression")
+                                            }
+                                            
+                                            finalPhotoUrl = base64String
+                                            profilePictureUri = finalPhotoUrl
+                                        } else {
+                                            throw Exception("Could not decode image")
+                                        }
                                     } catch(e: Exception) {
                                         e.printStackTrace()
+                                        Toast.makeText(context, "Failed to compress image: ${e.message}", Toast.LENGTH_LONG).show()
                                         finalPhotoUrl = it.profilePictureUri
+                                        profilePictureUri = finalPhotoUrl
                                     }
                                 }
                                 val updated = it.copy(

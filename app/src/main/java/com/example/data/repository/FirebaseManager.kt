@@ -1,10 +1,6 @@
 package com.example.data.repository
 
-import com.example.data.local.DailyMetric
-import com.example.data.local.UserProfile
-import com.example.data.local.FoodLog
-import com.example.data.local.MetricsDao
-import com.example.data.local.UserDao
+import com.example.data.local.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -26,6 +22,17 @@ object FirebaseManager {
                 for (doc in dietLogsSnap.documents) {
                     db.collection("users").document(uid).collection("diet_logs").document(doc.id).delete().await()
                 }
+                
+                val dietChartsSnap = db.collection("users").document(uid).collection("saved_diet_charts").get().await()
+                for (doc in dietChartsSnap.documents) {
+                    db.collection("users").document(uid).collection("saved_diet_charts").document(doc.id).delete().await()
+                }
+
+                val workoutsSnap = db.collection("users").document(uid).collection("saved_workouts").get().await()
+                for (doc in workoutsSnap.documents) {
+                    db.collection("users").document(uid).collection("saved_workouts").document(doc.id).delete().await()
+                }
+
                 db.collection("users").document(uid).delete().await()
                 user.delete().await()
                 true
@@ -88,7 +95,72 @@ object FirebaseManager {
         }
     }
 
-    suspend fun pullDataOnLogin(userDao: UserDao, metricsDao: MetricsDao) {
+    suspend fun syncSavedDietChart(chart: SavedDietChart) {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            try {
+                db.collection("users").document(user.uid)
+                    .collection("saved_diet_charts").document(chart.cloudId)
+                    .set(chart, SetOptions.merge()).await()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    suspend fun deleteSavedDietChart(chart: SavedDietChart) {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            try {
+                db.collection("users").document(user.uid)
+                    .collection("saved_diet_charts").document(chart.cloudId)
+                    .delete().await()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    suspend fun syncSavedWorkout(workout: SavedWorkout) {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            try {
+                db.collection("users").document(user.uid)
+                    .collection("saved_workouts").document(workout.cloudId)
+                    .set(workout, SetOptions.merge()).await()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    suspend fun deleteSavedWorkout(workout: SavedWorkout) {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            try {
+                db.collection("users").document(user.uid)
+                    .collection("saved_workouts").document(workout.cloudId)
+                    .delete().await()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    suspend fun pullDataOnLogin(
+        userDao: UserDao, 
+        metricsDao: MetricsDao, 
+        savedDietChartDao: SavedDietChartDao? = null,
+        savedWorkoutDao: SavedWorkoutDao? = null
+    ) {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser
         if (user != null) {
@@ -119,6 +191,29 @@ object FirebaseManager {
                         metricsDao.insertFoodLog(log)
                     }
                 }
+
+                // Pull Saved Diet Charts
+                if (savedDietChartDao != null) {
+                    val chartsSnap = db.collection("users").document(user.uid).collection("saved_diet_charts").get().await()
+                    for (doc in chartsSnap.documents) {
+                        val chart = doc.toObject(SavedDietChart::class.java)
+                        if (chart != null) {
+                            savedDietChartDao.insertChart(chart)
+                        }
+                    }
+                }
+
+                // Pull Saved Workouts
+                if (savedWorkoutDao != null) {
+                    val workoutsSnap = db.collection("users").document(user.uid).collection("saved_workouts").get().await()
+                    for (doc in workoutsSnap.documents) {
+                        val workout = doc.toObject(SavedWorkout::class.java)
+                        if (workout != null) {
+                            savedWorkoutDao.insertWorkout(workout)
+                        }
+                    }
+                }
+
             } catch (e: Exception) {
                 e.printStackTrace()
             }
