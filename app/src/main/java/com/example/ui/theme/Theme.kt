@@ -14,6 +14,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme =  darkColorScheme(
@@ -31,17 +33,22 @@ private val DarkColorScheme =  darkColorScheme(
 
 private val LightColorScheme =
   lightColorScheme(
-    primary = Emerald600,
-    secondary = Emerald700,
+    primary = Primary,
+    secondary = Secondary,
     tertiary = Orange500,
     background = Background,
-    surface = Color.White,
+    surface = Surface,
     onPrimary = Color.White,
-    onSecondary = Color.White,
+    onSecondary = TextPrimary,
     onTertiary = Color.White,
     onBackground = TextPrimary,
     onSurface = TextPrimary
   )
+
+val DefaultCardShape = RoundedCornerShape(20.dp)
+val DefaultCardElevation = 2.dp
+val DefaultButtonShape = RoundedCornerShape(16.dp)
+val DefaultButtonHeight = 56.dp
 
 @Composable
 fun MyApplicationTheme(

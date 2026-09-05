@@ -3,7 +3,10 @@ package com.example.ui.theme
 import androidx.compose.ui.graphics.Color
 
 val Background = Color(0xFFF8F9FA)
-val TextPrimary = Color.Black
+val Surface = Color(0xFFFFFFFF)
+val Primary = Color(0xFF1B4528)
+val Secondary = Color(0xFF2ECC71)
+val TextPrimary = Color(0xFF1E1E1E)
 
 val Emerald900 = Color(0xFF064E3B)
 val Emerald800 = Color(0xFF065F46)
