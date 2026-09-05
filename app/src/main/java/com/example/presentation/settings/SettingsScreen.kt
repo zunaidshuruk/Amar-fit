@@ -222,8 +222,10 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
                                 remindersEnabled = remindersEnabled,
                                 selectedLanguage = selectedLanguage
                             )
-                            viewModel.saveProfile(updated)
-                            showSavedMessage = true
+                            coroutineScope.launch {
+                                viewModel.saveProfile(updated)
+                                showSavedMessage = true
+                            }
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),

@@ -1,4 +1,4 @@
-package com.example.presentation.onboarding
+content = """package com.example.presentation.onboarding
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -377,3 +377,6 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
         Spacer(modifier = Modifier.height(32.dp))
     }
 }
+"""
+with open('app/src/main/java/com/example/presentation/onboarding/OnboardingScreen.kt', 'w') as f:
+    f.write(content)

@@ -176,13 +176,17 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun saveProfile(profile: UserProfile) {
-        viewModelScope.launch {
+    suspend fun saveProfile(profile: UserProfile): Boolean {
+        return try {
             repository.saveUserProfile(profile)
             // Initialize today's metrics if not exist
             if (todayMetrics.value == null) {
                 repository.saveMetrics(DailyMetric(date = todayDateString))
             }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
     
