@@ -72,7 +72,11 @@ class AppRepository(
         return apiKeys
     }
 
-    private suspend fun executeGeminiCallWithBackoff(request: GenerateContentRequest, maxRetries: Int = 3): GenerateContentResponse {
+    private suspend fun executeGeminiCallWithBackoff(
+        request: GenerateContentRequest,
+        maxRetries: Int = 3,
+        model: String = "gemini-3.5-flash"
+    ): GenerateContentResponse {
         val apiKeys = resolveApiKeys()
 
         if (apiKeys.isEmpty()) {
@@ -83,7 +87,7 @@ class AppRepository(
         for (attempt in 0..maxRetries) {
             for (apiKey in apiKeys) {
                 try {
-                    return RetrofitClient.service.generateContent(apiKey, request)
+                    return RetrofitClient.service.generateContent(model, apiKey, request)
                 } catch (e: HttpException) {
                     val code = e.code()
                     if (code == 429 || code == 403 || code == 503) {
@@ -447,7 +451,7 @@ class AppRepository(
         )
         
         try {
-            val response = executeGeminiCallWithBackoff(request)
+            val response = executeGeminiCallWithBackoff(request, model = "gemini-3.5-flash-lite")
             response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: """{"name": "Error", "category": "Error", "calories": 0, "description": "Could not analyze the image."}"""
         } catch (e: HttpException) {
             val msg = if (e.code() == 429) "AI quota exceeded. Retries exhausted (429)." else "Error: ${e.message}"

@@ -2,6 +2,7 @@ package com.example.data.remote
 
 import com.squareup.moshi.JsonClass
 import retrofit2.http.Body
+import retrofit2.http.Path
 import retrofit2.http.POST
 import retrofit2.http.Query
 
@@ -40,8 +41,9 @@ data class Candidate(
 )
 
 interface GeminiApiService {
-    @POST("v1beta/models/gemini-3.5-flash:generateContent")
+    @POST("v1beta/models/{model}:generateContent")
     suspend fun generateContent(
+        @Path("model") model: String,
         @Query("key") apiKey: String,
         @Body request: GenerateContentRequest
     ): GenerateContentResponse
