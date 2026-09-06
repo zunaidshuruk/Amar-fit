@@ -521,6 +521,37 @@ class AppRepository(
         }
     }
     
+    fun generateWorkoutStream(profile: UserProfile?): kotlinx.coroutines.flow.Flow<String> {
+        val contextPrompt = if (profile != null) {
+            "User Context: ${profile.age}yo ${profile.gender}, Weight: ${profile.weightKg}kg, Height: ${profile.heightCm}cm, Goal: ${profile.healthGoals}. "
+        } else ""
+        
+        val systemInstruction = """
+            You are 'Amar-Fit AI', an expert fitness coach. 
+            Generate a personalized daily workout routine based on the user's profile.
+            
+            FORMATTING RULES:
+            - Give the workout a catchy title.
+            - Provide a brief warmup, main workout, and cooldown.
+            - Use bullet points (•) and empty lines between points for spacing.
+            - For EACH exercise, provide a YouTube search link in this exact format:
+              https://www.youtube.com/results?search_query=[Exercise+Name+Here]
+              
+            $contextPrompt
+        """.trimIndent()
+        
+        val request = GenerateContentRequest(
+            contents = listOf(
+                Content(
+                    parts = listOf(Part(text = "Please generate my personalized workout for today."))
+                )
+            ),
+            systemInstruction = Content(parts = listOf(Part(text = systemInstruction)))
+        )
+        
+        return streamGeminiCall(request)
+    }
+
     suspend fun generateWorkout(profile: UserProfile?): String = withContext(Dispatchers.IO) {
         // API Key logic is handled by executeGeminiCallWithBackoff
         
@@ -562,6 +593,34 @@ class AppRepository(
         }
     }
 
+    fun generateDietChartStream(profile: UserProfile, durationDays: Int): kotlinx.coroutines.flow.Flow<String> {
+        val bmi = profile.weightKg / ((profile.heightCm / 100f) * (profile.heightCm / 100f))
+        val contextPrompt = "User Context: ${profile.age}yo ${profile.gender}, Weight: ${profile.weightKg}kg, Height: ${profile.heightCm}cm, BMI: ${"%.1f".format(bmi)}, Goal: ${profile.healthGoals}, Restrictions: ${profile.dietaryRestrictions}."
+        
+        val systemInstruction = """
+            You are an expert AI Nutritionist. You MUST follow optimum bangladeshi style food practices and include local Bangladeshi ingredients where possible.
+            Generate a personalized $durationDays-day diet chart based on the user's profile.
+            
+            FORMATTING RULES:
+            - Provide a day-by-day breakdown (e.g., Day 1, Day 2).
+            - For each day, provide Breakfast, Lunch, Snack, and Dinner.
+            - Keep it structured and easy to read using Markdown.
+            - IMPORTANT: Include written step-by-step recipes for the meals directly in the plan.
+            
+            $contextPrompt
+        """.trimIndent()
+
+        val request = GenerateContentRequest(
+            contents = listOf(
+                Content(
+                    parts = listOf(Part(text = "Please generate my $durationDays-day personalized diet chart."))
+                )
+            ),
+            systemInstruction = Content(parts = listOf(Part(text = systemInstruction)))
+        )
+
+        return streamGeminiCall(request)
+    }
 
     suspend fun generateDietChart(profile: UserProfile, durationDays: Int): String = withContext(Dispatchers.IO) {
         val bmi = profile.weightKg / ((profile.heightCm / 100f) * (profile.heightCm / 100f))

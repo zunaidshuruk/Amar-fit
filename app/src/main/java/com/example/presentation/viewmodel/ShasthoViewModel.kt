@@ -594,9 +594,16 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     fun generateAIWorkout() {
         viewModelScope.launch {
             _isLoadingWorkout.value = true
-            _workoutPlan.value = null
-            val response = repository.generateWorkout(userProfile.value)
-            _workoutPlan.value = response
+            _workoutPlan.value = ""
+            var accumulated = ""
+            try {
+                repository.generateWorkoutStream(userProfile.value).collect { chunk ->
+                    accumulated += chunk
+                    _workoutPlan.value = accumulated
+                }
+            } catch (e: Exception) {
+                _workoutPlan.value = "Sorry, I couldn't generate a workout right now. Please try again."
+            }
             _isLoadingWorkout.value = false
         }
     }
@@ -666,8 +673,16 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             _isGeneratingDiet.value = true
             val profile = userProfile.value
             if (profile != null) {
-                val chart = repository.generateDietChart(profile, durationDays)
-                _dietChart.value = chart
+                _dietChart.value = ""
+                var accumulated = ""
+                try {
+                    repository.generateDietChartStream(profile, durationDays).collect { chunk ->
+                        accumulated += chunk
+                        _dietChart.value = accumulated
+                    }
+                } catch (e: Exception) {
+                    _dietChart.value = "The AI is currently busy or unavailable. Please try again in a minute."
+                }
             } else {
                 _dietChart.value = "Please complete your profile first."
             }

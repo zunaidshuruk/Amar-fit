@@ -137,11 +137,11 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
-                if (isLoading) {
+                if (isLoading && workoutPlan.isNullOrEmpty()) {
                     Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = Orange500)
                     }
-                } else if (workoutPlan != null) {
+                } else if (!workoutPlan.isNullOrEmpty()) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),

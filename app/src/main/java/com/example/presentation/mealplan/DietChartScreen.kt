@@ -172,7 +172,11 @@ fun GenerateNewDietView(
 
     Spacer(modifier = Modifier.height(24.dp))
 
-    if (!dietChart.isNullOrEmpty() && !isGenerating) {
+    if (isGenerating && dietChart.isNullOrEmpty()) {
+        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = Emerald600)
+        }
+    } else if (!dietChart.isNullOrEmpty()) {
         if (showShoppingList && !shoppingList.isNullOrEmpty()) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
