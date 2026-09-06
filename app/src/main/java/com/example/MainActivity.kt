@@ -334,7 +334,6 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 composable("dietplan") { DietChartScreen(viewModel = viewModel) }
                 composable("lifestyle") { LifestyleScreen() }
                 composable("mealplan") { MealPlanScreen() }
-                composable("workout") { FitnessScreen(viewModel) }
                 composable("glucoselog") { GlucoseLogScreen(viewModel = viewModel) }
                 composable("weightlog") { WeightLogScreen(viewModel = viewModel) }
                 composable("recipe") { RecipeScreen(viewModel = viewModel) }

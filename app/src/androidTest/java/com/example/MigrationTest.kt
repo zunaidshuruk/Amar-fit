@@ -134,4 +134,37 @@ class MigrationTest {
 
         cursor.close()
     }
+
+    @Test
+    @Throws(IOException::class)
+    fun migrate17To18() {
+        var db = helper.createDatabase(TEST_DB, 17)
+        // Insert some data in version 17 with empty cloudId
+        db.execSQL("INSERT INTO saved_diet_charts (id, cloudId, name, chartContent, shoppingList, createdAt) VALUES (1, '', 'Empty 1', 'Content 1', 'List 1', 123)")
+        db.execSQL("INSERT INTO saved_diet_charts (id, cloudId, name, chartContent, shoppingList, createdAt) VALUES (2, '', 'Empty 2', 'Content 2', 'List 2', 456)")
+        // Insert some data with existing cloudId
+        db.execSQL("INSERT INTO saved_diet_charts (id, cloudId, name, chartContent, shoppingList, createdAt) VALUES (3, 'existing-123', 'Existing', 'Content 3', 'List 3', 789)")
+        db.close()
+
+        db = helper.runMigrationsAndValidate(TEST_DB, 18, true, AppDatabase.MIGRATION_17_18)
+
+        val cursor1 = db.query("SELECT cloudId FROM saved_diet_charts WHERE id = 1")
+        assert(cursor1.moveToFirst())
+        val cloudId1 = cursor1.getString(0)
+        assert(cloudId1.isNotEmpty() && cloudId1 != "''")
+        cursor1.close()
+
+        val cursor2 = db.query("SELECT cloudId FROM saved_diet_charts WHERE id = 2")
+        assert(cursor2.moveToFirst())
+        val cloudId2 = cursor2.getString(0)
+        assert(cloudId2.isNotEmpty() && cloudId2 != "''")
+        assert(cloudId1 != cloudId2) // Ensure they are distinct
+        cursor2.close()
+
+        val cursor3 = db.query("SELECT cloudId FROM saved_diet_charts WHERE id = 3")
+        assert(cursor3.moveToFirst())
+        val cloudId3 = cursor3.getString(0)
+        assert(cloudId3 == "existing-123")
+        cursor3.close()
+    }
 }
