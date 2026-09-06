@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import coil.compose.AsyncImage
@@ -253,8 +254,10 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.clickable { 
                                 navController.navigate(tab.route) { 
+                                    popUpTo(navController.graph.findStartDestination().id) { 
+                                        saveState = true 
+                                    }
                                     launchSingleTop = true 
-                                    popUpTo(TabScreen.Today.route) { saveState = true }
                                     restoreState = true
                                 } 
                             }
