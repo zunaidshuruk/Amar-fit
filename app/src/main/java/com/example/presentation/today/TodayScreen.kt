@@ -33,6 +33,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val profile by viewModel.userProfile.collectAsState()
@@ -44,6 +45,10 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val caloriesAccent = AccentTokens.caloriesAccent(isDark = isDark)
     val stepsAccent = AccentTokens.stepsAccent(isDark = isDark)
     val waterAccent = AccentTokens.waterAccent(isDark = isDark)
+    val weightAccent = AccentTokens.weightAccent(isDark = isDark)
+    val glucoseAccent = AccentTokens.glucoseAccent(isDark = isDark)
+    val bloodPressureAccent = AccentTokens.bloodPressureAccent(isDark = isDark)
+    val sleepAccent = AccentTokens.sleepAccent(isDark = isDark)
 
     val metrics by viewModel.todayMetrics.collectAsState()
     val todayFoodLogs by viewModel.todayFoodLogs.collectAsState()
@@ -52,6 +57,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
     var showStepsDialog by remember { mutableStateOf(false) }
     var showStepsOptionDialog by remember { mutableStateOf(false) }
     var showWaterDialog by remember { mutableStateOf(false) }
+    var showLogBottomSheet by remember { mutableStateOf(false) }
 
     val calorieLimit = profile?.dailyCalorieLimit ?: 2000
     val totalCalories = todayFoodLogs.sumOf { it.calories }
@@ -260,6 +266,62 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                 pagerState.animateScrollToPage(pageIndex)
                             }
                         }
+                )
+            }
+        }
+
+        // Action Row (+ Log / Start)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Button(
+                onClick = { showLogBottomSheet = true },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isDark) Emerald700 else Primary,
+                    contentColor = Color.White
+                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Log",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Button(
+                onClick = { navController.navigate("fitness") },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isDark) Emerald800 else Emerald600,
+                    contentColor = Color.White
+                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Start",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }
@@ -516,6 +578,155 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 TextButton(onClick = { showStepsDialog = false }) { Text("Cancel") }
             }
         )
+    }
+
+    if (showLogBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showLogBottomSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = if (isDark) MaterialTheme.colorScheme.surface else Surface,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            dragHandle = {
+                BottomSheetDefaults.DragHandle(
+                    color = if (isDark) MaterialTheme.colorScheme.outlineVariant else Slate200
+                )
+            }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 36.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = "Log Health Activity",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                LogActionRowItem(
+                    title = "Water",
+                    subtitle = "Log hydration intake",
+                    icon = Icons.Default.LocalDrink,
+                    accent = waterAccent,
+                    isDark = isDark,
+                    onClick = {
+                        showLogBottomSheet = false
+                        showWaterDialog = true
+                    }
+                )
+
+                LogActionRowItem(
+                    title = "Weight",
+                    subtitle = "Record body weight & height",
+                    icon = Icons.Default.MonitorWeight,
+                    accent = weightAccent,
+                    isDark = isDark,
+                    onClick = {
+                        showLogBottomSheet = false
+                        navController.navigate("weightlog")
+                    }
+                )
+
+                LogActionRowItem(
+                    title = "Blood Glucose",
+                    subtitle = "Morning fasting or post-meal reading",
+                    icon = Icons.Default.Favorite,
+                    accent = glucoseAccent,
+                    isDark = isDark,
+                    onClick = {
+                        showLogBottomSheet = false
+                        navController.navigate("glucoselog")
+                    }
+                )
+
+                LogActionRowItem(
+                    title = "Blood Pressure",
+                    subtitle = "Log systolic & diastolic measurement",
+                    icon = Icons.Default.MonitorHeart,
+                    accent = bloodPressureAccent,
+                    isDark = isDark,
+                    onClick = {
+                        showLogBottomSheet = false
+                        navController.navigate("health")
+                    }
+                )
+
+                LogActionRowItem(
+                    title = "Sleep",
+                    subtitle = "Track last night's sleep hours",
+                    icon = Icons.Default.Bedtime,
+                    accent = sleepAccent,
+                    isDark = isDark,
+                    onClick = {
+                        showLogBottomSheet = false
+                        navController.navigate("sleep")
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LogActionRowItem(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: AccentColors,
+    isDark: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) else Slate100.copy(alpha = 0.7f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(accent.bg),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    tint = accent.onBg,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp,
+                    color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 12.sp,
+                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate500
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate400,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 
