@@ -238,8 +238,34 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
     }
 
     if (showBmiDialog) {
-        var weightInput by remember { mutableStateOf(profile?.weightKg?.toString() ?: "") }
-        var heightInput by remember { mutableStateOf(profile?.heightCm?.toString() ?: "") }
+        var weightInput by remember { mutableStateOf(profile?.weightKg?.takeIf { it > 0 }?.toString() ?: "70.0") }
+        var heightInput by remember { mutableStateOf(profile?.heightCm?.takeIf { it > 0 }?.toString() ?: "170.0") }
+        var showWeightDialog by remember { mutableStateOf(false) }
+        var showHeightDialog by remember { mutableStateOf(false) }
+
+        if (showWeightDialog) {
+            com.example.ui.components.HeightWeightPickerDialog(
+                mode = com.example.ui.components.PickerMode.WEIGHT,
+                initialValue = weightInput.toFloatOrNull() ?: 70f,
+                onDismiss = { showWeightDialog = false },
+                onConfirm = { kg ->
+                    weightInput = kg.toString()
+                    showWeightDialog = false
+                }
+            )
+        }
+
+        if (showHeightDialog) {
+            com.example.ui.components.HeightWeightPickerDialog(
+                mode = com.example.ui.components.PickerMode.HEIGHT,
+                initialValue = heightInput.toFloatOrNull() ?: 170f,
+                onDismiss = { showHeightDialog = false },
+                onConfirm = { cm ->
+                    heightInput = cm.toString()
+                    showHeightDialog = false
+                }
+            )
+        }
         
         val w = weightInput.toFloatOrNull() ?: 0f
         val h = heightInput.toFloatOrNull()?.div(100f) ?: 0f
@@ -250,18 +276,26 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
             title = { Text("BMI Calculator") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = weightInput,
-                        onValueChange = { weightInput = it },
-                        label = { Text("Weight (kg)") },
-                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
-                    )
-                    OutlinedTextField(
-                        value = heightInput,
-                        onValueChange = { heightInput = it },
-                        label = { Text("Height (cm)") },
-                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
-                    )
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = "${weightInput.toFloatOrNull() ?: 70f} kg",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Weight") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Box(modifier = Modifier.matchParentSize().clickable { showWeightDialog = true })
+                    }
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = "${heightInput.toFloatOrNull() ?: 170f} cm",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Height") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Box(modifier = Modifier.matchParentSize().clickable { showHeightDialog = true })
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(text = "BMI: ${String.format("%.1f", calcBmi)}", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Emerald700)
                     val status = when {

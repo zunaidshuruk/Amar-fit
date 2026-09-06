@@ -2,6 +2,7 @@ package com.example.presentation.metrics
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -34,8 +35,34 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
     val profile by viewModel.userProfile.collectAsState()
     val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
     
-    var weightInput by remember { mutableStateOf(profile?.weightKg?.takeIf { it > 0 }?.toString() ?: "") }
-    var heightInput by remember { mutableStateOf(profile?.heightCm?.takeIf { it > 0 }?.toString() ?: "") }
+    var weightInput by remember { mutableStateOf(profile?.weightKg?.takeIf { it > 0 }?.toString() ?: "70.0") }
+    var heightInput by remember { mutableStateOf(profile?.heightCm?.takeIf { it > 0 }?.toString() ?: "170.0") }
+    var showWeightDialog by remember { mutableStateOf(false) }
+    var showHeightDialog by remember { mutableStateOf(false) }
+
+    if (showWeightDialog) {
+        com.example.ui.components.HeightWeightPickerDialog(
+            mode = com.example.ui.components.PickerMode.WEIGHT,
+            initialValue = weightInput.toFloatOrNull() ?: 70f,
+            onDismiss = { showWeightDialog = false },
+            onConfirm = { kg ->
+                weightInput = kg.toString()
+                showWeightDialog = false
+            }
+        )
+    }
+
+    if (showHeightDialog) {
+        com.example.ui.components.HeightWeightPickerDialog(
+            mode = com.example.ui.components.PickerMode.HEIGHT,
+            initialValue = heightInput.toFloatOrNull() ?: 170f,
+            onDismiss = { showHeightDialog = false },
+            onConfirm = { cm ->
+                heightInput = cm.toString()
+                showHeightDialog = false
+            }
+        )
+    }
 
     val currentWeight = weightInput.toFloatOrNull() ?: 0f
     val currentHeightM = (heightInput.toFloatOrNull() ?: 0f) / 100f
@@ -86,20 +113,26 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = weightInput,
-                        onValueChange = { weightInput = it },
-                        label = { Text("Weight (kg)") },
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
-                    OutlinedTextField(
-                        value = heightInput,
-                        onValueChange = { heightInput = it },
-                        label = { Text("Height (cm)") },
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedTextField(
+                            value = "${weightInput.toFloatOrNull() ?: 70f} kg",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Weight") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Box(modifier = Modifier.matchParentSize().clickable { showWeightDialog = true })
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedTextField(
+                            value = "${heightInput.toFloatOrNull() ?: 170f} cm",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Height") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Box(modifier = Modifier.matchParentSize().clickable { showHeightDialog = true })
+                    }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(

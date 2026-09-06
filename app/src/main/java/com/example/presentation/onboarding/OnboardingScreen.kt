@@ -78,14 +78,37 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
     var expandedGender by rememberSaveable { mutableStateOf(false) }
     val genderOptions = listOf("Male", "Female", "Other")
 
-    // Height logic
-    var heightFeet by rememberSaveable { mutableStateOf("") }
-    var heightInches by rememberSaveable { mutableStateOf("") }
+    // Height & Weight Picker state
+    var heightCm by rememberSaveable { mutableStateOf(170f) }
+    var weightKg by rememberSaveable { mutableStateOf(70f) }
+    var showHeightDialog by rememberSaveable { mutableStateOf(false) }
+    var showWeightDialog by rememberSaveable { mutableStateOf(false) }
     var heightError by rememberSaveable { mutableStateOf<String?>(null) }
-
-    // Weight logic
-    var weight by rememberSaveable { mutableStateOf("") }
     var weightError by rememberSaveable { mutableStateOf<String?>(null) }
+
+    if (showHeightDialog) {
+        com.example.ui.components.HeightWeightPickerDialog(
+            mode = com.example.ui.components.PickerMode.HEIGHT,
+            initialValue = heightCm,
+            onDismiss = { showHeightDialog = false },
+            onConfirm = { cm ->
+                heightCm = cm
+                showHeightDialog = false
+            }
+        )
+    }
+
+    if (showWeightDialog) {
+        com.example.ui.components.HeightWeightPickerDialog(
+            mode = com.example.ui.components.PickerMode.WEIGHT,
+            initialValue = weightKg,
+            onDismiss = { showWeightDialog = false },
+            onConfirm = { kg ->
+                weightKg = kg
+                showWeightDialog = false
+            }
+        )
+    }
     
     val dietOptions = listOf("None", "Halal", "Vegan", "Vegetarian", "Keto", "Gluten-Free", "Other")
     // Sets aren't directly supported by rememberSaveable out of the box, use string conversion or list
@@ -193,43 +216,38 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
         }
 
         // Height
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        val totalInches = (heightCm / 2.54f).toInt()
+        val ft = totalInches / 12
+        val ins = totalInches % 12
+        Box(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
             OutlinedTextField(
-                value = heightFeet,
-                onValueChange = { heightFeet = it },
-                label = { Text("Feet") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.weight(1f),
+                value = "$ft ft $ins in (${heightCm.toInt()} cm)",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Height") },
+                modifier = Modifier.fillMaxWidth(),
                 isError = heightError != null
             )
-            OutlinedTextField(
-                value = heightInches,
-                onValueChange = { heightInches = it },
-                label = { Text("Inch") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.weight(1f),
-                isError = heightError != null
-            )
+            Box(modifier = Modifier.matchParentSize().clickable { showHeightDialog = true })
         }
         if (heightError != null) {
             Text(text = heightError!!, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))
-        } else {
-            Spacer(modifier = Modifier.height(16.dp))
         }
 
         // Weight
-        OutlinedTextField(
-            value = weight,
-            onValueChange = { weight = it },
-            label = { Text("Weight (kg)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(),
-            isError = weightError != null
-        )
+        Box(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+            OutlinedTextField(
+                value = "$weightKg kg",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Weight") },
+                modifier = Modifier.fillMaxWidth(),
+                isError = weightError != null
+            )
+            Box(modifier = Modifier.matchParentSize().clickable { showWeightDialog = true })
+        }
         if (weightError != null) {
             Text(text = weightError!!, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))
-        } else {
-            Spacer(modifier = Modifier.height(16.dp))
         }
 
         Text("Dietary Restrictions", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp, bottom = 8.dp), color = Color(0xFF1E1E1E))
@@ -303,22 +321,18 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
                 weightError = null
                 saveError = null
                 
-                val ft = heightFeet.toIntOrNull()
-                val insStr = heightInches.trim()
-                val ins = if (insStr.isEmpty()) 0 else insStr.toIntOrNull()
-                
-                if (ft == null || ft <= 0) {
-                    heightError = "Invalid feet"
-                } else if (ins == null || ins !in 0..11) {
-                    heightError = "Inches must be between 0 and 11"
-                }
+                val ft = (heightCm / 30.48f).toInt()
+                val ins = 0
+                val kg = weightKg
 
-                val kg = weight.toFloatOrNull()
-                if (kg == null || kg <= 0f) {
+                if (heightCm <= 0f) {
+                    heightError = "Invalid height"
+                }
+                if (kg <= 0f) {
                     weightError = "Enter a valid weight in kg"
                 }
 
-                if (name.isNotBlank() && dobLocalDate != null && heightError == null && weightError == null && kg != null && ft != null && ins != null) {
+                if (name.isNotBlank() && dobLocalDate != null && heightError == null && weightError == null) {
                     isSaving = true
                     
                     val finalDiets = selectedDietsList.toMutableSet()

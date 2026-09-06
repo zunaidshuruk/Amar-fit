@@ -52,8 +52,34 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
 
     var name by remember { mutableStateOf("") }
     var age by remember { mutableStateOf("") }
-    var weight by remember { mutableStateOf("") }
-    var height by remember { mutableStateOf("") }
+    var weight by remember { mutableStateOf("70.0") }
+    var height by remember { mutableStateOf("170.0") }
+    var showWeightDialog by remember { mutableStateOf(false) }
+    var showHeightDialog by remember { mutableStateOf(false) }
+
+    if (showWeightDialog) {
+        com.example.ui.components.HeightWeightPickerDialog(
+            mode = com.example.ui.components.PickerMode.WEIGHT,
+            initialValue = weight.toFloatOrNull() ?: 70f,
+            onDismiss = { showWeightDialog = false },
+            onConfirm = { kg ->
+                weight = kg.toString()
+                showWeightDialog = false
+            }
+        )
+    }
+
+    if (showHeightDialog) {
+        com.example.ui.components.HeightWeightPickerDialog(
+            mode = com.example.ui.components.PickerMode.HEIGHT,
+            initialValue = height.toFloatOrNull() ?: 170f,
+            onDismiss = { showHeightDialog = false },
+            onConfirm = { cm ->
+                height = cm.toString()
+                showHeightDialog = false
+            }
+        )
+    }
 
     var calorieLimit by remember { mutableStateOf("") }
     var showSavedMessage by remember { mutableStateOf(false) }
@@ -208,20 +234,26 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = height,
-                        onValueChange = { height = it },
-                        label = { Text("Height (cm)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = weight,
-                        onValueChange = { weight = it },
-                        label = { Text("Weight (kg)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
-                    )
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedTextField(
+                            value = "${height.toFloatOrNull() ?: 170f} cm",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Height") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Box(modifier = Modifier.matchParentSize().clickable { showHeightDialog = true })
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedTextField(
+                            value = "${weight.toFloatOrNull() ?: 70f} kg",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Weight") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Box(modifier = Modifier.matchParentSize().clickable { showWeightDialog = true })
+                    }
                 }
 
                 Button(

@@ -36,7 +36,7 @@ Last verified: current session, against commit `91425ae`.
 
 Compiled from the Google Health screenshot review. Each will become its own scoped sprint(s) when we get there — do not combine multiple line items into one AI Studio prompt.
 
-1. [ ] **Height/Weight picker redesign** — modal dialogs, unit toggle (kg/lb/st, cm/ft), wheel-scroll selection, replacing current plain text fields (Onboarding, Settings, Weight Log)
+1. [x] **Height/Weight picker redesign** — modal dialogs, unit toggle (kg/lb/st, cm/ft), wheel-scroll selection, replacing current plain text fields (Onboarding, Settings, Weight Log)
 2. [ ] **Health tab overhaul** — Key metrics as graphs/bars (Weight, Energy burned, Calories, Carbs/Fat/Protein, Steps, Exercise days), Focus areas category tiles, Health checks alerts, Personal info section
 3. [ ] **Today tab redesign** — 3-page swipeable stat carousel, action row (Log/Start/Edit), chronological activity timeline feed, tile customization (scope: fixed curated set, not a full 25+ tile catalog engine)
 4. [ ] **Health Connect READ expansion** — Active calories burned, HRV, SpO2, Skin Temperature, Breathing Rate (all real Health Connect record types)
