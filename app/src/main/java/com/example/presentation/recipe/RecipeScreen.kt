@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocalDining
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
@@ -27,7 +28,7 @@ import com.example.ui.components.MarkdownText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RecipeScreen(viewModel: ShasthoViewModel) {
+fun RecipeScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
     val recipe by viewModel.premiumRecipe.collectAsState()
     val isLoading by viewModel.isLoadingRecipe.collectAsState()
     var query by remember { mutableStateOf("") }
@@ -40,13 +41,24 @@ fun RecipeScreen(viewModel: ShasthoViewModel) {
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Text(
-            text = "AI Medicinal Recipes",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary,
-            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp)
+        ) {
+            IconButton(onClick = onNavigateBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = TextPrimary
+                )
+            }
+            Text(
+                text = "AI Medicinal Recipes",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+        }
         Text(
             text = "Premium functional LCHF foods for health",
             fontSize = 14.sp,

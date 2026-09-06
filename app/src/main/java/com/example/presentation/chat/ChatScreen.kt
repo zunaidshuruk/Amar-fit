@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
@@ -22,7 +23,7 @@ import com.example.ui.theme.*
 import com.example.ui.components.MarkdownText
 
 @Composable
-fun ChatScreen(viewModel: ShasthoViewModel) {
+fun ChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
     val chatHistory by viewModel.chatHistory.collectAsState()
     val isLoading by viewModel.isLoadingChat.collectAsState()
     var currentMessage by remember { mutableStateOf("") }
@@ -39,12 +40,21 @@ fun ChatScreen(viewModel: ShasthoViewModel) {
                 .background(Color.White)
                 .padding(horizontal = 16.dp, vertical = 24.dp)
         ) {
-            Text(
-                text = "AI Diet & Recipe Chat",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Emerald900
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Emerald900
+                    )
+                }
+                Text(
+                    text = "AI Diet & Recipe Chat",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Emerald900
+                )
+            }
         }
         
         HorizontalDivider(color = Slate100)

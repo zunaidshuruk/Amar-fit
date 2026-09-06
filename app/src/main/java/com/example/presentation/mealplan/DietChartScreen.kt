@@ -14,7 +14,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,7 +36,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 @Composable
-fun DietChartScreen(viewModel: ShasthoViewModel) {
+fun DietChartScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
     val dietChart by viewModel.dietChart.collectAsState()
     val isGenerating by viewModel.isGeneratingDiet.collectAsState()
     val shoppingList by viewModel.shoppingList.collectAsState()
@@ -67,13 +67,24 @@ fun DietChartScreen(viewModel: ShasthoViewModel) {
                 onUpdate = { updated -> viewModel.updateSavedDietChart(updated); selectedSavedChart = updated }
             )
         } else {
-            Text(
-                text = "Diet Plans",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Emerald900,
-                modifier = Modifier.padding(bottom = 16.dp, top = 16.dp)
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp, top = 16.dp)
+            ) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Emerald900
+                    )
+                }
+                Text(
+                    text = "Diet Plans",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Emerald900
+                )
+            }
 
             // Tabs
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
@@ -346,7 +357,7 @@ fun SavedChartDetailView(chart: SavedDietChart, onBack: () -> Unit, onUpdate: (S
 
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 16.dp)) {
         IconButton(onClick = onBack) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Emerald900)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Emerald900)
         }
         Text(text = chart.name, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Emerald900)
     }

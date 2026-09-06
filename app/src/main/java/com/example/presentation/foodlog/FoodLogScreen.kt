@@ -38,9 +38,10 @@ import com.example.ui.components.MarkdownText
 import androidx.compose.material.icons.filled.AutoGraph
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
 @Composable
-fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit = {}) {
+fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit = {}, onNavigateBack: () -> Unit = {}) {
     val todayFoodLogs by viewModel.todayFoodLogs.collectAsState()
     val allFoodLogs by viewModel.allFoodLogs.collectAsState()
     val profile by viewModel.userProfile.collectAsState()
@@ -234,13 +235,26 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text(
-                    text = "Food Log",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 24.dp)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp, bottom = 24.dp)
+                ) {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = TextPrimary
+                        )
+                    }
+                    Text(
+                        text = "Food Log",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                }
             }
         
             // Calorie Progress Chart

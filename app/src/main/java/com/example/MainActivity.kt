@@ -330,15 +330,15 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 composable(TabScreen.Health.route) { HealthScreen(viewModel, navController) }
                 
                 // SUB-DESTINATIONS
-                composable("chat") { ChatScreen(viewModel = viewModel) }
-                composable("coach") { CoachScreen(viewModel = viewModel) }
-                composable("dietplan") { DietChartScreen(viewModel = viewModel) }
-                composable("lifestyle") { LifestyleScreen() }
-                composable("mealplan") { MealPlanScreen() }
-                composable("glucoselog") { GlucoseLogScreen(viewModel = viewModel) }
-                composable("weightlog") { WeightLogScreen(viewModel = viewModel) }
-                composable("recipe") { RecipeScreen(viewModel = viewModel) }
-                composable("foodlog") { FoodLogScreen(viewModel = viewModel, onNavigateToScanner = { navController.navigate("scanner") }) }
+                composable("chat") { ChatScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                composable("coach") { CoachScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                composable("dietplan") { DietChartScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                composable("lifestyle") { LifestyleScreen(onNavigateBack = { navController.popBackStack() }) }
+                composable("mealplan") { MealPlanScreen(onNavigateBack = { navController.popBackStack() }) }
+                composable("glucoselog") { GlucoseLogScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                composable("weightlog") { WeightLogScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                composable("recipe") { RecipeScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                composable("foodlog") { FoodLogScreen(viewModel = viewModel, onNavigateToScanner = { navController.navigate("scanner") }, onNavigateBack = { navController.popBackStack() }) }
                 composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }) }
                 composable("scanner") { ScannerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
               }

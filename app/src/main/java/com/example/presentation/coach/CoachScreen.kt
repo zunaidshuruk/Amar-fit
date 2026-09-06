@@ -8,9 +8,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,10 +30,25 @@ import com.example.ui.components.MarkdownText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CoachScreen(viewModel: ShasthoViewModel) {
+fun CoachScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
     val coachAdvice by viewModel.coachAdvice.collectAsState()
     val isLoading by viewModel.isLoadingCoach.collectAsState()
     var selectedTopic by remember { mutableStateOf<CoachTopic?>(null) }
+    var showSearch by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredTopics = remember(searchQuery) {
+        if (searchQuery.isBlank()) {
+            coachTopics
+        } else {
+            val q = searchQuery.trim().lowercase()
+            coachTopics.filter { topic ->
+                topic.condition.lowercase().contains(q) ||
+                topic.habit.lowercase().contains(q) ||
+                topic.benefits.lowercase().contains(q)
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -39,13 +56,64 @@ fun CoachScreen(viewModel: ShasthoViewModel) {
             .background(Background)
             .padding(16.dp)
     ) {
-        Text(
-            text = "Wellness Coach",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary,
-            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp, bottom = 8.dp)
+        ) {
+            IconButton(onClick = onNavigateBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = TextPrimary
+                )
+            }
+            Text(
+                text = "Wellness Coach",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = { 
+                showSearch = !showSearch
+                if (!showSearch) {
+                    searchQuery = ""
+                }
+            }) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = TextPrimary
+                )
+            }
+        }
+
+        if (showSearch) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("Search wellness topics...") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                singleLine = true,
+                trailingIcon = {
+                    IconButton(onClick = {
+                        searchQuery = ""
+                        showSearch = false
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Clear search",
+                            tint = Slate500
+                        )
+                    }
+                }
+            )
+        }
+
         Text(
             text = "Tap a topic to get personalized AI coaching on how to integrate these habits into your life.",
             fontSize = 14.sp,
@@ -53,8 +121,23 @@ fun CoachScreen(viewModel: ShasthoViewModel) {
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(coachTopics) { topic ->
+        if (filteredTopics.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 48.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No matching wellness topics found.",
+                    color = Slate500,
+                    fontSize = 16.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(filteredTopics) { topic ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -91,6 +174,7 @@ fun CoachScreen(viewModel: ShasthoViewModel) {
             item { Spacer(modifier = Modifier.height(100.dp)) }
         }
     }
+}
 
     if (selectedTopic != null) {
         AlertDialog(

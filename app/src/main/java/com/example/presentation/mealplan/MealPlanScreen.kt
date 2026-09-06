@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
@@ -90,7 +91,7 @@ val mealPlans = listOf(
 )
 
 @Composable
-fun MealPlanScreen() {
+fun MealPlanScreen(onNavigateBack: () -> Unit = {}) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -102,12 +103,21 @@ fun MealPlanScreen() {
                 .background(Color.White)
                 .padding(horizontal = 16.dp, vertical = 24.dp)
         ) {
-            Text(
-                text = "7-Day Fat Adaptation Plan",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = Emerald900
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = Emerald900
+                    )
+                }
+                Text(
+                    text = "7-Day Fat Adaptation Plan",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Emerald900
+                )
+            }
         }
         
         HorizontalDivider(color = Slate100)
