@@ -217,11 +217,11 @@ fun CoachScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
                         HorizontalDivider(color = Slate100)
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        if (isLoading) {
+                        if (isLoading && coachAdvice.isNullOrEmpty()) {
                             Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
                                 CircularProgressIndicator(color = Emerald600)
                             }
-                        } else if (coachAdvice != null) {
+                        } else if (!coachAdvice.isNullOrEmpty()) {
                             MarkdownText(
                                 text = coachAdvice!!,
                                 color = TextPrimary,

@@ -457,6 +457,33 @@ class AppRepository(
         }
     }
 
+    fun generateCoachAdviceStream(topic: String, habit: String, benefits: String): kotlinx.coroutines.flow.Flow<String> {
+        val systemInstruction = """
+            You are 'Amar-Fit AI', an expert Wellness and Sleep Optimization Coach. 
+            The user wants to learn about the health topic: "$topic".
+            The core habit is: "$habit".
+            The benefit is: "$benefits".
+            
+            Provide a friendly, motivational coaching suggestion directly to the user.
+            IMPORTANT FORMATTING RULES:
+            - Use proper spacing (blank lines between paragraphs).
+            - Use bullet points for actionable steps to make it easily readable.
+            - Explain WHY this habit works biologically or psychologically.
+            - Keep it highly engaging, well-organized, and professional.
+        """.trimIndent()
+        
+        val request = GenerateContentRequest(
+            contents = listOf(
+                Content(
+                    parts = listOf(Part(text = "Please give me my wellness coaching advice on $topic."))
+                )
+            ),
+            systemInstruction = Content(parts = listOf(Part(text = systemInstruction)))
+        )
+        
+        return streamGeminiCall(request)
+    }
+
     suspend fun generateCoachAdvice(topic: String, habit: String, benefits: String): String = withContext(Dispatchers.IO) {
         // API Key logic is handled by executeGeminiCallWithBackoff
         

@@ -567,9 +567,16 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     fun requestCoachAdvice(topic: String, habit: String, benefits: String) {
         viewModelScope.launch {
             _isLoadingCoach.value = true
-            _coachAdvice.value = null
-            val response = repository.generateCoachAdvice(topic, habit, benefits)
-            _coachAdvice.value = response
+            _coachAdvice.value = ""
+            var accumulated = ""
+            try {
+                repository.generateCoachAdviceStream(topic, habit, benefits).collect { chunk ->
+                    accumulated += chunk
+                    _coachAdvice.value = accumulated
+                }
+            } catch (e: Exception) {
+                _coachAdvice.value = "Sorry, I couldn't generate advice right now. Please try again."
+            }
             _isLoadingCoach.value = false
         }
     }
