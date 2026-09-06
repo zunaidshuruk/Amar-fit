@@ -40,6 +40,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val bmiFillColor = if (isDark) Emerald300 else Emerald600
 
     val metrics by viewModel.todayMetrics.collectAsState()
+    val todayFoodLogs by viewModel.todayFoodLogs.collectAsState()
     
     val glucose = maxOf(metrics?.bloodGlucoseMorning ?: 0f, metrics?.bloodGlucoseNight ?: 0f)
     val heartRate = metrics?.heartRate ?: 0
@@ -203,6 +204,159 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     }
                 }
                 Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Go", tint = Slate400)
+            }
+        }
+
+        // Focus areas section
+        Spacer(modifier = Modifier.height(4.dp))
+        Text("Focus areas", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+
+        data class FocusAreaItem(
+            val title: String,
+            val isTracked: Boolean,
+            val accent: AccentColors,
+            val onClick: () -> Unit
+        )
+
+        val focusAreas = listOf(
+            FocusAreaItem("Heart", heartRate > 0, AccentTokens.heartRateAccent(isDark)) { navController.navigate("health") },
+            FocusAreaItem("Metabolic", glucose > 0f, AccentTokens.glucoseAccent(isDark)) { navController.navigate("glucoselog") },
+            FocusAreaItem("Fitness", (metrics?.steps ?: 0) > 0 || (metrics?.exerciseMinutes ?: 0) > 0, AccentTokens.stepsAccent(isDark)) { navController.navigate("fitness") },
+            FocusAreaItem("Sleep", (metrics?.sleepHours ?: 0f) > 0f, AccentTokens.sleepAccent(isDark)) { navController.navigate("sleep") },
+            FocusAreaItem("Nutrition", todayFoodLogs.isNotEmpty() || (metrics?.caloriesConsumed ?: 0) > 0, AccentTokens.foodLogAccent(isDark)) { navController.navigate("foodlog") },
+            FocusAreaItem("Vitals", bloodPressure.isNotBlank(), AccentTokens.bloodPressureAccent(isDark)) { showBpDialog = true },
+            FocusAreaItem("Respiratory", false, AccentTokens.waterAccent(isDark)) {},
+            FocusAreaItem("Temperature", false, AccentTokens.caloriesAccent(isDark)) {},
+            FocusAreaItem("Mental wellbeing", false, AccentTokens.coachAccent(isDark)) {}
+        )
+
+        focusAreas.chunked(2).forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                rowItems.forEach { item ->
+                    val bg = if (item.isTracked) item.accent.bg else MaterialTheme.colorScheme.surfaceVariant
+                    val contentColor = if (item.isTracked) item.accent.onBg else MaterialTheme.colorScheme.onSurfaceVariant
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(bg)
+                            .then(if (item.isTracked) Modifier.clickable { item.onClick() } else Modifier)
+                            .padding(16.dp)
+                    ) {
+                        Column {
+                            Text(text = item.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = contentColor)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = if (item.isTracked) "Tracked" else "Not tracked",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = contentColor.copy(alpha = if (item.isTracked) 1f else 0.7f)
+                            )
+                        }
+                    }
+                }
+                if (rowItems.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+
+        // Health checks section
+        Spacer(modifier = Modifier.height(4.dp))
+        Text("Health checks", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+
+        val isHighHeartRate = heartRate > 100
+        val isLowHeartRate = heartRate in 1..59
+        val hrAccent = AccentTokens.heartRateAccent(isDark)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            val highBg = if (isHighHeartRate) hrAccent.bg else MaterialTheme.colorScheme.surfaceVariant
+            val highColor = if (isHighHeartRate) hrAccent.onBg else MaterialTheme.colorScheme.onSurfaceVariant
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(highBg)
+                    .padding(16.dp)
+            ) {
+                Column {
+                    Text(text = "High heart rate", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = highColor)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (isHighHeartRate) "$heartRate bpm" else "Not available",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = highColor.copy(alpha = if (isHighHeartRate) 1f else 0.7f)
+                    )
+                }
+            }
+
+            val lowBg = if (isLowHeartRate) hrAccent.bg else MaterialTheme.colorScheme.surfaceVariant
+            val lowColor = if (isLowHeartRate) hrAccent.onBg else MaterialTheme.colorScheme.onSurfaceVariant
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(lowBg)
+                    .padding(16.dp)
+            ) {
+                Column {
+                    Text(text = "Low heart rate", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = lowColor)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (isLowHeartRate) "$heartRate bpm" else "Not available",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = lowColor.copy(alpha = if (isLowHeartRate) 1f else 0.7f)
+                    )
+                }
+            }
+        }
+
+        // Personal info section
+        Spacer(modifier = Modifier.height(4.dp))
+        Text("Personal info", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            val profileAccent = AccentTokens.pointsAccent(isDark)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(profileAccent.bg)
+                    .clickable { navController.navigate("settings") }
+                    .padding(16.dp)
+            ) {
+                Column {
+                    Text(text = "Profile", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = profileAccent.onBg)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = "Account & Settings", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = profileAccent.onBg.copy(alpha = 0.8f))
+                }
+            }
+
+            val chatAccent = AccentTokens.dietChartAccent(isDark)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(chatAccent.bg)
+                    .clickable { navController.navigate("chat?openSavedChats=true") }
+                    .padding(16.dp)
+            ) {
+                Column {
+                    Text(text = "Chat history", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = chatAccent.onBg)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = "Saved AI chats", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = chatAccent.onBg.copy(alpha = 0.8f))
+                }
             }
         }
     }

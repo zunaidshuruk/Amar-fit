@@ -38,6 +38,7 @@ Compiled from the Google Health screenshot review. Each will become its own scop
 
 1. [x] **Height/Weight picker redesign** — modal dialogs, unit toggle (kg/lb/st, cm/ft), wheel-scroll selection, replacing current plain text fields (Onboarding, Settings, Weight Log)
 2. [ ] **Health tab overhaul** — Key metrics as graphs/bars (Weight, Energy burned, Calories, Carbs/Fat/Protein, Steps, Exercise days), Focus areas category tiles, Health checks alerts, Personal info section
+   - *(Partial: Focus areas, Health checks, and Personal info sections added; Key metrics graphs pending)*
 3. [ ] **Today tab redesign** — 3-page swipeable stat carousel, action row (Log/Start/Edit), chronological activity timeline feed, tile customization (scope: fixed curated set, not a full 25+ tile catalog engine)
 4. [ ] **Health Connect READ expansion** — Active calories burned, HRV, SpO2, Skin Temperature, Breathing Rate (all real Health Connect record types)
 5. [ ] **Per-metric detail drill-down screens** — shared D/W/M/3M/Y template with variants (bar chart, zone bars, streak strip, hourly pills, status-only) for each tracked metric

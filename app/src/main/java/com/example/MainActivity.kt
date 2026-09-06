@@ -322,7 +322,13 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 composable(TabScreen.Health.route) { HealthScreen(viewModel, navController) }
                 
                 // SUB-DESTINATIONS
-                composable("chat") { ChatScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                composable(
+                    route = "chat?openSavedChats={openSavedChats}",
+                    arguments = listOf(androidx.navigation.navArgument("openSavedChats") { type = androidx.navigation.NavType.BoolType; defaultValue = false })
+                ) { backStackEntry ->
+                    val openSavedChats = backStackEntry.arguments?.getBoolean("openSavedChats") ?: false
+                    ChatScreen(viewModel = viewModel, initialTab = if (openSavedChats) 1 else 0, onNavigateBack = { navController.popBackStack() })
+                }
                 composable("coach") { CoachScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                 composable("dietplan") { DietChartScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                 composable("lifestyle") { LifestyleScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }

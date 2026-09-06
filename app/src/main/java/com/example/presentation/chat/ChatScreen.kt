@@ -34,14 +34,14 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
-fun ChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
+fun ChatScreen(viewModel: ShasthoViewModel, initialTab: Int = 0, onNavigateBack: () -> Unit = {}) {
     val profile by viewModel.userProfile.collectAsState()
     val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
     val chatHistory by viewModel.chatHistory.collectAsState()
     val isLoading by viewModel.isLoadingChat.collectAsState()
     val savedChats by viewModel.savedChats.collectAsState()
 
-    var selectedTab by remember { mutableStateOf(0) } // 0 = Active Chat, 1 = Saved Chats
+    var selectedTab by remember { mutableStateOf(initialTab) } // 0 = Active Chat, 1 = Saved Chats
     var selectedSavedChat by remember { mutableStateOf<SavedChat?>(null) }
     var showSaveDialog by remember { mutableStateOf(false) }
     var chatTitle by remember { mutableStateOf("") }
