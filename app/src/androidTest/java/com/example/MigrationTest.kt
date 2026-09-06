@@ -191,4 +191,31 @@ class MigrationTest {
 
         cursor.close()
     }
+
+    @Test
+    @Throws(IOException::class)
+    fun migrate19To20() {
+        var db = helper.createDatabase(TEST_DB, 19)
+        // Insert some data in version 19
+        db.execSQL("INSERT INTO daily_metrics (date, caloriesConsumed, waterLiters, steps, bloodGlucoseMorning, bloodGlucoseNight, bloodPressure, weightKg, sleepHours, heartRate, distanceMeters, exerciseMinutes, externalNutritionCalories) VALUES ('2026-09-05', 2100, 2.5, 8500, 95.0, 110.0, '120/80', 72.5, 7.5, 72, 1000.0, 30, 0)")
+        db.close()
+
+        db = helper.runMigrationsAndValidate(TEST_DB, 20, true, AppDatabase.MIGRATION_19_20)
+
+        // Verify saved_chats table exists and supports operations
+        db.execSQL("INSERT INTO saved_chats (cloudId, title, messages, createdAt) VALUES ('chat-123', 'Diet Chat', '[{\"text\":\"Hello\",\"isUser\":true}]', 123456789)")
+        val cursor = db.query("SELECT cloudId, title, messages, createdAt FROM saved_chats WHERE cloudId = 'chat-123'")
+        assert(cursor.moveToFirst())
+        assert(cursor.getString(cursor.getColumnIndex("cloudId")) == "chat-123")
+        assert(cursor.getString(cursor.getColumnIndex("title")) == "Diet Chat")
+        assert(cursor.getString(cursor.getColumnIndex("messages")).contains("Hello"))
+        assert(cursor.getLong(cursor.getColumnIndex("createdAt")) == 123456789L)
+        cursor.close()
+
+        // Verify existing table data survives migration
+        val metricCursor = db.query("SELECT caloriesConsumed FROM daily_metrics WHERE date = '2026-09-05'")
+        assert(metricCursor.moveToFirst())
+        assert(metricCursor.getInt(0) == 2100)
+        metricCursor.close()
+    }
 }
