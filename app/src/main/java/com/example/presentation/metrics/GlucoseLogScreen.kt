@@ -2,6 +2,7 @@ package com.example.presentation.metrics
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,6 +32,9 @@ import com.example.ui.theme.*
 fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
     val history by viewModel.metricsHistory.collectAsState()
     val today by viewModel.todayMetrics.collectAsState()
+    val profile by viewModel.userProfile.collectAsState()
+    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val glucoseAccent = AccentTokens.glucoseAccent(isDark)
     
     var morningInput by remember { mutableStateOf(today?.bloodGlucoseMorning?.takeIf { it > 0 }?.toString() ?: "") }
     var nightInput by remember { mutableStateOf(today?.bloodGlucoseNight?.takeIf { it > 0 }?.toString() ?: "") }
@@ -38,7 +42,7 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
@@ -50,24 +54,24 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = TextPrimary
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
             Text(
                 text = "Blood Glucose Trends",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = MaterialTheme.colorScheme.onBackground
             )
         }
         
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = glucoseAccent.bg),
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Today's Readings (mmol/L)", fontWeight = FontWeight.Bold, color = Indigo700)
+                Text("Today's Readings (mmol/L)", fontWeight = FontWeight.Bold, color = glucoseAccent.onBg)
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
@@ -115,7 +119,7 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
             
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Indigo50),
+                colors = CardDefaults.cardColors(containerColor = glucoseAccent.bg),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Row(
@@ -124,20 +128,20 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("Estimated HbA1c", fontWeight = FontWeight.Bold, color = Indigo900)
-                        Text("Based on 3 months data", fontSize = 12.sp, color = Indigo700)
+                        Text("Estimated HbA1c", fontWeight = FontWeight.Bold, color = glucoseAccent.onBg)
+                        Text("Based on 3 months data", fontSize = 12.sp, color = glucoseAccent.onBg)
                     }
-                    Text("${String.format("%.1f", hba1c)}%", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Indigo600)
+                    Text("${String.format("%.1f", hba1c)}%", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = glucoseAccent.onBg)
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        Text("Last 3 Months Trend", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+        Text("Last 3 Months Trend", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(12.dp))
         
         if (history.isEmpty()) {
-            Text("No data available to display.", color = Slate500)
+            Text("No data available to display.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
             val chartData = history.reversed()
             Box(
@@ -145,7 +149,7 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
                     .fillMaxWidth()
                     .height(250.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White)
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(24.dp)
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
@@ -182,13 +186,13 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(12.dp).clip(RoundedCornerShape(6.dp)).background(Indigo600))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Morning", fontSize = 12.sp, color = Slate600)
+                    Text("Morning", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(modifier = Modifier.width(24.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(12.dp).clip(RoundedCornerShape(6.dp)).background(Orange500))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Night", fontSize = 12.sp, color = Slate600)
+                    Text("Night", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
