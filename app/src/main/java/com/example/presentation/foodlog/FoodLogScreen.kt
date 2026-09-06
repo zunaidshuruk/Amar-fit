@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
 import com.example.ui.components.MarkdownText
+import com.example.ui.components.MealTypeSelector
 import androidx.compose.material.icons.filled.AutoGraph
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Delete
@@ -157,22 +158,11 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text("Meal Type", color = Slate500, fontSize = 14.sp)
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf("Breakfast", "Lunch", "Dinner", "Snack").forEach { type ->
-                            FilterChip(
-                                selected = manualMealType == type,
-                                onClick = { manualMealType = type },
-                                label = { Text(type, fontSize = 12.sp) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = Emerald100,
-                                    selectedLabelColor = Emerald700
-                                )
-                            )
-                        }
-                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    MealTypeSelector(
+                        selectedMealType = manualMealType,
+                        onMealTypeSelected = { manualMealType = it }
+                    )
                     if (isScanning) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -187,8 +177,9 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                 TextButton(
                     onClick = {
                         if (manualText.isNotBlank()) {
-                            viewModel.analyzeFoodText(manualText)
+                            viewModel.analyzeFoodText(manualText, manualMealType)
                             manualText = ""
+                            manualMealType = "Snack"
                             showManualEntry = false
                         }
                     },

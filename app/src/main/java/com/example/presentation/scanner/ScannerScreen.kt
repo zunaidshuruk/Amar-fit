@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.example.ui.components.MarkdownText
+import com.example.ui.components.MealTypeSelector
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.Background
 import com.example.ui.theme.Emerald500
@@ -67,9 +68,11 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
     var parsedCategory by remember { mutableStateOf("") }
     var parsedCalories by remember { mutableStateOf(0) }
     var parsedDescription by remember { mutableStateOf("") }
+    var selectedMealType by remember { mutableStateOf("Snack") }
 
     LaunchedEffect(scanResult) {
         if (scanResult != null) {
+            selectedMealType = "Snack"
             try {
                 // Find JSON block if AI wrapped it in markdown or something
                 val jsonString = scanResult!!.substringAfter("{").substringBeforeLast("}")
@@ -139,7 +142,10 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text("Scan Result", fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = Emerald900)
-                            IconButton(onClick = { viewModel.clearScanResult() }) {
+                            IconButton(onClick = { 
+                                viewModel.clearScanResult() 
+                                selectedMealType = "Snack"
+                            }) {
                                 Icon(Icons.Default.Close, "Close")
                             }
                         }
@@ -153,13 +159,27 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                         )
                         
                         Spacer(modifier = Modifier.height(16.dp))
+
+                        MealTypeSelector(
+                            selectedMealType = selectedMealType,
+                            onMealTypeSelected = { selectedMealType = it }
+                        )
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
                         
                         Button(
                             onClick = { 
                                 if (parsedCalories > 0) {
-                                    viewModel.logScannedFood(parsedName, parsedCategory, parsedCalories, parsedDescription)
+                                    viewModel.logScannedFood(
+                                        name = parsedName,
+                                        category = parsedCategory,
+                                        calories = parsedCalories,
+                                        description = parsedDescription,
+                                        mealType = selectedMealType
+                                    )
                                 }
                                 viewModel.clearScanResult() 
+                                selectedMealType = "Snack"
                                 onNavigateBack()
                             },
                             modifier = Modifier.fillMaxWidth().height(50.dp),

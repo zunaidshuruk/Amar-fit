@@ -166,7 +166,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
-    fun analyzeFoodText(foodText: String) {
+    fun analyzeFoodText(foodText: String, mealType: String = "Snack") {
         viewModelScope.launch {
             _isScanning.value = true
             val result = repository.analyzeFoodText(foodText)
@@ -178,7 +178,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 val parsedCalories = json.optInt("calories", 0)
                 val parsedDescription = json.optString("description", "")
                 if (parsedCalories > 0) {
-                    logScannedFood(parsedName, parsedCategory, parsedCalories, parsedDescription)
+                    logScannedFood(parsedName, parsedCategory, parsedCalories, parsedDescription, mealType = mealType)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
