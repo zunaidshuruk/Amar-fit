@@ -36,17 +36,9 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
+import com.example.data.health.HealthConnectManager
 
 import androidx.compose.ui.platform.LocalContext
-import androidx.health.connect.client.HealthConnectClient
-import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.StepsRecord
-import androidx.health.connect.client.records.SleepSessionRecord
-import androidx.health.connect.client.records.BloodPressureRecord
-import androidx.health.connect.client.records.BloodGlucoseRecord
-import androidx.health.connect.client.records.DistanceRecord
-import androidx.health.connect.client.records.ExerciseSessionRecord
-import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.PermissionController
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -82,21 +74,10 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
 
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    var isHealthConnectAvailable by remember { mutableStateOf(HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE) }
-    
-    val PERMISSIONS = setOf(
-        HealthPermission.getReadPermission(StepsRecord::class),
-        HealthPermission.getReadPermission(SleepSessionRecord::class),
-        HealthPermission.getReadPermission(BloodPressureRecord::class),
-        HealthPermission.getReadPermission(BloodGlucoseRecord::class),
-        HealthPermission.getReadPermission(androidx.health.connect.client.records.HeartRateRecord::class),
-        HealthPermission.getReadPermission(DistanceRecord::class),
-        HealthPermission.getReadPermission(ExerciseSessionRecord::class),
-        HealthPermission.getReadPermission(NutritionRecord::class)
-    )
+    var isHealthConnectAvailable by remember { mutableStateOf(HealthConnectManager.isAvailable(context)) }
 
     val requestPermissionLauncher = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) { granted ->
-        if (granted.containsAll(PERMISSIONS)) {
+        if (granted.containsAll(HealthConnectManager.REQUIRED_PERMISSIONS)) {
             Toast.makeText(context, "Health Connect connected!", Toast.LENGTH_SHORT).show()
             viewModel.syncWithHealthConnect(context)
         } else {
@@ -321,7 +302,11 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
                 }
 
                 if (showSavedMessage) {
-                    Text("Profile updated successfully!", color = Emerald600, fontSize = 14.sp)
+                    Text(
+                        text = "Profile updated successfully!",
+                        color = if (isDark) Emerald300 else Emerald600,
+                        fontSize = 14.sp
+                    )
                 }
             }
         }
@@ -426,7 +411,7 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
                     Button(
                         onClick = {
                             if (isHealthConnectAvailable) {
-                                requestPermissionLauncher.launch(PERMISSIONS)
+                                requestPermissionLauncher.launch(HealthConnectManager.REQUIRED_PERMISSIONS)
                             } else {
                                 Toast.makeText(context, "Health Connect is not available on this device", Toast.LENGTH_SHORT).show()
                             }

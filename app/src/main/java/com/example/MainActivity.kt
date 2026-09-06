@@ -53,6 +53,7 @@ import com.example.presentation.settings.SettingsScreen
 import com.example.presentation.sleep.SleepScreen
 import com.example.presentation.today.TodayScreen
 import com.example.presentation.viewmodel.ShasthoViewModel
+import com.example.data.health.HealthConnectManager
 import com.example.ui.theme.*
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -158,26 +159,14 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                           },
                           actions = {
                               val context = androidx.compose.ui.platform.LocalContext.current
-                              var isHealthConnectAvailable by remember { mutableStateOf(androidx.health.connect.client.HealthConnectClient.getSdkStatus(context) == androidx.health.connect.client.HealthConnectClient.SDK_AVAILABLE) }
+                              var isHealthConnectAvailable by remember { mutableStateOf(HealthConnectManager.isAvailable(context)) }
                               
                               if (isHealthConnectAvailable) {
                                   val coroutineScope = rememberCoroutineScope()
                                   IconButton(
                                       onClick = {
-                                          val healthConnectClient = androidx.health.connect.client.HealthConnectClient.getOrCreate(context)
-                                          val permissionsToRequest = setOf(
-                                            androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.StepsRecord::class),
-                                            androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.SleepSessionRecord::class),
-                                            androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.BloodPressureRecord::class),
-                                            androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.BloodGlucoseRecord::class),
-                                            androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.HeartRateRecord::class),
-                                            androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.DistanceRecord::class),
-                                            androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.ExerciseSessionRecord::class),
-                                            androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.NutritionRecord::class)
-                                          )
                                           coroutineScope.launch {
-                                              val granted = healthConnectClient.permissionController.getGrantedPermissions()
-                                              if (granted.containsAll(permissionsToRequest)) {
+                                              if (HealthConnectManager.hasAllPermissions(context)) {
                                                   android.widget.Toast.makeText(context, "Syncing with Health Connect...", android.widget.Toast.LENGTH_SHORT).show()
                                                   viewModel.syncWithHealthConnect(context)
                                               } else {
