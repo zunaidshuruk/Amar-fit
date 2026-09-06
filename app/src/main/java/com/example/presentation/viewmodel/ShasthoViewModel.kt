@@ -49,10 +49,10 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun deleteAccount(onComplete: (Boolean) -> Unit) {
+    fun deleteAccount(onComplete: (com.example.data.repository.DeleteAccountResult) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            val success = repository.deleteAccount()
-            if (success) {
+            val result = repository.deleteAccount()
+            if (result is com.example.data.repository.DeleteAccountResult.Success) {
                 database.clearAllTables()
                 _weeklyInsights.value = null
                 _chatHistory.value = listOf(
@@ -65,11 +65,11 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 _shoppingList.value = null
                 _premiumRecipe.value = null
                 withContext(Dispatchers.Main) {
-                    onComplete(true)
+                    onComplete(com.example.data.repository.DeleteAccountResult.Success)
                 }
             } else {
                 withContext(Dispatchers.Main) {
-                    onComplete(false)
+                    onComplete(result)
                 }
             }
         }

@@ -60,6 +60,8 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
     var isSaving by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showPasswordReauthDialog by remember { mutableStateOf(false) }
+    var reauthPassword by remember { mutableStateOf("") }
 
 
     var isDarkMode by remember { mutableStateOf(false) }
@@ -467,11 +469,54 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
-                    viewModel.deleteAccount { success ->
-                        if (success) {
-                            onLogout()
-                        } else {
-                            Toast.makeText(context, "Please log out, log back in, and try deleting again immediately.", Toast.LENGTH_LONG).show()
+                    viewModel.deleteAccount { result ->
+                        when (result) {
+                            is com.example.data.repository.DeleteAccountResult.Success -> {
+                                onLogout()
+                            }
+                            is com.example.data.repository.DeleteAccountResult.NeedsReauth -> {
+                                val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+                                val user = auth.currentUser
+                                val providers = user?.providerData?.map { it.providerId } ?: emptyList()
+                                if (providers.contains("google.com")) {
+                                    coroutineScope.launch {
+                                        try {
+                                            val googleIdOption = com.google.android.libraries.identity.googleid.GetGoogleIdOption.Builder()
+                                                .setFilterByAuthorizedAccounts(false)
+                                                .setServerClientId(context.getString(com.example.R.string.default_web_client_id))
+                                                .build()
+                                            val request = androidx.credentials.GetCredentialRequest.Builder()
+                                                .addCredentialOption(googleIdOption)
+                                                .build()
+                                            val credentialManager = androidx.credentials.CredentialManager.create(context)
+                                            val credResult = credentialManager.getCredential(context = context, request = request)
+                                            if (credResult.credential is androidx.credentials.CustomCredential &&
+                                                credResult.credential.type == com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                                            ) {
+                                                val googleIdTokenCredential = com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.createFrom(credResult.credential.data)
+                                                val credential = com.google.firebase.auth.GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
+                                                user?.reauthenticate(credential)?.await()
+                                                viewModel.deleteAccount { retryResult ->
+                                                    when (retryResult) {
+                                                        is com.example.data.repository.DeleteAccountResult.Success -> onLogout()
+                                                        is com.example.data.repository.DeleteAccountResult.NeedsReauth -> Toast.makeText(context, "Reauthentication succeeded, but deletion still requires recent login.", Toast.LENGTH_LONG).show()
+                                                        is com.example.data.repository.DeleteAccountResult.Error -> Toast.makeText(context, retryResult.message, Toast.LENGTH_LONG).show()
+                                                    }
+                                                }
+                                            }
+                                        } catch (e: androidx.credentials.exceptions.GetCredentialCancellationException) {
+                                            // Cancelled, do nothing
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, e.message ?: "Google reauthentication failed", Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                } else {
+                                    showPasswordReauthDialog = true
+                                }
+                            }
+                            is com.example.data.repository.DeleteAccountResult.Error -> {
+                                Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
+                            }
                         }
                     }
                 }) {
@@ -480,6 +525,67 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showPasswordReauthDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showPasswordReauthDialog = false
+                reauthPassword = ""
+            },
+            title = { Text("Re-authentication Required") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Please enter your current password to confirm account deletion.")
+                    OutlinedTextField(
+                        value = reauthPassword,
+                        onValueChange = { reauthPassword = it },
+                        label = { Text("Password") },
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    coroutineScope.launch {
+                        try {
+                            val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+                            val user = auth.currentUser
+                            val email = user?.email
+                            if (!email.isNullOrBlank() && reauthPassword.isNotBlank()) {
+                                val credential = com.google.firebase.auth.EmailAuthProvider.getCredential(email, reauthPassword)
+                                user.reauthenticate(credential).await()
+                                showPasswordReauthDialog = false
+                                reauthPassword = ""
+                                viewModel.deleteAccount { retryResult ->
+                                    when (retryResult) {
+                                        is com.example.data.repository.DeleteAccountResult.Success -> onLogout()
+                                        is com.example.data.repository.DeleteAccountResult.NeedsReauth -> Toast.makeText(context, "Reauthentication succeeded, but deletion still requires recent login.", Toast.LENGTH_LONG).show()
+                                        is com.example.data.repository.DeleteAccountResult.Error -> Toast.makeText(context, retryResult.message, Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            } else {
+                                Toast.makeText(context, "Please enter your password", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            Toast.makeText(context, e.message ?: "Reauthentication failed", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showPasswordReauthDialog = false
+                    reauthPassword = ""
+                }) {
+                    Text("Cancel")
+                }
             }
         )
     }

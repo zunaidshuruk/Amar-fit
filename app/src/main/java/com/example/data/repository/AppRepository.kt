@@ -22,7 +22,7 @@ class AppRepository(
     private val savedChatDao: com.example.data.local.SavedChatDao
 ) {
 
-    suspend fun deleteAccount(): Boolean {
+    suspend fun deleteAccount(): DeleteAccountResult {
         return FirebaseManager.deleteAccount()
     }
 

@@ -6,8 +6,14 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 
+sealed class DeleteAccountResult {
+    data object Success : DeleteAccountResult()
+    data object NeedsReauth : DeleteAccountResult()
+    data class Error(val message: String) : DeleteAccountResult()
+}
+
 object FirebaseManager {
-    suspend fun deleteAccount(): Boolean {
+    suspend fun deleteAccount(): DeleteAccountResult {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser
         if (user != null) {
@@ -33,15 +39,27 @@ object FirebaseManager {
                     db.collection("users").document(uid).collection("saved_workouts").document(doc.id).delete().await()
                 }
 
+                val chatsSnap = db.collection("users").document(uid).collection("saved_chats").get().await()
+                for (doc in chatsSnap.documents) {
+                    db.collection("users").document(uid).collection("saved_chats").document(doc.id).delete().await()
+                }
+
                 db.collection("users").document(uid).delete().await()
                 user.delete().await()
-                true
+                DeleteAccountResult.Success
+            } catch (e: com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException) {
+                DeleteAccountResult.NeedsReauth
             } catch (e: Exception) {
                 e.printStackTrace()
-                false
+                val msg = e.message ?: ""
+                if (msg.contains("requires recent authentication") || msg.contains("ERROR_REQUIRES_RECENT_LOGIN")) {
+                    DeleteAccountResult.NeedsReauth
+                } else {
+                    DeleteAccountResult.Error(msg.ifBlank { "Unknown error during account deletion" })
+                }
             }
         }
-        return false
+        return DeleteAccountResult.Error("No user logged in")
     }
 
     fun syncMetric(metric: DailyMetric) {
