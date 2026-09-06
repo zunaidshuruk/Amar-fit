@@ -117,14 +117,14 @@ fun MealPlanScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = Emerald900
+                        tint = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900
                     )
                 }
                 Text(
                     text = "7-Day Fat Adaptation Plan",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Emerald900
+                    color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900
                 )
             }
         }

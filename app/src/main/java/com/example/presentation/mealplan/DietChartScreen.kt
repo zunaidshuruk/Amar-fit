@@ -2,6 +2,7 @@ package com.example.presentation.mealplan
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawing
@@ -37,6 +38,9 @@ import org.json.JSONObject
 
 @Composable
 fun DietChartScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
+    val profile by viewModel.userProfile.collectAsState()
+    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+
     val dietChart by viewModel.dietChart.collectAsState()
     val isGenerating by viewModel.isGeneratingDiet.collectAsState()
     val shoppingList by viewModel.shoppingList.collectAsState()
@@ -55,7 +59,7 @@ fun DietChartScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState()).imePadding()
@@ -63,6 +67,7 @@ fun DietChartScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
         if (selectedSavedChart != null) {
             SavedChartDetailView(
                 chart = selectedSavedChart!!, 
+                isDark = isDark,
                 onBack = { selectedSavedChart = null },
                 onUpdate = { updated -> viewModel.updateSavedDietChart(updated); selectedSavedChart = updated }
             )
@@ -75,14 +80,14 @@ fun DietChartScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = Emerald900
+                        tint = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900
                     )
                 }
                 Text(
                     text = "Diet Plans",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Emerald900
+                    color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900
                 )
             }
 
@@ -90,24 +95,24 @@ fun DietChartScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
                 Button(
                     onClick = { selectedTab = 0 },
-                    colors = ButtonDefaults.buttonColors(containerColor = if (selectedTab == 0) Emerald600 else Slate200),
+                    colors = ButtonDefaults.buttonColors(containerColor = if (selectedTab == 0) Emerald600 else MaterialTheme.colorScheme.surfaceVariant),
                     modifier = Modifier.weight(1f).padding(end = 4.dp)
                 ) {
-                    Text("Generate New", color = if (selectedTab == 0) Color.White else Slate500)
+                    Text("Generate New", color = if (selectedTab == 0) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Button(
                     onClick = { selectedTab = 1 },
-                    colors = ButtonDefaults.buttonColors(containerColor = if (selectedTab == 1) Emerald600 else Slate200),
+                    colors = ButtonDefaults.buttonColors(containerColor = if (selectedTab == 1) Emerald600 else MaterialTheme.colorScheme.surfaceVariant),
                     modifier = Modifier.weight(1f).padding(start = 4.dp)
                 ) {
-                    Text("Saved Plans", color = if (selectedTab == 1) Color.White else Slate500)
+                    Text("Saved Plans", color = if (selectedTab == 1) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
             if (selectedTab == 0) {
-                GenerateNewDietView(viewModel, dietChart, isGenerating, shoppingList)
+                GenerateNewDietView(viewModel, dietChart, isGenerating, shoppingList, isDark)
             } else {
-                SavedChartsListView(savedCharts, onSelect = { selectedSavedChart = it }, onDelete = { viewModel.deleteSavedDietChart(it) })
+                SavedChartsListView(savedCharts, isDark = isDark, onSelect = { selectedSavedChart = it }, onDelete = { viewModel.deleteSavedDietChart(it) })
             }
         }
     }
@@ -118,7 +123,8 @@ fun GenerateNewDietView(
     viewModel: ShasthoViewModel, 
     dietChart: String?, 
     isGenerating: Boolean, 
-    shoppingList: String?
+    shoppingList: String?,
+    isDark: Boolean
 ) {
     var duration by remember { mutableStateOf("7") }
     var isEditing by remember { mutableStateOf(false) }
@@ -134,11 +140,11 @@ fun GenerateNewDietView(
     }
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Create a new plan based on Bangladeshi local foods & your metrics.", fontSize = 14.sp, color = Slate600, modifier = Modifier.padding(bottom = 16.dp))
+            Text("Create a new plan based on Bangladeshi local foods & your metrics.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 16.dp))
             OutlinedTextField(
                 value = duration,
                 onValueChange = { duration = it },
@@ -169,12 +175,12 @@ fun GenerateNewDietView(
     if (!dietChart.isNullOrEmpty() && !isGenerating) {
         if (showShoppingList && !shoppingList.isNullOrEmpty()) {
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Shopping List", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Emerald900, modifier = Modifier.padding(bottom = 12.dp))
-                    MarkdownText(text = shoppingList, color = TextPrimary)
+                    Text("Shopping List", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900, modifier = Modifier.padding(bottom = 12.dp))
+                    MarkdownText(text = shoppingList, color = MaterialTheme.colorScheme.onSurface)
                     Spacer(modifier = Modifier.height(16.dp))
                     
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -197,7 +203,7 @@ fun GenerateNewDietView(
             }
         } else {
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -206,7 +212,7 @@ fun GenerateNewDietView(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Your Diet Chart", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Emerald900)
+                        Text("Your Diet Chart", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900)
                         if (isEditing) {
                             IconButton(onClick = { 
                                 isEditing = false 
@@ -216,7 +222,7 @@ fun GenerateNewDietView(
                             }
                         } else {
                             IconButton(onClick = { isEditing = true }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Slate500)
+                                Icon(Icons.Default.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
@@ -229,7 +235,7 @@ fun GenerateNewDietView(
                             textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
                         )
                     } else {
-                        MarkdownText(text = dietChart, color = TextPrimary)
+                        MarkdownText(text = dietChart, color = MaterialTheme.colorScheme.onSurface)
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -316,15 +322,20 @@ fun GenerateNewDietView(
 }
 
 @Composable
-fun SavedChartsListView(savedCharts: List<SavedDietChart>, onSelect: (SavedDietChart) -> Unit, onDelete: (SavedDietChart) -> Unit) {
+fun SavedChartsListView(
+    savedCharts: List<SavedDietChart>, 
+    isDark: Boolean,
+    onSelect: (SavedDietChart) -> Unit, 
+    onDelete: (SavedDietChart) -> Unit
+) {
     if (savedCharts.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize().padding(top = 40.dp), contentAlignment = Alignment.Center) {
-            Text("No saved diet plans yet.", color = Slate500)
+            Text("No saved diet plans yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     } else {
         savedCharts.forEach { chart ->
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).clickable { onSelect(chart) },
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -334,11 +345,11 @@ fun SavedChartsListView(savedCharts: List<SavedDietChart>, onSelect: (SavedDietC
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(chart.name, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Emerald900)
+                        Text(chart.name, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900)
                         Text(
                             java.text.SimpleDateFormat("MMM dd, yyyy").format(java.util.Date(chart.createdAt)), 
                             fontSize = 12.sp, 
-                            color = Slate500
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     IconButton(onClick = { onDelete(chart) }) {
@@ -352,24 +363,44 @@ fun SavedChartsListView(savedCharts: List<SavedDietChart>, onSelect: (SavedDietC
 }
 
 @Composable
-fun SavedChartDetailView(chart: SavedDietChart, onBack: () -> Unit, onUpdate: (SavedDietChart) -> Unit) {
+fun SavedChartDetailView(
+    chart: SavedDietChart, 
+    isDark: Boolean,
+    onBack: () -> Unit, 
+    onUpdate: (SavedDietChart) -> Unit
+) {
     var isEditingList by remember { mutableStateOf(false) }
 
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 16.dp)) {
         IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Emerald900)
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack, 
+                contentDescription = "Back", 
+                tint = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900
+            )
         }
-        Text(text = chart.name, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Emerald900)
+        Text(
+            text = chart.name, 
+            fontSize = 24.sp, 
+            fontWeight = FontWeight.Bold, 
+            color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900
+        )
     }
 
     if (chart.shoppingList.startsWith("[")) {
         // Render Checklist
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).padding(bottom = 24.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Shopping List", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Emerald900, modifier = Modifier.padding(bottom = 12.dp))
+                Text(
+                    "Shopping List", 
+                    fontSize = 20.sp, 
+                    fontWeight = FontWeight.Bold, 
+                    color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900, 
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
                 
                 val items = remember(chart.shoppingList) {
                     val list = mutableListOf<Pair<String, Boolean>>()
@@ -415,7 +446,7 @@ fun SavedChartDetailView(chart: SavedDietChart, onBack: () -> Unit, onUpdate: (S
                             Text(
                                 text = text, 
                                 fontSize = 16.sp, 
-                                color = if (isChecked) Slate400 else TextPrimary,
+                                color = if (isChecked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                                 textDecoration = if (isChecked) TextDecoration.LineThrough else TextDecoration.None
                             )
                         }
@@ -425,23 +456,35 @@ fun SavedChartDetailView(chart: SavedDietChart, onBack: () -> Unit, onUpdate: (S
         }
     } else if (chart.shoppingList.isNotBlank()) {
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).padding(bottom = 24.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Shopping List", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Emerald900, modifier = Modifier.padding(bottom = 12.dp))
-                MarkdownText(text = chart.shoppingList, color = TextPrimary)
+                Text(
+                    "Shopping List", 
+                    fontSize = 20.sp, 
+                    fontWeight = FontWeight.Bold, 
+                    color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900, 
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                MarkdownText(text = chart.shoppingList, color = MaterialTheme.colorScheme.onSurface)
             }
         }
     }
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Diet Chart", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Emerald900, modifier = Modifier.padding(bottom = 12.dp))
-            MarkdownText(text = chart.chartContent, color = TextPrimary)
+            Text(
+                "Diet Chart", 
+                fontSize = 20.sp, 
+                fontWeight = FontWeight.Bold, 
+                color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900, 
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            MarkdownText(text = chart.chartContent, color = MaterialTheme.colorScheme.onSurface)
         }
     }
 

@@ -1,6 +1,7 @@
 package com.example.presentation.chat
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,6 +25,8 @@ import com.example.ui.components.MarkdownText
 
 @Composable
 fun ChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
+    val profile by viewModel.userProfile.collectAsState()
+    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
     val chatHistory by viewModel.chatHistory.collectAsState()
     val isLoading by viewModel.isLoadingChat.collectAsState()
     var currentMessage by remember { mutableStateOf("") }
@@ -45,14 +48,14 @@ fun ChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = Emerald900
+                        tint = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900
                     )
                 }
                 Text(
                     text = "AI Diet & Recipe Chat",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Emerald900
+                    color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900
                 )
             }
         }
