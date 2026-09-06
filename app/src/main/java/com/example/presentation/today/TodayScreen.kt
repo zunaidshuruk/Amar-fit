@@ -5,11 +5,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -59,6 +63,9 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val points = profile?.points ?: 0
     val currentStreak = profile?.currentStreak ?: 0
 
+    val pagerState = rememberPagerState(pageCount = { 3 })
+    val coroutineScope = rememberCoroutineScope()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -66,142 +73,194 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Hero: Gamification Points, Badges, & Streak Row
-        Row(
+        // 3-Page Swipeable Stat Carousel
+        HorizontalPager(
+            state = pagerState,
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .shadow(2.dp, RoundedCornerShape(20.dp))
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(streakAccent.bg)
-                    .padding(12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.LocalFireDepartment, contentDescription = "Streak", tint = streakAccent.onBg)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "$currentStreak Days", fontWeight = FontWeight.Bold, color = streakAccent.onBg, fontSize = 14.sp)
-                    Text(text = "Streak", fontSize = 10.sp, color = TextPrimary)
+            pageSpacing = 12.dp
+        ) { page ->
+            when (page) {
+                0 -> {
+                    // Page 1 ("Today"): Streak / Points / Badges Hero Row
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(148.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .shadow(2.dp, RoundedCornerShape(20.dp))
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(streakAccent.bg)
+                                .padding(12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.LocalFireDepartment, contentDescription = "Streak", tint = streakAccent.onBg)
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(text = "$currentStreak Days", fontWeight = FontWeight.Bold, color = streakAccent.onBg, fontSize = 14.sp)
+                                Text(text = "Streak", fontSize = 10.sp, color = TextPrimary)
+                            }
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .shadow(2.dp, RoundedCornerShape(20.dp))
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(pointsAccent.bg)
+                                .padding(12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.Star, contentDescription = "Points", tint = pointsAccent.onBg)
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(text = "$points", fontWeight = FontWeight.Bold, color = pointsAccent.onBg, fontSize = 14.sp)
+                                Text(text = "Points", fontSize = 10.sp, color = TextPrimary)
+                            }
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .shadow(2.dp, RoundedCornerShape(20.dp))
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(badgesAccent.bg)
+                                .padding(12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.EmojiEvents, contentDescription = "Badges", tint = badgesAccent.onBg)
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(text = "${badges.size}", fontWeight = FontWeight.Bold, color = badgesAccent.onBg, fontSize = 14.sp)
+                                Text(text = "Badges", fontSize = 10.sp, color = TextPrimary)
+                            }
+                        }
+                    }
                 }
-            }
-            
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .shadow(2.dp, RoundedCornerShape(20.dp))
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(pointsAccent.bg)
-                    .padding(12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Star, contentDescription = "Points", tint = pointsAccent.onBg)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "$points", fontWeight = FontWeight.Bold, color = pointsAccent.onBg, fontSize = 14.sp)
-                    Text(text = "Points", fontSize = 10.sp, color = TextPrimary)
+                1 -> {
+                    // Page 2 ("Activity"): Steps & Water Tiles
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(148.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // 2. Steps Tile
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .shadow(2.dp, RoundedCornerShape(20.dp))
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(stepsAccent.bg)
+                                .clickable { showStepsOptionDialog = true }
+                                .padding(20.dp)
+                        ) {
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.AutoMirrored.Filled.DirectionsWalk, contentDescription = null, tint = stepsAccent.onBg, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(text = "Steps", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(text = "$steps", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = stepsAccent.onBg)
+                            }
+                        }
+                        
+                        // 3. Water Tile
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .shadow(2.dp, RoundedCornerShape(20.dp))
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(waterAccent.bg)
+                                .clickable { showWaterDialog = true }
+                                .padding(20.dp)
+                        ) {
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.LocalDrink, contentDescription = null, tint = waterAccent.onBg, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(text = "Water", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Row(verticalAlignment = Alignment.Bottom) {
+                                    Text(text = String.format("%.1f", waterConsumed), fontSize = 28.sp, fontWeight = FontWeight.Bold, color = waterAccent.onBg)
+                                    Text(text = " L", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = waterAccent.onBg, modifier = Modifier.padding(bottom = 4.dp))
+                                }
+                            }
+                        }
+                    }
                 }
-            }
-            
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .shadow(2.dp, RoundedCornerShape(20.dp))
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(badgesAccent.bg)
-                    .padding(12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.EmojiEvents, contentDescription = "Badges", tint = badgesAccent.onBg)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = "${badges.size}", fontWeight = FontWeight.Bold, color = badgesAccent.onBg, fontSize = 14.sp)
-                    Text(text = "Badges", fontSize = 10.sp, color = TextPrimary)
+                2 -> {
+                    // Page 3 ("Nutrition"): Calories Tile
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(148.dp)
+                            .shadow(2.dp, RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(caloriesAccent.bg)
+                            .clickable { navController.navigate("nutrition") }
+                            .padding(20.dp)
+                    ) {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.LocalFireDepartment, contentDescription = null, tint = caloriesAccent.onBg, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Calories", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                            }
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Row(verticalAlignment = Alignment.Bottom) {
+                                Text(text = "$totalCalories", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = caloriesAccent.onBg)
+                                Text(text = " / $calorieLimit kcal", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = caloriesAccent.onBg, modifier = Modifier.padding(bottom = 4.dp))
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            LinearProgressIndicator(
+                                progress = { calorieProgress },
+                                modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
+                                color = Orange500,
+                                trackColor = Orange100,
+                            )
+                        }
+                    }
                 }
             }
         }
 
-        // Glanceable Stats: Google Health Style 
-        // 1. Calories Tile
-        Box(
+        // Page Indicator Dots
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(2.dp, RoundedCornerShape(20.dp))
-                .clip(RoundedCornerShape(20.dp))
-                .background(caloriesAccent.bg)
-                .clickable { navController.navigate("nutrition") }
-                .padding(20.dp)
+                .padding(top = 0.dp, bottom = 4.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.LocalFireDepartment, contentDescription = null, tint = caloriesAccent.onBg, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Calories", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(text = "$totalCalories", fontSize = 36.sp, fontWeight = FontWeight.Bold, color = caloriesAccent.onBg)
-                    Text(text = " / $calorieLimit kcal", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = caloriesAccent.onBg, modifier = Modifier.padding(bottom = 6.dp))
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                LinearProgressIndicator(
-                    progress = { calorieProgress },
-                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
-                    color = Orange500,
-                    trackColor = Orange100,
+            repeat(3) { pageIndex ->
+                val isSelected = pagerState.currentPage == pageIndex
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 4.dp)
+                        .height(8.dp)
+                        .width(if (isSelected) 24.dp else 8.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isSelected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.outlineVariant
+                        )
+                        .clickable {
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(pageIndex)
+                            }
+                        }
                 )
-            }
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // 2. Steps Tile
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .shadow(2.dp, RoundedCornerShape(20.dp))
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(stepsAccent.bg)
-                    .clickable { showStepsOptionDialog = true }
-                    .padding(20.dp)
-            ) {
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.DirectionsWalk, contentDescription = null, tint = stepsAccent.onBg, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "Steps", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = "$steps", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = stepsAccent.onBg)
-                }
-            }
-            
-            // 3. Water Tile
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .shadow(2.dp, RoundedCornerShape(20.dp))
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(waterAccent.bg)
-                    .clickable { showWaterDialog = true }
-                    .padding(20.dp)
-            ) {
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.LocalDrink, contentDescription = null, tint = waterAccent.onBg, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "Water", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(text = String.format("%.1f", waterConsumed), fontSize = 28.sp, fontWeight = FontWeight.Bold, color = waterAccent.onBg)
-                        Text(text = " L", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = waterAccent.onBg, modifier = Modifier.padding(bottom = 4.dp))
-                    }
-                }
             }
         }
 
