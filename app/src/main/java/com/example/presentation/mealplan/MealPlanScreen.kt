@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -24,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
 
 data class Meal(val type: String, val title: String, val instructions: String, val videoQuery: String)
@@ -91,16 +93,23 @@ val mealPlans = listOf(
 )
 
 @Composable
-fun MealPlanScreen(onNavigateBack: () -> Unit = {}) {
+fun MealPlanScreen(
+    viewModel: ShasthoViewModel? = null,
+    onNavigateBack: () -> Unit = {}
+) {
+    val vm: ShasthoViewModel? = viewModel ?: runCatching { androidx.lifecycle.viewmodel.compose.viewModel<ShasthoViewModel>() }.getOrNull()
+    val profile by (vm?.userProfile ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
+    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.White)
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(horizontal = 16.dp, vertical = 24.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -120,7 +129,7 @@ fun MealPlanScreen(onNavigateBack: () -> Unit = {}) {
             }
         }
         
-        HorizontalDivider(color = Slate100)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         
         LazyColumn(
             contentPadding = PaddingValues(16.dp),
@@ -129,14 +138,14 @@ fun MealPlanScreen(onNavigateBack: () -> Unit = {}) {
             item {
                 Text(
                     text = "Follow this structural 7-day schedule for the first week. Eat ONLY when genuinely hungry.",
-                    color = Slate500,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
             
             item {
-                ShoppingListCard()
+                ShoppingListCard(isDark = isDark)
             }
             
             items(mealPlans) { plan ->
@@ -154,7 +163,7 @@ fun DailyPlanCard(plan: DailyPlan) {
     val context = LocalContext.current
     
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier.fillMaxWidth()
@@ -167,11 +176,11 @@ fun DailyPlanCard(plan: DailyPlan) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Day ${plan.day}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                Text("Day ${plan.day}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
                 Icon(
                     imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, 
                     contentDescription = "Toggle", 
-                    tint = Slate400
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             
@@ -183,14 +192,14 @@ fun DailyPlanCard(plan: DailyPlan) {
                             .fillMaxWidth()
                             .padding(bottom = 16.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Slate100)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                             .padding(12.dp)
                     ) {
                         Text(meal.type, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Emerald600)
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(meal.title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Text(meal.title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Prep: ${meal.instructions}", fontSize = 14.sp, color = Slate600, lineHeight = 20.sp)
+                        Text("Prep: ${meal.instructions}", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 20.sp)
                         
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(
@@ -215,12 +224,13 @@ fun DailyPlanCard(plan: DailyPlan) {
 }
 
 @Composable
-fun ShoppingListCard() {
+fun ShoppingListCard(isDark: Boolean = false) {
     var expanded by remember { mutableStateOf(false) }
     val checkedState = remember { mutableStateMapOf<String, Boolean>() }
+    val stepsAccent = AccentTokens.stepsAccent(isDark)
     
     Card(
-        colors = CardDefaults.cardColors(containerColor = Emerald50),
+        colors = CardDefaults.cardColors(containerColor = stepsAccent.bg),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier.fillMaxWidth()
@@ -234,14 +244,14 @@ fun ShoppingListCard() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ShoppingCart, contentDescription = "Shopping List", tint = Emerald700)
+                    Icon(Icons.Default.ShoppingCart, contentDescription = "Shopping List", tint = if (isDark) stepsAccent.onBg else Emerald700)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("7-Day Shopping List", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Emerald900)
+                    Text("7-Day Shopping List", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = if (isDark) stepsAccent.onBg else Emerald900)
                 }
                 Icon(
                     imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, 
                     contentDescription = "Toggle", 
-                    tint = Emerald700
+                    tint = if (isDark) stepsAccent.onBg else Emerald700
                 )
             }
             
@@ -265,10 +275,10 @@ fun ShoppingListCard() {
                             Text(
                                 text = item.name, 
                                 fontSize = 16.sp, 
-                                color = if (isChecked) Slate400 else TextPrimary,
+                                color = if (isChecked) MaterialTheme.colorScheme.onSurfaceVariant else (if (isDark) stepsAccent.onBg else MaterialTheme.colorScheme.onSurface),
                                 textDecoration = if (isChecked) androidx.compose.ui.text.style.TextDecoration.LineThrough else null
                             )
-                            Text(text = item.quantity, fontSize = 12.sp, color = Slate500)
+                            Text(text = item.quantity, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }

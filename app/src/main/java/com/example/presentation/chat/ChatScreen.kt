@@ -31,13 +31,13 @@ fun ChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // Header
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.White)
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(horizontal = 16.dp, vertical = 24.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -57,7 +57,7 @@ fun ChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
             }
         }
         
-        HorizontalDivider(color = Slate100)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
         // Chat list
         LazyColumn(
@@ -71,7 +71,7 @@ fun ChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
                 item {
                     Text(
                         "Ask me anything! e.g., 'What should I eat for breakfast today?'",
-                        color = Slate500,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
@@ -102,7 +102,7 @@ fun ChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
                                     bottomStart = if (message.isUser) 16.dp else 0.dp,
                                     bottomEnd = if (message.isUser) 0.dp else 16.dp
                                 ))
-                                .background(if (message.isUser) Emerald600 else Color.White)
+                                .background(if (message.isUser) Emerald600 else MaterialTheme.colorScheme.surfaceVariant)
                                 .padding(16.dp)
                                 .widthIn(max = 280.dp)
                         ) {
@@ -114,7 +114,7 @@ fun ChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
                             } else {
                                 MarkdownText(
                                     text = displayMsg,
-                                    color = TextPrimary
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -158,7 +158,7 @@ fun ChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.White)
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -170,7 +170,7 @@ fun ChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
                 shape = RoundedCornerShape(24.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Emerald500,
-                    unfocusedBorderColor = Slate100
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                 )
             )
             Spacer(modifier = Modifier.width(8.dp))

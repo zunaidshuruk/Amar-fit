@@ -37,7 +37,7 @@ fun RecipeScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
@@ -49,20 +49,20 @@ fun RecipeScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = TextPrimary
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
             Text(
                 text = "AI Medicinal Recipes",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = MaterialTheme.colorScheme.onBackground
             )
         }
         Text(
             text = "Premium functional LCHF foods for health",
             fontSize = 14.sp,
-            color = Slate500,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 24.dp)
         )
         
@@ -74,9 +74,9 @@ fun RecipeScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
             shape = RoundedCornerShape(16.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Emerald500,
-                unfocusedBorderColor = Slate200,
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface
             ),
             trailingIcon = {
                 IconButton(
@@ -110,7 +110,7 @@ fun RecipeScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 shape = RoundedCornerShape(24.dp)
             ) {
@@ -119,7 +119,7 @@ fun RecipeScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
                         .fillMaxWidth()
                         .padding(24.dp)
                 ) {
-                    MarkdownText(displayRecipe, fontSize = 16.sp, color = TextPrimary, lineHeight = 24.sp)
+                    MarkdownText(displayRecipe, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface, lineHeight = 24.sp)
                     
                     if (hasYouTubeSearch && youtubeQuery.isNotBlank()) {
                         Spacer(modifier = Modifier.height(24.dp))
@@ -150,7 +150,7 @@ fun RecipeScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "Enter a health goal or ingredient above to get a customized medicinal recipe with video instructions.",
-                        color = Slate400,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 14.sp,
                         lineHeight = 20.sp,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
