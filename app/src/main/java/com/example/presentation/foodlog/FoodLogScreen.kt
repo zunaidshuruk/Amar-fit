@@ -1,5 +1,6 @@
 package com.example.presentation.foodlog
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -46,6 +47,8 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
     val todayFoodLogs by viewModel.todayFoodLogs.collectAsState()
     val allFoodLogs by viewModel.allFoodLogs.collectAsState()
     val profile by viewModel.userProfile.collectAsState()
+    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val foodLogAccent = AccentTokens.foodLogAccent(isDark)
     
     val calorieLimit = profile?.dailyCalorieLimit ?: 2000
     val totalCalories = todayFoodLogs.sumOf { it.calories }
@@ -215,7 +218,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                 )
             }
         },
-        containerColor = Background
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
@@ -236,14 +239,14 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = TextPrimary
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                     Text(
                         text = "Food Log",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
             }
@@ -263,7 +266,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                         CircularProgressIndicator(
                             progress = { 1f },
                             modifier = Modifier.fillMaxSize(),
-                            color = Slate100,
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                             strokeWidth = 14.dp
                         )
                         CircularProgressIndicator(
@@ -278,12 +281,12 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                                 text = "$totalCalories",
                                 fontSize = 36.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary
+                                color = MaterialTheme.colorScheme.onBackground
                             )
                             Text(
                                 text = "/ $calorieLimit kcal",
                                 fontSize = 14.sp,
-                                color = Slate500,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Medium
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -305,27 +308,27 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 24.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Analytics, contentDescription = null, tint = Emerald600)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Weekly Nutritional Trends", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                            Text("Weekly Nutritional Trends", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         
                         if (weeklyInsights != null) {
-                            MarkdownText(text = weeklyInsights!!, color = Slate600, fontSize = 14.sp)
+                            MarkdownText(text = weeklyInsights!!, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                         } else if (isLoadingInsights) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Emerald500, strokeWidth = 2.dp)
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Text("Analyzing 7-day logs...", color = Slate500, fontSize = 14.sp)
+                                Text("Analyzing 7-day logs...", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                             }
                         } else {
-                            Text("Discover your macro-nutrient trends and potential deficiencies based on your recent food logs.", color = Slate500, fontSize = 14.sp)
+                            Text("Discover your macro-nutrient trends and potential deficiencies based on your recent food logs.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                             Spacer(modifier = Modifier.height(12.dp))
                             Button(
                                 onClick = { viewModel.fetchWeeklyInsights() },
@@ -345,7 +348,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
             if (allFoodLogs.isEmpty()) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                        Text(text = "No food logs yet.", color = Slate400)
+                        Text(text = "No food logs yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             } else {
@@ -355,7 +358,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                         Text(
                             text = date,
                             fontWeight = FontWeight.Bold,
-                            color = Slate600,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
                         )
                     }
@@ -364,7 +367,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(Color.White)
+                                .background(MaterialTheme.colorScheme.surface)
                                 .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -372,16 +375,16 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                                 modifier = Modifier
                                     .size(48.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Emerald100),
+                                    .background(foodLogAccent.bg),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.Restaurant, contentDescription = null, tint = Emerald600)
+                                Icon(Icons.Default.Restaurant, contentDescription = null, tint = foodLogAccent.onBg)
                             }
                             Spacer(modifier = Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(text = log.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+                                Text(text = log.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
                                 Text(text = "${log.mealType} • ${log.time}", fontSize = 12.sp, color = Emerald600, fontWeight = FontWeight.Medium)
-                                Text(text = log.category, fontSize = 12.sp, color = Slate400)
+                                Text(text = log.category, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(

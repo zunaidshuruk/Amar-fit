@@ -1,6 +1,7 @@
 package com.example.presentation.lifestyle
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,12 +10,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
 
 data class LifestylePhase(val title: String, val duration: String, val objective: String, val rules: String)
@@ -56,11 +60,15 @@ val corePillars = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LifestyleScreen(onNavigateBack: () -> Unit = {}) {
+fun LifestyleScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
+    val profile by viewModel.userProfile.collectAsState()
+    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val pointsAccent = AccentTokens.pointsAccent(isDark)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
     ) {
         Row(
@@ -71,55 +79,55 @@ fun LifestyleScreen(onNavigateBack: () -> Unit = {}) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = TextPrimary
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
             Text(
                 text = "Lifestyle Goals",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = MaterialTheme.colorScheme.onBackground
             )
         }
         Text(
             text = "The Lifestyle Modification protocol for metabolic reversal",
             fontSize = 14.sp,
-            color = Slate500,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
         LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = Indigo50)) {
+                Card(colors = CardDefaults.cardColors(containerColor = pointsAccent.bg)) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("The 5 Core Pillars", fontWeight = FontWeight.Bold, color = Indigo900)
+                        Text("The 5 Core Pillars", fontWeight = FontWeight.Bold, color = pointsAccent.onBg)
                         Spacer(modifier = Modifier.height(8.dp))
                         corePillars.forEach { pillar ->
-                            Text("• $pillar", fontSize = 14.sp, color = Indigo700, modifier = Modifier.padding(vertical = 2.dp))
+                            Text("• $pillar", fontSize = 14.sp, color = pointsAccent.onBg, modifier = Modifier.padding(vertical = 2.dp))
                         }
                     }
                 }
             }
             
             item {
-                Text("Phase-by-Phase Protocol", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary, modifier = Modifier.padding(top = 8.dp))
+                Text("Phase-by-Phase Protocol", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(top = 8.dp))
             }
 
             items(phases) { phase ->
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(16.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                            Text(phase.title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Emerald700)
-                            Text(phase.duration, fontSize = 12.sp, color = Slate500)
+                            Text(phase.title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald700)
+                            Text(phase.duration, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Objective: ${phase.objective}", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+                        Text("Objective: ${phase.objective}", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(phase.rules, fontSize = 14.sp, color = Slate600, lineHeight = 20.sp)
+                        Text(phase.rules, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 20.sp)
                     }
                 }
             }

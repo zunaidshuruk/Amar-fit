@@ -2,6 +2,7 @@ package com.example.presentation.coach
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,6 +32,10 @@ import com.example.ui.components.MarkdownText
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoachScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
+    val profile by viewModel.userProfile.collectAsState()
+    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val waterAccent = AccentTokens.waterAccent(isDark)
+
     val coachAdvice by viewModel.coachAdvice.collectAsState()
     val isLoading by viewModel.isLoadingCoach.collectAsState()
     var selectedTopic by remember { mutableStateOf<CoachTopic?>(null) }
@@ -145,7 +150,7 @@ fun CoachScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
                             selectedTopic = topic
                             viewModel.requestCoachAdvice(topic.condition, topic.habit, topic.benefits)
                         },
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                     shape = RoundedCornerShape(16.dp)
                 ) {
@@ -157,16 +162,16 @@ fun CoachScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(BlueBg),
+                                .background(waterAccent.bg),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.MonitorHeart, contentDescription = null, tint = Blue700)
+                            Icon(Icons.Default.MonitorHeart, contentDescription = null, tint = waterAccent.onBg)
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = topic.condition, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+                            Text(text = topic.condition, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = topic.habit, fontSize = 14.sp, color = Slate500, lineHeight = 18.sp)
+                            Text(text = topic.habit, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 18.sp)
                         }
                     }
                 }

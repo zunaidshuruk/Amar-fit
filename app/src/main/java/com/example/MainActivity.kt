@@ -322,7 +322,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 composable("chat") { ChatScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                 composable("coach") { CoachScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                 composable("dietplan") { DietChartScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
-                composable("lifestyle") { LifestyleScreen(onNavigateBack = { navController.popBackStack() }) }
+                composable("lifestyle") { LifestyleScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                 composable("mealplan") { MealPlanScreen(onNavigateBack = { navController.popBackStack() }) }
                 composable("glucoselog") { GlucoseLogScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                 composable("weightlog") { WeightLogScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
