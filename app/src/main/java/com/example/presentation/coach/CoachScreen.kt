@@ -58,7 +58,7 @@ fun CoachScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Background)
+            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
     ) {
         Row(
@@ -71,14 +71,14 @@ fun CoachScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = TextPrimary
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
             Text(
                 text = "Wellness Coach",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(Modifier.weight(1f))
             IconButton(onClick = { 
@@ -90,7 +90,7 @@ fun CoachScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search",
-                    tint = TextPrimary
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
         }
@@ -112,7 +112,7 @@ fun CoachScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Clear search",
-                            tint = Slate500
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -122,7 +122,7 @@ fun CoachScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
         Text(
             text = "Tap a topic to get personalized AI coaching on how to integrate these habits into your life.",
             fontSize = 14.sp,
-            color = Slate500,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
@@ -135,7 +135,7 @@ fun CoachScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
             ) {
                 Text(
                     text = "No matching wellness topics found.",
-                    color = Slate500,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 16.sp,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )

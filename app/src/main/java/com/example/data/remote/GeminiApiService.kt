@@ -45,4 +45,12 @@ interface GeminiApiService {
         @Query("key") apiKey: String,
         @Body request: GenerateContentRequest
     ): GenerateContentResponse
+
+    @retrofit2.http.Streaming
+    @POST("v1beta/models/gemini-3.5-flash:streamGenerateContent")
+    suspend fun streamGenerateContent(
+        @Query("key") apiKey: String,
+        @Query("alt") alt: String = "sse",
+        @Body request: GenerateContentRequest
+    ): okhttp3.ResponseBody
 }

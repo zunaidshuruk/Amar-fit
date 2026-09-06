@@ -5,6 +5,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -62,8 +63,17 @@ fun ChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
         
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
+        val listState = rememberLazyListState()
+
+        LaunchedEffect(chatHistory.size, chatHistory.lastOrNull()?.text?.length) {
+            if (chatHistory.isNotEmpty()) {
+                listState.animateScrollToItem(chatHistory.size + if (isLoading) 1 else 0)
+            }
+        }
+
         // Chat list
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 16.dp),

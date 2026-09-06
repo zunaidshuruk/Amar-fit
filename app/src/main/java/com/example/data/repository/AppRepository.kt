@@ -9,6 +9,7 @@ import com.example.data.remote.*
 import kotlinx.coroutines.Dispatchers
 import retrofit2.HttpException
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
 import com.example.presentation.viewmodel.ChatMessage
@@ -28,14 +29,13 @@ class AppRepository(
         FirebaseManager.pullDataOnLogin(userDao, metricsDao, savedDietChartDao, savedWorkoutDao)
     }
 
-    private suspend fun executeGeminiCallWithBackoff(request: GenerateContentRequest, maxRetries: Int = 3): GenerateContentResponse {
+    private fun resolveApiKeys(): List<String> {
         fun isValidKey(key: String?): Boolean {
             if (key.isNullOrBlank()) return false
             val trimmed = key.trim()
             if (trimmed.startsWith("MY_GEMINI_API_KEY") || trimmed == "default" || trimmed.length < 10) return false
             return true
-        
-}
+        }
 
         val apiKeys = mutableListOf<String>()
 
@@ -69,6 +69,12 @@ class AppRepository(
             }
         } catch (e: Throwable) { /* Ignored */ }
 
+        return apiKeys
+    }
+
+    private suspend fun executeGeminiCallWithBackoff(request: GenerateContentRequest, maxRetries: Int = 3): GenerateContentResponse {
+        val apiKeys = resolveApiKeys()
+
         if (apiKeys.isEmpty()) {
             throw Exception("API Key is missing or invalid. Please configure GEMINI_API_KEY_3 in the Secrets panel.")
         }
@@ -98,6 +104,77 @@ class AppRepository(
             }
         }
         throw Exception("Max retries exceeded")
+    }
+
+    private fun streamGeminiCall(request: GenerateContentRequest): kotlinx.coroutines.flow.Flow<String> = kotlinx.coroutines.flow.flow {
+        val apiKeys = resolveApiKeys()
+        if (apiKeys.isEmpty()) throw Exception("API Key is missing or invalid.")
+        var lastError: Exception? = null
+        for (apiKey in apiKeys) {
+            try {
+                val responseBody = RetrofitClient.service.streamGenerateContent(apiKey = apiKey, request = request)
+                responseBody.source().use { source ->
+                    while (true) {
+                        val line = source.readUtf8Line() ?: break
+                        if (line.startsWith("data: ")) {
+                            val jsonPart = line.removePrefix("data: ").trim()
+                            if (jsonPart.isEmpty()) continue
+                            try {
+                                val adapter = RetrofitClient.moshi.adapter(GenerateContentResponse::class.java)
+                                val parsed = adapter.fromJson(jsonPart)
+                                val textChunk = parsed?.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
+                                if (!textChunk.isNullOrEmpty()) {
+                                    emit(textChunk)
+                                }
+                            } catch (e: Exception) {
+                                // skip a malformed/partial chunk, keep reading
+                            }
+                        }
+                    }
+                }
+                return@flow
+            } catch (e: Exception) {
+                lastError = e
+                continue
+            }
+        }
+        if (lastError != null) throw lastError
+    }.flowOn(Dispatchers.IO)
+
+    fun getChatResponseStream(chatHistory: List<ChatMessage>, profile: UserProfile?): kotlinx.coroutines.flow.Flow<String> {
+        val contextPrompt = if (profile != null) {
+            "User Context: ${profile.age}yo ${profile.gender}, Goal: ${profile.healthGoals}, Restrictions: ${profile.dietaryRestrictions}. "
+        } else ""
+        
+        val systemInstruction = """
+            You are 'Amar-Fit AI', a universal health, fitness, and wellness bot powered by a vast knowledge bank.
+            Your goal is to assist the user with ANY health-related query, including general fitness, nutrition, mental wellness, sleep, healthy habits, and medical knowledge.
+            
+            You can act as a nutritionist, a workout coach, a lifestyle advisor, or a general health assistant.
+            You should provide well-rounded, evidence-based advice.
+            
+            Guidelines:
+            - Answer directly and professionally, but maintain a warm and motivating tone.
+            - If they ask for recipes, you can provide them.
+            - Do NOT force a specific conversation flow (e.g., asking for ingredients first). Simply respond naturally and thoughtfully to their questions.
+            - Use markdown (bolding, bullet points) to format your advice for readability.
+            
+            $contextPrompt
+        """.trimIndent()
+        
+        val apiContents = chatHistory.drop(1).map { msg ->
+            Content(
+                role = if (msg.isUser) "user" else "model",
+                parts = listOf(Part(text = msg.text))
+            )
+        }
+        
+        val request = GenerateContentRequest(
+            contents = apiContents,
+            systemInstruction = Content(parts = listOf(Part(text = systemInstruction)))
+        )
+        
+        return streamGeminiCall(request)
     }
 
     val userProfile = userDao.getUserProfile()

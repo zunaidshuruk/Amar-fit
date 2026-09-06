@@ -533,12 +533,24 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val newUserMsg = ChatMessage(message, true)
             _chatHistory.value = _chatHistory.value + newUserMsg
             _isLoadingChat.value = true
-            
-            // Pass the entire conversation context to Gemini
-            val response = repository.getChatResponse(_chatHistory.value, userProfile.value)
-            
+
+            val placeholderIndex = _chatHistory.value.size
+            _chatHistory.value = _chatHistory.value + ChatMessage("", false)
+
+            var accumulated = ""
+            try {
+                repository.getChatResponseStream(_chatHistory.value.dropLast(1), userProfile.value).collect { chunk ->
+                    accumulated += chunk
+                    _chatHistory.value = _chatHistory.value.toMutableList().also {
+                        it[placeholderIndex] = ChatMessage(accumulated, false)
+                    }
+                }
+            } catch (e: Exception) {
+                _chatHistory.value = _chatHistory.value.toMutableList().also {
+                    it[placeholderIndex] = ChatMessage("Sorry, I couldn't process that. Please try again.", false)
+                }
+            }
             _isLoadingChat.value = false
-            _chatHistory.value = _chatHistory.value + ChatMessage(response, false)
         }
     }
     

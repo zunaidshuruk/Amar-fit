@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 object RetrofitClient {
     private const val BASE_URL = "https://generativelanguage.googleapis.com/"
 
-    private val moshi = Moshi.Builder()
+    val moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())
         .build()
 
