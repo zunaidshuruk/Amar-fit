@@ -95,7 +95,44 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private val repository = AppRepository(database.userDao(), database.metricsDao(), database.savedDietChartDao(), database.savedWorkoutDao(), database.savedChatDao())
+    private val repository = AppRepository(
+        database.userDao(),
+        database.metricsDao(),
+        database.savedDietChartDao(),
+        database.savedWorkoutDao(),
+        database.savedChatDao(),
+        database.activityEventDao()
+    )
+
+    private val startOfDayMillis: Long
+        get() = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+    private val endOfDayMillis: Long
+        get() = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 23)
+            set(java.util.Calendar.MINUTE, 59)
+            set(java.util.Calendar.SECOND, 59)
+            set(java.util.Calendar.MILLISECOND, 999)
+        }.timeInMillis
+
+    val todayActivityEvents: StateFlow<List<com.example.data.local.ActivityEvent>> = repository
+        .getTodayActivityEvents(startOfDayMillis, endOfDayMillis)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun logActivityEvent(type: String, description: String) {
+        viewModelScope.launch {
+            repository.logActivityEvent(type, description)
+        }
+    }
 
     val userProfile = repository.userProfile.stateIn(
         scope = viewModelScope,
@@ -236,6 +273,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
             val updated = current.copy(sleepHours = hours)
             repository.saveMetrics(updated)
+            repository.logActivityEvent("sleep", "Logged ${hours}h sleep")
         }
     }
 
@@ -245,6 +283,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val updated = current.copy(waterLiters = current.waterLiters + amountLiters)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
+            repository.logActivityEvent("water", "Logged ${amountLiters}L water")
         }
     }
     
@@ -254,6 +293,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val updated = current.copy(bloodGlucoseMorning = value)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
+            repository.logActivityEvent("glucose", "Logged blood glucose: ${value} mmol/L")
         }
     }
 
@@ -263,6 +303,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val updated = current.copy(bloodGlucoseNight = value)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
+            repository.logActivityEvent("glucose", "Logged blood glucose: ${value} mmol/L")
         }
     }
     
@@ -276,6 +317,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val updated = current.copy(weightKg = weight)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
+            repository.logActivityEvent("weight", "Logged weight: ${weight}kg")
         }
     }
     
@@ -289,6 +331,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val updated = current.copy(weightKg = value)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
+            repository.logActivityEvent("weight", "Logged weight: ${value}kg")
         }
     }
     
@@ -298,6 +341,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val updated = current.copy(bloodPressure = value)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
+            repository.logActivityEvent("blood_pressure", "Logged blood pressure: ${value}")
         }
     }
     
@@ -525,6 +569,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val updated = current.copy(caloriesConsumed = current.caloriesConsumed + calories)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
+            repository.logActivityEvent("food", "Logged $name")
         }
     }
     
@@ -631,6 +676,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             if (!success) {
                 _syncErrorEvent.emit("Saved locally, but couldn't sync to the cloud — check your connection")
             }
+            repository.logActivityEvent("diet_chart", "Saved diet plan: $name")
         }
     }
     
@@ -722,6 +768,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             if (!success) {
                 _syncErrorEvent.emit("Saved locally, but couldn't sync to the cloud — check your connection")
             }
+            repository.logActivityEvent("workout", "Saved workout: $title")
         }
     }
 

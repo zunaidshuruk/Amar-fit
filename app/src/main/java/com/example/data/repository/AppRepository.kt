@@ -19,8 +19,27 @@ class AppRepository(
     private val metricsDao: MetricsDao,
     private val savedDietChartDao: com.example.data.local.SavedDietChartDao,
     private val savedWorkoutDao: com.example.data.local.SavedWorkoutDao,
-    private val savedChatDao: com.example.data.local.SavedChatDao
+    private val savedChatDao: com.example.data.local.SavedChatDao,
+    private val activityEventDao: com.example.data.local.ActivityEventDao? = null
 ) {
+
+    suspend fun logActivityEvent(type: String, description: String, timestamp: Long = System.currentTimeMillis()) {
+        activityEventDao?.insert(
+            com.example.data.local.ActivityEvent(
+                type = type,
+                description = description,
+                timestamp = timestamp
+            )
+        )
+    }
+
+    fun getTodayActivityEvents(startOfDay: Long, endOfDay: Long): kotlinx.coroutines.flow.Flow<List<com.example.data.local.ActivityEvent>> {
+        return activityEventDao?.getTodayEvents(startOfDay, endOfDay) ?: kotlinx.coroutines.flow.flowOf(emptyList())
+    }
+
+    fun getAllActivityEvents(): kotlinx.coroutines.flow.Flow<List<com.example.data.local.ActivityEvent>> {
+        return activityEventDao?.getAllEvents() ?: kotlinx.coroutines.flow.flowOf(emptyList())
+    }
 
     suspend fun deleteAccount(): DeleteAccountResult {
         return FirebaseManager.deleteAccount()

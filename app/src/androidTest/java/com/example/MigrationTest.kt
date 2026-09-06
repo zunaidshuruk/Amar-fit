@@ -218,4 +218,31 @@ class MigrationTest {
         assert(metricCursor.getInt(0) == 2100)
         metricCursor.close()
     }
+
+    @Test
+    @Throws(IOException::class)
+    fun migrate20To21() {
+        var db = helper.createDatabase(TEST_DB, 20)
+        // Insert some data in version 20
+        db.execSQL("INSERT INTO daily_metrics (date, caloriesConsumed, waterLiters, steps, bloodGlucoseMorning, bloodGlucoseNight, bloodPressure, weightKg, sleepHours, heartRate, distanceMeters, exerciseMinutes, externalNutritionCalories) VALUES ('2026-09-06', 1800, 2.0, 7000, 90.0, 105.0, '120/80', 71.0, 8.0, 70, 800.0, 25, 0)")
+        db.close()
+
+        db = helper.runMigrationsAndValidate(TEST_DB, 21, true, AppDatabase.MIGRATION_20_21)
+
+        // Verify activity_events table exists and supports operations
+        db.execSQL("INSERT INTO activity_events (type, description, timestamp) VALUES ('water', 'Logged 0.5L water', 1725600000000)")
+        val cursor = db.query("SELECT id, type, description, timestamp FROM activity_events WHERE type = 'water'")
+        assert(cursor.moveToFirst())
+        assert(cursor.getInt(cursor.getColumnIndex("id")) > 0)
+        assert(cursor.getString(cursor.getColumnIndex("type")) == "water")
+        assert(cursor.getString(cursor.getColumnIndex("description")) == "Logged 0.5L water")
+        assert(cursor.getLong(cursor.getColumnIndex("timestamp")) == 1725600000000L)
+        cursor.close()
+
+        // Verify existing table data survives migration
+        val metricCursor = db.query("SELECT caloriesConsumed FROM daily_metrics WHERE date = '2026-09-06'")
+        assert(metricCursor.moveToFirst())
+        assert(metricCursor.getInt(0) == 1800)
+        metricCursor.close()
+    }
 }

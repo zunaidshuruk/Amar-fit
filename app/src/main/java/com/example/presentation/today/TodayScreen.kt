@@ -25,6 +25,9 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
@@ -40,6 +43,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
 
     val metrics by viewModel.todayMetrics.collectAsState()
     val todayFoodLogs by viewModel.todayFoodLogs.collectAsState()
+    val todayActivityEvents by viewModel.todayActivityEvents.collectAsState()
     
     var showStepsDialog by remember { mutableStateOf(false) }
     var showStepsOptionDialog by remember { mutableStateOf(false) }
@@ -282,6 +286,95 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     }
                 }
                 Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Go", tint = Slate400)
+            }
+        }
+
+        // Today's Activity Timeline Feed
+        Text(
+            text = "Today's activity",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        if (todayActivityEvents.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(1.dp, RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No activities logged yet today",
+                    color = Slate500,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        } else {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                val timeFormat = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
+                todayActivityEvents.forEach { event ->
+                    val (icon, accent) = when (event.type) {
+                        "food" -> Pair(Icons.Default.RestaurantMenu, AccentTokens.caloriesAccent(isDark))
+                        "water" -> Pair(Icons.Default.LocalDrink, AccentTokens.waterAccent(isDark))
+                        "weight" -> Pair(Icons.Default.MonitorWeight, AccentTokens.weightAccent(isDark))
+                        "glucose" -> Pair(Icons.Default.Favorite, AccentTokens.glucoseAccent(isDark))
+                        "blood_pressure" -> Pair(Icons.Default.MonitorHeart, AccentTokens.bloodPressureAccent(isDark))
+                        "sleep" -> Pair(Icons.Default.Bedtime, AccentTokens.sleepAccent(isDark))
+                        "workout" -> Pair(Icons.Default.FitnessCenter, AccentTokens.stepsAccent(isDark))
+                        "diet_chart" -> Pair(Icons.Default.MenuBook, AccentTokens.pointsAccent(isDark))
+                        else -> Pair(Icons.Default.CheckCircle, AccentTokens.badgesAccent(isDark))
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(2.dp, RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(accent.bg),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = event.type,
+                                    tint = accent.onBg,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = event.description,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = timeFormat.format(Date(event.timestamp)),
+                                    fontSize = 12.sp,
+                                    color = Slate500
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
