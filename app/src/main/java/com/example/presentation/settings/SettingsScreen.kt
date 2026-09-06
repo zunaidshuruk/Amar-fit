@@ -46,6 +46,7 @@ import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.PermissionController
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -90,7 +91,8 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
         HealthPermission.getReadPermission(BloodGlucoseRecord::class),
         HealthPermission.getReadPermission(androidx.health.connect.client.records.HeartRateRecord::class),
         HealthPermission.getReadPermission(DistanceRecord::class),
-        HealthPermission.getReadPermission(ExerciseSessionRecord::class)
+        HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+        HealthPermission.getReadPermission(NutritionRecord::class)
     )
 
     val requestPermissionLauncher = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) { granted ->

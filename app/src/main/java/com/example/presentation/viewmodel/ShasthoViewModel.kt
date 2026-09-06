@@ -26,6 +26,7 @@ import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.NutritionRecord
 
 import androidx.health.connect.client.time.TimeRangeFilter
 import java.time.Instant
@@ -413,6 +414,19 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     exerciseMinutes = fallbackMinutes.toInt()
                 }
 
+                // 8. Nutrition Calories
+                val nutritionAggregate = healthConnectClient.aggregate(
+                    AggregateRequest(
+                        metrics = setOf(NutritionRecord.ENERGY_TOTAL),
+                        timeRangeFilter = timeRangeFilter
+                    )
+                )
+                val totalEnergy = nutritionAggregate[NutritionRecord.ENERGY_TOTAL]
+                var externalNutritionCalories = 0
+                if (totalEnergy != null) {
+                    externalNutritionCalories = totalEnergy.inKilocalories.toInt()
+                }
+
                 val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
                 val updated = current.copy(
                     steps = if (totalSteps > 0) totalSteps else current.steps,
@@ -421,7 +435,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     bloodGlucoseMorning = if (bloodGlucose > 0f) bloodGlucose else current.bloodGlucoseMorning,
                     heartRate = if (heartRate > 0) heartRate else current.heartRate,
                     distanceMeters = if (totalDistance > 0f) totalDistance else current.distanceMeters,
-                    exerciseMinutes = if (exerciseMinutes > 0) exerciseMinutes else current.exerciseMinutes
+                    exerciseMinutes = if (exerciseMinutes > 0) exerciseMinutes else current.exerciseMinutes,
+                    externalNutritionCalories = if (externalNutritionCalories > 0) externalNutritionCalories else current.externalNutritionCalories
                 )
                 repository.saveMetrics(updated)
             } catch (e: Exception) {

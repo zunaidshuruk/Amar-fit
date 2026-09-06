@@ -167,4 +167,28 @@ class MigrationTest {
         assert(cloudId3 == "existing-123")
         cursor3.close()
     }
+
+    @Test
+    @Throws(IOException::class)
+    fun migrate18To19() {
+        var db = helper.createDatabase(TEST_DB, 18)
+        // Insert some data in version 18
+        db.execSQL("INSERT INTO daily_metrics (date, caloriesConsumed, waterLiters, steps, bloodGlucoseMorning, bloodGlucoseNight, bloodPressure, weightKg, sleepHours, heartRate, distanceMeters, exerciseMinutes) VALUES ('2026-09-05', 2100, 2.5, 8500, 95.0, 110.0, '120/80', 72.5, 7.5, 72, 1000.0, 30)")
+        db.close()
+
+        db = helper.runMigrationsAndValidate(TEST_DB, 19, true, AppDatabase.MIGRATION_18_19)
+
+        val cursor = db.query("SELECT externalNutritionCalories, caloriesConsumed, date FROM daily_metrics WHERE date = '2026-09-05'")
+        assert(cursor.moveToFirst())
+
+        val externalNutritionIndex = cursor.getColumnIndex("externalNutritionCalories")
+        val caloriesConsumedIndex = cursor.getColumnIndex("caloriesConsumed")
+        val dateIndex = cursor.getColumnIndex("date")
+
+        assert(cursor.getInt(externalNutritionIndex) == 0)
+        assert(cursor.getInt(caloriesConsumedIndex) == 2100)
+        assert(cursor.getString(dateIndex) == "2026-09-05")
+
+        cursor.close()
+    }
 }

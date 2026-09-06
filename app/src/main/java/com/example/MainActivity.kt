@@ -172,7 +172,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                                             androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.BloodGlucoseRecord::class),
                                             androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.HeartRateRecord::class),
                                             androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.DistanceRecord::class),
-                                            androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.ExerciseSessionRecord::class)
+                                            androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.ExerciseSessionRecord::class),
+                                            androidx.health.connect.client.permission.HealthPermission.getReadPermission(androidx.health.connect.client.records.NutritionRecord::class)
                                           )
                                           coroutineScope.launch {
                                               val granted = healthConnectClient.permissionController.getGrantedPermissions()

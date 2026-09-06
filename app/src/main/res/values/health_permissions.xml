@@ -8,5 +8,6 @@
         <item>android.permission.health.READ_HEART_RATE</item>
         <item>android.permission.health.READ_DISTANCE</item>
         <item>android.permission.health.READ_EXERCISE</item>
+        <item>android.permission.health.READ_NUTRITION</item>
     </array>
 </resources>

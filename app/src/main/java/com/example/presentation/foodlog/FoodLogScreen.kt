@@ -205,7 +205,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
     }
 
     Scaffold(
-                floatingActionButton = {
+        floatingActionButton = {
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 ExtendedFloatingActionButton(
                     onClick = { showManualEntry = true },
@@ -225,117 +225,126 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
         },
         containerColor = Background
     ) { innerPadding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 140.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-        Text(
-            text = "Food Log",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary,
-            modifier = Modifier.padding(top = 16.dp, bottom = 24.dp)
-        )
-        
-        // Calorie Progress Chart
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                modifier = Modifier.size(180.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(
-                    progress = { 1f },
-                    modifier = Modifier.fillMaxSize(),
-                    color = Slate100,
-                    strokeWidth = 14.dp
+            item {
+                Text(
+                    text = "Food Log",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 24.dp)
                 )
-                CircularProgressIndicator(
-                    progress = { animatedProgress },
-                    modifier = Modifier.fillMaxSize(),
-                    color = if (totalCalories > calorieLimit) Orange700 else Emerald500,
-                    strokeWidth = 14.dp,
-                    strokeCap = StrokeCap.Round
-                )
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "$totalCalories",
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = "/ $calorieLimit kcal",
-                        fontSize = 14.sp,
-                        color = Slate500,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = if (totalCalories > calorieLimit) "Over Limit" else "${calorieLimit - totalCalories} left",
-                        fontSize = 12.sp,
-                        color = if (totalCalories > calorieLimit) Orange700 else Emerald600,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
             }
-        }
-
         
-        // Weekly Nutritional Trends Card
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Analytics, contentDescription = null, tint = Emerald600)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Weekly Nutritional Trends", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                if (weeklyInsights != null) {
-                    MarkdownText(text = weeklyInsights!!, color = Slate600, fontSize = 14.sp)
-                } else if (isLoadingInsights) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Emerald500, strokeWidth = 2.dp)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text("Analyzing 7-day logs...", color = Slate500, fontSize = 14.sp)
-                    }
-                } else {
-                    Text("Discover your macro-nutrient trends and potential deficiencies based on your recent food logs.", color = Slate500, fontSize = 14.sp)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(
-                        onClick = { viewModel.fetchWeeklyInsights() },
-                        colors = ButtonDefaults.buttonColors(containerColor = Emerald100, contentColor = Emerald700),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
+            // Calorie Progress Chart
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier.size(180.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.AutoGraph, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Generate AI Insights", fontWeight = FontWeight.SemiBold)
+                        CircularProgressIndicator(
+                            progress = { 1f },
+                            modifier = Modifier.fillMaxSize(),
+                            color = Slate100,
+                            strokeWidth = 14.dp
+                        )
+                        CircularProgressIndicator(
+                            progress = { animatedProgress },
+                            modifier = Modifier.fillMaxSize(),
+                            color = if (totalCalories > calorieLimit) Orange700 else Emerald500,
+                            strokeWidth = 14.dp,
+                            strokeCap = StrokeCap.Round
+                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "$totalCalories",
+                                fontSize = 36.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = "/ $calorieLimit kcal",
+                                fontSize = 14.sp,
+                                color = Slate500,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = if (totalCalories > calorieLimit) "Over Limit" else "${calorieLimit - totalCalories} left",
+                                fontSize = 12.sp,
+                                color = if (totalCalories > calorieLimit) Orange700 else Emerald600,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        if (allFoodLogs.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = "No food logs yet.", color = Slate400)
+        
+            // Weekly Nutritional Trends Card
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Analytics, contentDescription = null, tint = Emerald600)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Weekly Nutritional Trends", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        if (weeklyInsights != null) {
+                            MarkdownText(text = weeklyInsights!!, color = Slate600, fontSize = 14.sp)
+                        } else if (isLoadingInsights) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Emerald500, strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text("Analyzing 7-day logs...", color = Slate500, fontSize = 14.sp)
+                            }
+                        } else {
+                            Text("Discover your macro-nutrient trends and potential deficiencies based on your recent food logs.", color = Slate500, fontSize = 14.sp)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Button(
+                                onClick = { viewModel.fetchWeeklyInsights() },
+                                colors = ButtonDefaults.buttonColors(containerColor = Emerald100, contentColor = Emerald700),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.AutoGraph, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Generate AI Insights", fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
             }
-        } else {
-            val groupedLogs = allFoodLogs.groupBy { it.date }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 140.dp)) {
+
+            if (allFoodLogs.isEmpty()) {
+                item {
+                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                        Text(text = "No food logs yet.", color = Slate400)
+                    }
+                }
+            } else {
+                val groupedLogs = allFoodLogs.groupBy { it.date }
                 groupedLogs.forEach { (date, logs) ->
                     item {
                         Text(
@@ -397,6 +406,5 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                 }
             }
         }
-    }
     }
 }
