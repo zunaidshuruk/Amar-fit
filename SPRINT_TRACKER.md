@@ -27,7 +27,7 @@ Last verified: current session, against commit `91425ae`.
 
 ## 🔲 PART B — KNOWN OPEN ITEMS (small, pre-existing, not yet done)
 
-- [ ] **Chat save feature (SavedChat)** — was scoped in an earlier sprint but never actually built. No `SavedChat` entity exists, DB is still at version 19 with no chat-save migration. Needs to be redone from scratch.
+- [x] **Chat save feature (SavedChat)** — built with Room (v20 migration), Moshi serialization of ChatMessage list, Firestore sync, and two-tab ChatScreen layout.
 - [ ] **Account deletion re-authentication flow** — still shows the deferred placeholder Toast ("log out, log back in, try again") instead of a real in-app re-auth prompt.
 - [ ] **Your own pending check:** confirm `saved_diet_charts` / `saved_workouts` actually appear in Firestore Console under your UID (this was flagged a while back and may still be unconfirmed).
 - [ ] Tab navigation fix — live-test after a fresh rebuild (see Part A note above).

@@ -167,11 +167,48 @@ object FirebaseManager {
         return false
     }
 
+    suspend fun syncSavedChat(chat: SavedChat): Boolean {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            return try {
+                db.collection("users").document(user.uid)
+                    .collection("saved_chats").document(chat.cloudId)
+                    .set(chat, SetOptions.merge()).await()
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
+        return false
+    }
+
+    suspend fun deleteSavedChat(chat: SavedChat): Boolean {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            return try {
+                db.collection("users").document(user.uid)
+                    .collection("saved_chats").document(chat.cloudId)
+                    .delete().await()
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
+        return false
+    }
+
     suspend fun pullDataOnLogin(
         userDao: UserDao, 
         metricsDao: MetricsDao, 
         savedDietChartDao: SavedDietChartDao? = null,
-        savedWorkoutDao: SavedWorkoutDao? = null
+        savedWorkoutDao: SavedWorkoutDao? = null,
+        savedChatDao: SavedChatDao? = null
     ) {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser
@@ -223,6 +260,17 @@ object FirebaseManager {
                         val workout = doc.toObject(SavedWorkout::class.java)
                         if (workout != null) {
                             savedWorkoutDao.insertWorkout(workout)
+                        }
+                    }
+                }
+
+                // Pull Saved Chats
+                if (savedChatDao != null) {
+                    val chatsSnap = db.collection("users").document(user.uid).collection("saved_chats").get().await()
+                    for (doc in chatsSnap.documents) {
+                        val chat = doc.toObject(SavedChat::class.java)
+                        if (chat != null) {
+                            savedChatDao.insertChat(chat)
                         }
                     }
                 }

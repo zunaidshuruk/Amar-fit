@@ -18,7 +18,8 @@ class AppRepository(
     private val userDao: UserDao,
     private val metricsDao: MetricsDao,
     private val savedDietChartDao: com.example.data.local.SavedDietChartDao,
-    private val savedWorkoutDao: com.example.data.local.SavedWorkoutDao
+    private val savedWorkoutDao: com.example.data.local.SavedWorkoutDao,
+    private val savedChatDao: com.example.data.local.SavedChatDao
 ) {
 
     suspend fun deleteAccount(): Boolean {
@@ -26,7 +27,7 @@ class AppRepository(
     }
 
     suspend fun syncDataOnLogin() {
-        FirebaseManager.pullDataOnLogin(userDao, metricsDao, savedDietChartDao, savedWorkoutDao)
+        FirebaseManager.pullDataOnLogin(userDao, metricsDao, savedDietChartDao, savedWorkoutDao, savedChatDao)
     }
 
     private fun resolveApiKeys(): List<String> {
@@ -758,5 +759,17 @@ class AppRepository(
     suspend fun deleteWorkout(workout: com.example.data.local.SavedWorkout): Boolean {
         savedWorkoutDao.deleteWorkout(workout)
         return FirebaseManager.deleteSavedWorkout(workout)
+    }
+
+    fun getAllSavedChats() = savedChatDao.getAllSavedChats()
+
+    suspend fun saveChat(chat: com.example.data.local.SavedChat): Boolean {
+        savedChatDao.insertChat(chat)
+        return FirebaseManager.syncSavedChat(chat)
+    }
+
+    suspend fun deleteChat(chat: com.example.data.local.SavedChat): Boolean {
+        savedChatDao.deleteChat(chat)
+        return FirebaseManager.deleteSavedChat(chat)
     }
 }

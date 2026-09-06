@@ -95,7 +95,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    private val repository = AppRepository(database.userDao(), database.metricsDao(), database.savedDietChartDao(), database.savedWorkoutDao())
+    private val repository = AppRepository(database.userDao(), database.metricsDao(), database.savedDietChartDao(), database.savedWorkoutDao(), database.savedChatDao())
 
     val userProfile = repository.userProfile.stateIn(
         scope = viewModelScope,
@@ -733,8 +733,44 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             }
         }
     }
+
+    val savedChats: StateFlow<List<com.example.data.local.SavedChat>> = repository.getAllSavedChats()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun saveChat(title: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val history = _chatHistory.value
+            if (history.isNotEmpty()) {
+                val listType = com.squareup.moshi.Types.newParameterizedType(List::class.java, ChatMessage::class.java)
+                val adapter = com.example.data.remote.RetrofitClient.moshi.adapter<List<ChatMessage>>(listType)
+                val jsonMessages = adapter.toJson(history)
+                val chat = com.example.data.local.SavedChat(
+                    title = title.ifBlank { "Chat Session" },
+                    messages = jsonMessages
+                )
+                val success = repository.saveChat(chat)
+                if (!success) {
+                    _syncErrorEvent.emit("Saved locally, but couldn't sync to the cloud — check your connection")
+                }
+            }
+        }
+    }
+
+    fun deleteChat(chat: com.example.data.local.SavedChat) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val success = repository.deleteChat(chat)
+            if (!success) {
+                _syncErrorEvent.emit("Deleted locally, but couldn't sync to the cloud — check your connection")
+            }
+        }
+    }
 }
 
+@com.squareup.moshi.JsonClass(generateAdapter = true)
 data class ChatMessage(
     val text: String,
     val isUser: Boolean
