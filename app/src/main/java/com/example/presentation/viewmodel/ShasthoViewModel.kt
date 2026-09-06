@@ -24,6 +24,8 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.ExerciseSessionRecord
 
 import androidx.health.connect.client.time.TimeRangeFilter
 import java.time.Instant
@@ -379,13 +381,47 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
 
+                // 6. Distance using Aggregate
+                val distanceAggregate = healthConnectClient.aggregate(
+                    AggregateRequest(
+                        metrics = setOf(DistanceRecord.DISTANCE_TOTAL),
+                        timeRangeFilter = timeRangeFilter
+                    )
+                )
+                val totalDistance = distanceAggregate[DistanceRecord.DISTANCE_TOTAL]?.inMeters?.toFloat() ?: 0f
+
+                // 7. Exercise Session Duration
+                val exerciseAggregate = healthConnectClient.aggregate(
+                    AggregateRequest(
+                        metrics = setOf(ExerciseSessionRecord.EXERCISE_DURATION_TOTAL),
+                        timeRangeFilter = timeRangeFilter
+                    )
+                )
+                val totalExerciseDuration = exerciseAggregate[ExerciseSessionRecord.EXERCISE_DURATION_TOTAL]
+                var exerciseMinutes = 0
+                if (totalExerciseDuration != null) {
+                    exerciseMinutes = totalExerciseDuration.toMinutes().toInt()
+                } else {
+                    // Fallback to readRecords if aggregate is empty
+                    val exerciseResponse = healthConnectClient.readRecords(
+                        ReadRecordsRequest(ExerciseSessionRecord::class, timeRangeFilter)
+                    )
+                    var fallbackMinutes = 0L
+                    for (record in exerciseResponse.records) {
+                        fallbackMinutes += java.time.Duration.between(record.startTime, record.endTime).toMinutes()
+                    }
+                    exerciseMinutes = fallbackMinutes.toInt()
+                }
+
                 val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
                 val updated = current.copy(
                     steps = if (totalSteps > 0) totalSteps else current.steps,
                     sleepHours = if (sleepHours > 0f) sleepHours else current.sleepHours,
                     bloodPressure = if (bloodPressure.isNotEmpty()) bloodPressure else current.bloodPressure,
                     bloodGlucoseMorning = if (bloodGlucose > 0f) bloodGlucose else current.bloodGlucoseMorning,
-                    heartRate = if (heartRate > 0) heartRate else current.heartRate
+                    heartRate = if (heartRate > 0) heartRate else current.heartRate,
+                    distanceMeters = if (totalDistance > 0f) totalDistance else current.distanceMeters,
+                    exerciseMinutes = if (exerciseMinutes > 0) exerciseMinutes else current.exerciseMinutes
                 )
                 repository.saveMetrics(updated)
             } catch (e: Exception) {

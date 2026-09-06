@@ -6,5 +6,7 @@
         <item>android.permission.health.READ_BLOOD_PRESSURE</item>
         <item>android.permission.health.READ_BLOOD_GLUCOSE</item>
         <item>android.permission.health.READ_HEART_RATE</item>
+        <item>android.permission.health.READ_DISTANCE</item>
+        <item>android.permission.health.READ_EXERCISE</item>
     </array>
 </resources>

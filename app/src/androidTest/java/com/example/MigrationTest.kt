@@ -108,4 +108,30 @@ class MigrationTest {
 
         cursor.close()
     }
+
+    @Test
+    @Throws(IOException::class)
+    fun migrate16To17() {
+        var db = helper.createDatabase(TEST_DB, 16)
+        // Insert some data in version 16
+        db.execSQL("INSERT INTO daily_metrics (date, caloriesConsumed, waterLiters, steps, bloodGlucoseMorning, bloodGlucoseNight, bloodPressure, weightKg, sleepHours, heartRate) VALUES ('2026-09-05', 2100, 2.5, 8500, 95.0, 110.0, '120/80', 72.5, 7.5, 72)")
+        db.close()
+
+        db = helper.runMigrationsAndValidate(TEST_DB, 17, true, AppDatabase.MIGRATION_16_17)
+
+        val cursor = db.query("SELECT distanceMeters, exerciseMinutes, steps, date FROM daily_metrics WHERE date = '2026-09-05'")
+        assert(cursor.moveToFirst())
+
+        val distanceIndex = cursor.getColumnIndex("distanceMeters")
+        val exerciseIndex = cursor.getColumnIndex("exerciseMinutes")
+        val stepsIndex = cursor.getColumnIndex("steps")
+        val dateIndex = cursor.getColumnIndex("date")
+
+        assert(cursor.getFloat(distanceIndex) == 0f)
+        assert(cursor.getInt(exerciseIndex) == 0)
+        assert(cursor.getInt(stepsIndex) == 8500)
+        assert(cursor.getString(dateIndex) == "2026-09-05")
+
+        cursor.close()
+    }
 }

@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [UserProfile::class, DailyMetric::class, FoodLog::class, SavedDietChart::class, SavedWorkout::class], version = 16, exportSchema = true)
+@Database(entities = [UserProfile::class, DailyMetric::class, FoodLog::class, SavedDietChart::class, SavedWorkout::class], version = 17, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun metricsDao(): MetricsDao
@@ -40,6 +40,12 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE food_logs ADD COLUMN cloudId TEXT NOT NULL DEFAULT ''")
             }
         }
+        val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE daily_metrics ADD COLUMN distanceMeters REAL NOT NULL DEFAULT 0.0")
+                database.execSQL("ALTER TABLE daily_metrics ADD COLUMN exerciseMinutes INTEGER NOT NULL DEFAULT 0")
+            }
+        }
 
         @Volatile
         private var INSTANCE: AppDatabase? = null
@@ -51,7 +57,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "shastho_database"
                 )
-                .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
+                .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
                 .build()
                 INSTANCE = instance
                 instance
