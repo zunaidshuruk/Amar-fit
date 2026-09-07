@@ -38,7 +38,8 @@ object HealthConnectManager {
         HealthPermission.getWritePermission(NutritionRecord::class),
         HealthPermission.getWritePermission(HydrationRecord::class),
         HealthPermission.getWritePermission(SleepSessionRecord::class),
-        HealthPermission.getWritePermission(ExerciseSessionRecord::class)
+        HealthPermission.getWritePermission(ExerciseSessionRecord::class),
+        HealthPermission.getWritePermission(MindfulnessSessionRecord::class)
     )
 
     fun isAvailable(context: Context): Boolean {
