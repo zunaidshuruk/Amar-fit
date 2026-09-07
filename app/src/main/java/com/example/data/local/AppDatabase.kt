@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [UserProfile::class, DailyMetric::class, FoodLog::class, SavedDietChart::class, SavedWorkout::class, SavedChat::class, ActivityEvent::class, YoutubeVideoCache::class, MedicalRecord::class], version = 27, exportSchema = true)
+@Database(entities = [UserProfile::class, DailyMetric::class, FoodLog::class, SavedDietChart::class, SavedWorkout::class, SavedChat::class, ActivityEvent::class, YoutubeVideoCache::class, MedicalRecord::class], version = 28, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun metricsDao(): MetricsDao
@@ -113,6 +113,26 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             }
         }
+        val MIGRATION_27_28 = object : Migration(27, 28) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Remove duplicate food_logs rows, keeping the lowest id per cloudId
+                db.execSQL(
+                    "DELETE FROM food_logs WHERE id NOT IN (" +
+                    "SELECT MIN(id) FROM food_logs GROUP BY cloudId)"
+                )
+                // Remove duplicate saved_diet_charts rows, keeping the lowest id per cloudId
+                db.execSQL(
+                    "DELETE FROM saved_diet_charts WHERE id NOT IN (" +
+                    "SELECT MIN(id) FROM saved_diet_charts GROUP BY cloudId)"
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_food_logs_cloudId ON food_logs(cloudId)"
+                )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_saved_diet_charts_cloudId ON saved_diet_charts(cloudId)"
+                )
+            }
+        }
 
         @Volatile
         private var INSTANCE: AppDatabase? = null
@@ -124,7 +144,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "shastho_database"
                 )
-                .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27)
+                .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28)
                 .build()
                 INSTANCE = instance
                 instance

@@ -1,6 +1,7 @@
 package com.example.data.local
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.util.UUID
 
@@ -53,7 +54,7 @@ data class DailyMetric(
     val mindfulnessMinutes: Int = 0
 )
 
-@Entity(tableName = "food_logs")
+@Entity(tableName = "food_logs", indices = [Index(value = ["cloudId"], unique = true)])
 data class FoodLog(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val cloudId: String = UUID.randomUUID().toString(),
