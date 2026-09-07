@@ -617,6 +617,89 @@ class AppRepository(
         }
     }
 
+    suspend fun generateStructuredWorkout(profile: UserProfile?): Result<com.example.data.model.WorkoutPlan> = withContext(Dispatchers.IO) {
+        val contextPrompt = if (profile != null) {
+            "User Context: ${profile.age}yo ${profile.gender}, Weight: ${profile.weightKg}kg, Height: ${profile.heightCm}cm, Goal: ${profile.healthGoals}. "
+        } else ""
+
+        val systemInstruction = """
+            You are 'Amar-Fit AI', an expert fitness coach.
+            Generate a personalized daily workout routine based on the user's profile.
+            You MUST return ONLY a raw JSON object matching this schema with NO markdown formatting, NO commentary, and NO code fences:
+            {
+              "title": "String",
+              "warmup": [
+                {
+                  "name": "String",
+                  "sets": Int or null,
+                  "reps": "String (e.g. 10-12)" or null,
+                  "durationSeconds": Int (seconds) or null,
+                  "restSeconds": Int,
+                  "youtubeSearchQuery": "String search query for exercise demonstration",
+                  "metValue": Double (estimated MET intensity, e.g. 3.0 to 8.0)
+                }
+              ],
+              "mainExercises": [
+                {
+                  "name": "String",
+                  "sets": Int or null,
+                  "reps": "String (e.g. 8-10)" or null,
+                  "durationSeconds": Int or null,
+                  "restSeconds": Int,
+                  "youtubeSearchQuery": "String",
+                  "metValue": Double
+                }
+              ],
+              "cooldown": [
+                {
+                  "name": "String",
+                  "sets": Int or null,
+                  "reps": "String" or null,
+                  "durationSeconds": Int or null,
+                  "restSeconds": Int,
+                  "youtubeSearchQuery": "String",
+                  "metValue": Double
+                }
+              ]
+            }
+            $contextPrompt
+        """.trimIndent()
+
+        val request = GenerateContentRequest(
+            contents = listOf(
+                Content(
+                    parts = listOf(Part(text = "Please generate my personalized structured workout for today in JSON format."))
+                )
+            ),
+            systemInstruction = Content(parts = listOf(Part(text = systemInstruction))),
+            generationConfig = GenerationConfig(responseMimeType = "application/json")
+        )
+
+        try {
+            val response = executeGeminiCallWithBackoff(request)
+            val jsonText = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
+                ?: return@withContext Result.failure(Exception("Empty response from AI service"))
+            
+            val cleanedJson = jsonText.trim().removeSurrounding("```json", "```").removeSurrounding("```", "```").trim()
+            val adapter = RetrofitClient.moshi.adapter(com.example.data.model.WorkoutPlan::class.java)
+            val plan = adapter.fromJson(cleanedJson)
+            if (plan != null) {
+                Result.success(plan)
+            } else {
+                Result.failure(Exception("Failed to parse workout plan JSON"))
+            }
+        } catch (e: HttpException) {
+            val msg = if (e.code() == 429) {
+                "The AI is currently busy due to high traffic. Retries exhausted. Please try again in a minute."
+            } else {
+                "Error (${e.code()}): ${e.message}"
+            }
+            Result.failure(Exception(msg, e))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     fun generateDietChartStream(profile: UserProfile, durationDays: Int): kotlinx.coroutines.flow.Flow<String> {
         val bmi = profile.weightKg / ((profile.heightCm / 100f) * (profile.heightCm / 100f))
         val contextPrompt = "User Context: ${profile.age}yo ${profile.gender}, Weight: ${profile.weightKg}kg, Height: ${profile.heightCm}cm, BMI: ${"%.1f".format(bmi)}, Goal: ${profile.healthGoals}, Restrictions: ${profile.dietaryRestrictions}."

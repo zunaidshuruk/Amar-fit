@@ -9,5 +9,6 @@ data class SavedWorkout(
     @PrimaryKey val cloudId: String = UUID.randomUUID().toString(),
     val title: String = "",
     val content: String = "",
+    val structuredJson: String = "",
     val createdAt: Long = System.currentTimeMillis()
 )

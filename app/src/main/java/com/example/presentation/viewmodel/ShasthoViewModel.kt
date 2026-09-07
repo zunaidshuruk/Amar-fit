@@ -831,9 +831,49 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     
     private val _isLoadingWorkout = MutableStateFlow(false)
     val isLoadingWorkout: StateFlow<Boolean> = _isLoadingWorkout.asStateFlow()
+
+    private val _structuredWorkoutPlan = MutableStateFlow<com.example.data.model.WorkoutPlan?>(null)
+    val structuredWorkoutPlan: StateFlow<com.example.data.model.WorkoutPlan?> = _structuredWorkoutPlan.asStateFlow()
+
+    private val _rawStructuredWorkoutJson = MutableStateFlow<String>("")
+    val rawStructuredWorkoutJson: StateFlow<String> = _rawStructuredWorkoutJson.asStateFlow()
+
+    private val _isLoadingStructuredWorkout = MutableStateFlow(false)
+    val isLoadingStructuredWorkout: StateFlow<Boolean> = _isLoadingStructuredWorkout.asStateFlow()
+
+    private val _structuredWorkoutError = MutableStateFlow<String?>(null)
+    val structuredWorkoutError: StateFlow<String?> = _structuredWorkoutError.asStateFlow()
     
     fun clearWorkoutPlan() {
         _workoutPlan.value = null
+    }
+
+    fun clearStructuredWorkoutPlan() {
+        _structuredWorkoutPlan.value = null
+        _rawStructuredWorkoutJson.value = ""
+        _structuredWorkoutError.value = null
+    }
+
+    fun generateAIStructuredWorkout() {
+        viewModelScope.launch {
+            _isLoadingStructuredWorkout.value = true
+            _structuredWorkoutError.value = null
+            _structuredWorkoutPlan.value = null
+            _rawStructuredWorkoutJson.value = ""
+            val result = repository.generateStructuredWorkout(userProfile.value)
+            result.onSuccess { plan ->
+                _structuredWorkoutPlan.value = plan
+                try {
+                    val adapter = com.example.data.remote.RetrofitClient.moshi.adapter(com.example.data.model.WorkoutPlan::class.java)
+                    _rawStructuredWorkoutJson.value = adapter.toJson(plan)
+                } catch (e: Exception) {
+                    _rawStructuredWorkoutJson.value = ""
+                }
+            }.onFailure { error ->
+                _structuredWorkoutError.value = error.message ?: "Could not generate structured workout. Please try again."
+            }
+            _isLoadingStructuredWorkout.value = false
+        }
     }
     
     fun generateAIWorkout() {
@@ -958,11 +998,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             _isLoadingRecipe.value = false
         }
     }
-    fun saveWorkout(title: String, content: String) {
+    fun saveWorkout(title: String, content: String, structuredJson: String = "") {
         viewModelScope.launch(Dispatchers.IO) {
             val workout = com.example.data.local.SavedWorkout(
                 title = title,
-                content = content
+                content = content,
+                structuredJson = structuredJson
             )
             val success = repository.saveWorkout(workout)
             if (!success) {

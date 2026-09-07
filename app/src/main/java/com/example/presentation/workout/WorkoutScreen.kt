@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.text.util.LinkifyCompat
 import com.example.data.local.SavedWorkout
+import com.example.data.model.WorkoutExercise
+import com.example.data.model.WorkoutPlan
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
 import java.text.SimpleDateFormat
@@ -39,8 +41,10 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
     val profile by viewModel.userProfile.collectAsState()
     val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
 
-    val workoutPlan by viewModel.workoutPlan.collectAsState()
-    val isLoading by viewModel.isLoadingWorkout.collectAsState()
+    val structuredPlan by viewModel.structuredWorkoutPlan.collectAsState()
+    val rawStructuredJson by viewModel.rawStructuredWorkoutJson.collectAsState()
+    val isLoadingStructured by viewModel.isLoadingStructuredWorkout.collectAsState()
+    val structuredError by viewModel.structuredWorkoutError.collectAsState()
     val savedWorkouts by viewModel.savedWorkouts.collectAsState()
     
     var selectedTab by remember { mutableStateOf(0) } // 0 = AI Workouts, 1 = Saved
@@ -124,24 +128,39 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 )
                 
                 Button(
-                    onClick = { viewModel.generateAIWorkout() },
+                    onClick = { viewModel.generateAIStructuredWorkout() },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Orange500),
                     shape = RoundedCornerShape(16.dp),
-                    enabled = !isLoading
+                    enabled = !isLoadingStructured
                 ) {
                     Icon(Icons.Default.AutoAwesome, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(if (isLoading) "Generating..." else "Generate Today's Workout", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(if (isLoadingStructured) "Generating..." else "Generate Today's Workout", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
-                if (isLoading && workoutPlan.isNullOrEmpty()) {
+                if (isLoadingStructured) {
                     Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = Orange500)
                     }
-                } else if (!workoutPlan.isNullOrEmpty()) {
+                } else if (structuredError != null) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text(
+                            text = structuredError!!,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(16.dp),
+                            fontSize = 14.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                } else if (structuredPlan != null) {
+                    val plan = structuredPlan!!
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -151,24 +170,41 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(24.dp)
+                                .padding(20.dp)
                         ) {
-                            AndroidView(
-                                factory = { ctx ->
-                                    TextView(ctx).apply {
-                                        textSize = 16f
-                                        setLineSpacing(0f, 1.3f)
-                                        autoLinkMask = Linkify.WEB_URLS
-                                        linksClickable = true
-                                    }
-                                },
-                                update = { textView ->
-                                    textView.setTextColor(bodyTextColor)
-                                    textView.setLinkTextColor(linkTextColor)
-                                    textView.text = workoutPlan
-                                    LinkifyCompat.addLinks(textView, Linkify.WEB_URLS)
-                                }
+                            Text(
+                                text = plan.title,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(bottom = 16.dp)
                             )
+
+                            if (plan.warmup.isNotEmpty()) {
+                                WorkoutSectionView(
+                                    sectionTitle = "Warmup",
+                                    exercises = plan.warmup,
+                                    sectionColor = AccentTokens.stepsAccent(isDark)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+
+                            if (plan.mainExercises.isNotEmpty()) {
+                                WorkoutSectionView(
+                                    sectionTitle = "Main Exercises",
+                                    exercises = plan.mainExercises,
+                                    sectionColor = AccentTokens.caloriesAccent(isDark)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+
+                            if (plan.cooldown.isNotEmpty()) {
+                                WorkoutSectionView(
+                                    sectionTitle = "Cooldown",
+                                    exercises = plan.cooldown,
+                                    sectionColor = AccentTokens.waterAccent(isDark)
+                                )
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
@@ -258,7 +294,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
         Spacer(modifier = Modifier.height(100.dp))
     }
 
-    if (showSaveDialog && workoutPlan != null) {
+    if (showSaveDialog && (structuredPlan != null || !workoutTitle.isEmpty())) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
             title = { Text("Save Workout") },
@@ -271,9 +307,29 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
             },
             confirmButton = {
                 TextButton(onClick = {
+                    val defaultTitle = structuredPlan?.title?.ifBlank { "My Workout" } ?: "My Workout"
+                    val finalTitle = workoutTitle.ifBlank { defaultTitle }
+                    val contentDescription = buildString {
+                        structuredPlan?.let { plan ->
+                            appendLine(plan.title)
+                            if (plan.warmup.isNotEmpty()) {
+                                appendLine("\nWarmup:")
+                                plan.warmup.forEach { appendLine("• ${it.name} - ${formatExerciseDetails(it)}") }
+                            }
+                            if (plan.mainExercises.isNotEmpty()) {
+                                appendLine("\nMain Exercises:")
+                                plan.mainExercises.forEach { appendLine("• ${it.name} - ${formatExerciseDetails(it)}") }
+                            }
+                            if (plan.cooldown.isNotEmpty()) {
+                                appendLine("\nCooldown:")
+                                plan.cooldown.forEach { appendLine("• ${it.name} - ${formatExerciseDetails(it)}") }
+                            }
+                        }
+                    }
                     viewModel.saveWorkout(
-                        title = workoutTitle.ifBlank { "My Workout" },
-                        content = workoutPlan!!
+                        title = finalTitle,
+                        content = contentDescription,
+                        structuredJson = rawStructuredJson
                     )
                     showSaveDialog = false
                     workoutTitle = ""
@@ -286,6 +342,104 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 TextButton(onClick = { showSaveDialog = false }) { Text("Cancel") }
             }
         )
+    }
+}
+
+private fun formatExerciseDetails(exercise: WorkoutExercise): String {
+    val details = mutableListOf<String>()
+    if (exercise.sets != null) {
+        details.add("${exercise.sets} sets")
+    }
+    if (!exercise.reps.isNullOrBlank()) {
+        details.add("${exercise.reps} reps")
+    }
+    if (exercise.durationSeconds != null && exercise.durationSeconds > 0) {
+        details.add("${exercise.durationSeconds}s")
+    }
+    if (exercise.restSeconds > 0) {
+        details.add("${exercise.restSeconds}s rest")
+    }
+    return details.joinToString(" • ")
+}
+
+@Composable
+fun WorkoutSectionView(
+    sectionTitle: String,
+    exercises: List<WorkoutExercise>,
+    sectionColor: AccentColors
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(bottom = 8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp, 16.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(sectionColor.onBg)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = sectionTitle,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        exercises.forEach { exercise ->
+            ExerciseItemRow(exercise = exercise)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+fun ExerciseItemRow(exercise: WorkoutExercise) {
+    val context = LocalContext.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .padding(12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = exercise.name,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            val details = formatExerciseDetails(exercise)
+            if (details.isNotBlank()) {
+                Text(
+                    text = details,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+        }
+        val query = exercise.youtubeSearchQuery.ifBlank { exercise.name }
+        IconButton(
+            onClick = {
+                val intent = Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse("https://www.youtube.com/results?search_query=${Uri.encode(query)}")
+                )
+                context.startActivity(intent)
+            },
+            modifier = Modifier.size(36.dp)
+        ) {
+            Icon(
+                Icons.Default.PlayCircle,
+                contentDescription = "Watch tutorial on YouTube",
+                tint = Red500
+            )
+        }
     }
 }
 
@@ -302,6 +456,18 @@ fun SavedWorkoutDetailView(workout: SavedWorkout, isDark: Boolean, onBack: () ->
         android.graphics.Color.parseColor("#3B82F6")
     }
 
+    val parsedPlan: WorkoutPlan? = remember(workout.structuredJson) {
+        if (workout.structuredJson.isNotBlank()) {
+            try {
+                com.example.data.remote.RetrofitClient.moshi
+                    .adapter(WorkoutPlan::class.java)
+                    .fromJson(workout.structuredJson)
+            } catch (e: Exception) {
+                null
+            }
+        } else null
+    }
+
     Column {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 16.dp)) {
             IconButton(onClick = onBack) {
@@ -315,22 +481,50 @@ fun SavedWorkoutDetailView(workout: SavedWorkout, isDark: Boolean, onBack: () ->
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                AndroidView(
-                    factory = { ctx ->
-                        TextView(ctx).apply {
-                            textSize = 16f
-                            setLineSpacing(0f, 1.3f)
-                            autoLinkMask = Linkify.WEB_URLS
-                            linksClickable = true
-                        }
-                    },
-                    update = { textView ->
-                        textView.setTextColor(bodyTextColor)
-                        textView.setLinkTextColor(linkTextColor)
-                        textView.text = workout.content
-                        LinkifyCompat.addLinks(textView, Linkify.WEB_URLS)
+                if (parsedPlan != null) {
+                    if (parsedPlan.warmup.isNotEmpty()) {
+                        WorkoutSectionView(
+                            sectionTitle = "Warmup",
+                            exercises = parsedPlan.warmup,
+                            sectionColor = AccentTokens.stepsAccent(isDark)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
-                )
+
+                    if (parsedPlan.mainExercises.isNotEmpty()) {
+                        WorkoutSectionView(
+                            sectionTitle = "Main Exercises",
+                            exercises = parsedPlan.mainExercises,
+                            sectionColor = AccentTokens.caloriesAccent(isDark)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    if (parsedPlan.cooldown.isNotEmpty()) {
+                        WorkoutSectionView(
+                            sectionTitle = "Cooldown",
+                            exercises = parsedPlan.cooldown,
+                            sectionColor = AccentTokens.waterAccent(isDark)
+                        )
+                    }
+                } else {
+                    AndroidView(
+                        factory = { ctx ->
+                            TextView(ctx).apply {
+                                textSize = 16f
+                                setLineSpacing(0f, 1.3f)
+                                autoLinkMask = Linkify.WEB_URLS
+                                linksClickable = true
+                            }
+                        },
+                        update = { textView ->
+                            textView.setTextColor(bodyTextColor)
+                            textView.setLinkTextColor(linkTextColor)
+                            textView.text = workout.content
+                            LinkifyCompat.addLinks(textView, Linkify.WEB_URLS)
+                        }
+                    )
+                }
             }
         }
     }
