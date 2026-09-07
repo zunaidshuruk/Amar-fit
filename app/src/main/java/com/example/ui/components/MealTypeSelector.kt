@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
@@ -41,40 +42,54 @@ fun MealTypeSelector(
     onMealTypeSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    // Laid out as a 2x2 grid rather than a single 4-wide row: a single row split
+    // 4 ways doesn't leave enough width for icon + text at any realistic dialog
+    // width (it was truncating "Breakfast"/"Lunch"/"Dinner"/"Snack" down to a
+    // single letter each in both the manual-entry and scan-result dialogs, since
+    // both share this component). Splitting 2-per-row roughly doubles the space
+    // each chip gets, which is enough for the longest label ("Breakfast") plus
+    // its icon without truncating.
+    Column(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        mealTypes.forEach { item ->
-            val isSelected = selectedMealType.equals(item.type, ignoreCase = true)
-            FilterChip(
-                selected = isSelected,
-                onClick = { onMealTypeSelected(item.type) },
-                label = {
-                    Text(
-                        text = item.type,
-                        fontSize = 11.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+        mealTypes.chunked(2).forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                rowItems.forEach { item ->
+                    val isSelected = selectedMealType.equals(item.type, ignoreCase = true)
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { onMealTypeSelected(item.type) },
+                        label = {
+                            Text(
+                                text = item.type,
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = item.type,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Emerald100,
+                            selectedLabelColor = Emerald700,
+                            selectedLeadingIconColor = Emerald700,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            iconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        modifier = Modifier.weight(1f)
                     )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = item.icon,
-                        contentDescription = item.type,
-                        modifier = Modifier.size(16.dp)
-                    )
-                },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = Emerald100,
-                    selectedLabelColor = Emerald700,
-                    selectedLeadingIconColor = Emerald700,
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    iconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-                modifier = Modifier.weight(1f)
-            )
+                }
+            }
         }
     }
 }
