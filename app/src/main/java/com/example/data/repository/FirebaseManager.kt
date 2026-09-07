@@ -45,6 +45,11 @@ object FirebaseManager {
                     db.collection("users").document(uid).collection("saved_chats").document(doc.id).delete().await()
                 }
 
+                val medicalRecordsSnap = db.collection("users").document(uid).collection("medical_records").get().await()
+                for (doc in medicalRecordsSnap.documents) {
+                    db.collection("users").document(uid).collection("medical_records").document(doc.id).delete().await()
+                }
+
                 db.collection("users").document(uid).delete().await()
                 user.delete().await()
                 DeleteAccountResult.Success
@@ -222,12 +227,49 @@ object FirebaseManager {
         return false
     }
 
+    suspend fun syncMedicalRecord(record: com.example.data.local.MedicalRecord): Boolean {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            return try {
+                db.collection("users").document(user.uid)
+                    .collection("medical_records").document(record.cloudId)
+                    .set(record, SetOptions.merge()).await()
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
+        return false
+    }
+
+    suspend fun deleteMedicalRecordRemote(cloudId: String): Boolean {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            return try {
+                db.collection("users").document(user.uid)
+                    .collection("medical_records").document(cloudId)
+                    .delete().await()
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
+        return false
+    }
+
     suspend fun pullDataOnLogin(
         userDao: UserDao, 
         metricsDao: MetricsDao, 
         savedDietChartDao: SavedDietChartDao? = null,
         savedWorkoutDao: SavedWorkoutDao? = null,
-        savedChatDao: SavedChatDao? = null
+        savedChatDao: SavedChatDao? = null,
+        medicalRecordDao: com.example.data.local.MedicalRecordDao? = null
     ) {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser
@@ -319,6 +361,22 @@ object FirebaseManager {
                     }
                 } catch (e: Exception) {
                     Log.e("FirebaseManager", "Error pulling saved chats on login", e)
+                    e.printStackTrace()
+                }
+            }
+
+            // Pull Medical Records
+            if (medicalRecordDao != null) {
+                try {
+                    val recordsSnap = db.collection("users").document(user.uid).collection("medical_records").get().await()
+                    for (doc in recordsSnap.documents) {
+                        val record = doc.toObject(com.example.data.local.MedicalRecord::class.java)
+                        if (record != null) {
+                            medicalRecordDao.insertMedicalRecord(record)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("FirebaseManager", "Error pulling medical records on login", e)
                     e.printStackTrace()
                 }
             }

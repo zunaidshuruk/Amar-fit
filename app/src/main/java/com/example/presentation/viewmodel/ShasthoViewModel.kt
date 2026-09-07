@@ -114,7 +114,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         database.savedWorkoutDao(),
         database.savedChatDao(),
         database.activityEventDao(),
-        database.youtubeVideoCacheDao()
+        database.youtubeVideoCacheDao(),
+        database.medicalRecordDao()
     )
 
     private val startOfDayMillis: Long
@@ -1116,6 +1117,31 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     fun deleteChat(chat: com.example.data.local.SavedChat) {
         viewModelScope.launch(Dispatchers.IO) {
             val success = repository.deleteChat(chat)
+            if (!success) {
+                _syncErrorEvent.emit("Deleted locally, but couldn't sync to the cloud — check your connection")
+            }
+        }
+    }
+
+    val medicalRecords: StateFlow<List<com.example.data.local.MedicalRecord>> = repository.getMedicalRecords()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun addMedicalRecord(record: com.example.data.local.MedicalRecord) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val success = repository.addMedicalRecord(record)
+            if (!success) {
+                _syncErrorEvent.emit("Saved locally, but couldn't sync to the cloud — check your connection")
+            }
+        }
+    }
+
+    fun deleteMedicalRecord(record: com.example.data.local.MedicalRecord) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val success = repository.deleteMedicalRecord(record)
             if (!success) {
                 _syncErrorEvent.emit("Deleted locally, but couldn't sync to the cloud — check your connection")
             }

@@ -21,7 +21,8 @@ class AppRepository(
     private val savedWorkoutDao: com.example.data.local.SavedWorkoutDao,
     private val savedChatDao: com.example.data.local.SavedChatDao,
     private val activityEventDao: com.example.data.local.ActivityEventDao? = null,
-    private val youtubeVideoCacheDao: com.example.data.local.YoutubeVideoCacheDao? = null
+    private val youtubeVideoCacheDao: com.example.data.local.YoutubeVideoCacheDao? = null,
+    private val medicalRecordDao: com.example.data.local.MedicalRecordDao? = null
 ) {
 
     suspend fun logActivityEvent(type: String, description: String, timestamp: Long = System.currentTimeMillis()) {
@@ -47,7 +48,7 @@ class AppRepository(
     }
 
     suspend fun syncDataOnLogin() {
-        FirebaseManager.pullDataOnLogin(userDao, metricsDao, savedDietChartDao, savedWorkoutDao, savedChatDao)
+        FirebaseManager.pullDataOnLogin(userDao, metricsDao, savedDietChartDao, savedWorkoutDao, savedChatDao, medicalRecordDao)
     }
 
     private fun resolveApiKeys(): List<String> {
@@ -874,6 +875,19 @@ class AppRepository(
     suspend fun deleteChat(chat: com.example.data.local.SavedChat): Boolean {
         savedChatDao.deleteChat(chat)
         return FirebaseManager.deleteSavedChat(chat)
+    }
+
+    fun getMedicalRecords(): kotlinx.coroutines.flow.Flow<List<com.example.data.local.MedicalRecord>> =
+        medicalRecordDao?.getAllMedicalRecords() ?: kotlinx.coroutines.flow.flowOf(emptyList())
+
+    suspend fun addMedicalRecord(record: com.example.data.local.MedicalRecord): Boolean {
+        medicalRecordDao?.insertMedicalRecord(record)
+        return FirebaseManager.syncMedicalRecord(record)
+    }
+
+    suspend fun deleteMedicalRecord(record: com.example.data.local.MedicalRecord): Boolean {
+        medicalRecordDao?.deleteMedicalRecord(record)
+        return FirebaseManager.deleteMedicalRecordRemote(record.cloudId)
     }
 
     suspend fun resolveYoutubeVideoId(searchQuery: String): String? = withContext(Dispatchers.IO) {

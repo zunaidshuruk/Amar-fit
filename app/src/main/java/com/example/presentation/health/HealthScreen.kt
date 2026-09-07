@@ -858,6 +858,22 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 }
             }
         }
+
+        val medicalAccent = AccentTokens.medicalAccent(isDark)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(medicalAccent.bg)
+                .clickable { navController.navigate("medical_records") }
+                .padding(16.dp)
+        ) {
+            Column {
+                Text(text = "Medical", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = medicalAccent.onBg)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = "Health records", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = medicalAccent.onBg.copy(alpha = 0.8f))
+            }
+        }
     }
 
     if (showBpDialog) {

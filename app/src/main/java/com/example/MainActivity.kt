@@ -339,6 +339,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 composable("foodlog") { FoodLogScreen(viewModel = viewModel, onNavigateToScanner = { navController.navigate("scanner") }, onNavigateBack = { navController.popBackStack() }) }
                 composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }) }
                 composable("scanner") { ScannerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                composable("medical_records") { com.example.presentation.health.MedicalRecordsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
               }
             }
         }
