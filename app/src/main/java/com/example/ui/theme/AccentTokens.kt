@@ -128,5 +128,7 @@ object AccentTokens {
 
     fun sleepAccent(isDark: Boolean): AccentColors = mindfulnessAccent(isDark)
 
+    fun resilienceAccent(isDark: Boolean): AccentColors = mindfulnessAccent(isDark)
+
     fun coachAccent(isDark: Boolean): AccentColors = waterAccent(isDark)
 }

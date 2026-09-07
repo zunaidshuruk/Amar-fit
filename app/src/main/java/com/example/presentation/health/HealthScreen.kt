@@ -46,15 +46,61 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val bmiAccent = AccentTokens.bmiAccent(isDark)
     val caloriesAccent = AccentTokens.caloriesAccent(isDark)
     val stepsAccent = AccentTokens.stepsAccent(isDark)
+    val resilienceAccent = AccentTokens.resilienceAccent(isDark)
 
     val bmiTrackColor = if (isDark) Emerald800 else Emerald200
     val bmiFillColor = if (isDark) Emerald300 else Emerald600
+    val resilienceTrackColor = resilienceAccent.onBg.copy(alpha = 0.2f)
+    val resilienceFillColor = resilienceAccent.onBg
 
     val metrics by viewModel.todayMetrics.collectAsState()
     val todayFoodLogs by viewModel.todayFoodLogs.collectAsState()
     val metricsHistory by viewModel.metricsHistory.collectAsState()
     val last7Days = remember(metricsHistory) {
         metricsHistory.take(7).reversed()
+    }
+
+    // Resilience calculation
+    val recent7Days = remember(metricsHistory) { metricsHistory.take(7) }
+    val recentSleepDay = remember(recent7Days) { recent7Days.firstOrNull { it.sleepHours > 0f } }
+
+    val sleepScore = remember(recentSleepDay) {
+        recentSleepDay?.let {
+            (100f - kotlin.math.abs(it.sleepHours - 8f) * 20f).coerceIn(0f, 100f)
+        }
+    }
+
+    val hrvScore = remember(recent7Days, metricsHistory) {
+        val mostRecentHrvDay = recent7Days.firstOrNull { it.heartRateVariability > 0f }
+        if (mostRecentHrvDay != null) {
+            val todayHrv = mostRecentHrvDay.heartRateVariability
+            val priorHrvDays = metricsHistory.filter { it.date < mostRecentHrvDay.date && it.heartRateVariability > 0f }.take(7)
+            if (priorHrvDays.size >= 3) {
+                val avgHrv = priorHrvDays.map { it.heartRateVariability }.average().toFloat()
+                if (avgHrv > 0f) {
+                    (50f + ((todayHrv - avgHrv) / avgHrv) * 200f).coerceIn(0f, 100f)
+                } else null
+            } else null
+        } else null
+    }
+
+    val resilienceScore = remember(sleepScore, hrvScore) {
+        when {
+            sleepScore == null -> null
+            hrvScore == null -> kotlin.math.round(sleepScore).toInt().coerceIn(0, 100)
+            else -> kotlin.math.round(0.6f * sleepScore + 0.4f * hrvScore).toInt().coerceIn(0, 100)
+        }
+    }
+
+    val resilienceBucket = remember(resilienceScore) {
+        resilienceScore?.let { score ->
+            when {
+                score >= 80 -> "Great"
+                score >= 60 -> "Good"
+                score >= 40 -> "Fair"
+                else -> "Low"
+            }
+        }
     }
     
     val glucose = maxOf(metrics?.bloodGlucoseMorning ?: 0f, metrics?.bloodGlucoseNight ?: 0f)
@@ -181,6 +227,83 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                 .fillMaxHeight()
                                 .clip(CircleShape)
                                 .background(bmiFillColor)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Resilience Card
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(resilienceAccent.bg)
+                .padding(16.dp)
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "RESILIENCE",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = resilienceAccent.onBg
+                    )
+                    if (resilienceBucket != null) {
+                        Text(
+                            text = resilienceBucket,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = resilienceAccent.onBg
+                        )
+                    }
+                }
+                if (resilienceScore == null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Log your sleep to see your Resilience score",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = resilienceAccent.onBg
+                    )
+                } else {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "$resilienceScore",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = resilienceAccent.onBg
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(CircleShape)
+                            .background(resilienceTrackColor)
+                    ) {
+                        val fillFraction = (resilienceScore / 100f).coerceIn(0f, 1f)
+                        if (fillFraction > 0f) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(fillFraction)
+                                    .fillMaxHeight()
+                                    .clip(CircleShape)
+                                    .background(resilienceFillColor)
+                            )
+                        }
+                    }
+                    if (hrvScore == null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Based on sleep only — sync Health Connect HRV for a fuller score",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = resilienceAccent.onBg.copy(alpha = 0.85f)
                         )
                     }
                 }
