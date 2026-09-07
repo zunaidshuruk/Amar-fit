@@ -32,7 +32,7 @@ Last verified: current session, against commit `91425ae`.
 - [x] **Firestore deserialization fix on login for saved items (SavedWorkout, SavedDietChart, SavedChat)** — added default parameter values to all three entity models so Firestore's zero-arg constructor reflection works on restore; isolated collection pulls into individual try-catches in FirebaseManager.pullDataOnLogin so failures in one collection cannot block others.
 - [x] **Email verification for email/password accounts** — newly identified and closed gap: requires email verification via Firebase Auth before reaching the app on sign up or unverified password login, provides 30s rate-limited resend, check status button, and account switcher. Google Sign-In and already-verified accounts remain untouched.
 - [ ] **Your own pending check:** confirm `saved_diet_charts` / `saved_workouts` actually appear in Firestore Console under your UID (this was flagged a while back and may still be unconfirmed).
-- [ ] Tab navigation fix — all 7 in-app shortcuts updated to navigateToTab with popUpTo(findStartDestination), singleTop, and state restoration; ready for live confirmation after a fresh rebuild.
+- [ ] Tab navigation fix — all 10 in-app shortcut call sites (7 in TodayScreen, 3 in HealthScreen) updated to navigateToTab with popUpTo(findStartDestination), singleTop, and state restoration; ready for live confirmation after a fresh rebuild.
 
 ## 🔲 PART C — NEW DESIGN & FEATURE BACKLOG (nothing built yet — this is the big one)
 

@@ -173,7 +173,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     unitText = "hrs",
                     subtext = if (sleepHrs >= 7f) "Good rest" else "(Tap to log)",
                     progress = if (sleepHrs > 0f) (sleepHrs / 8f).coerceIn(0f, 1f) else null,
-                    onClick = { navController.navigate("sleep") }
+                    onClick = { navigateToTab(navController, "sleep") }
                 )
             }
             "blood_glucose" -> {
@@ -201,7 +201,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     unitText = "mmHg",
                     subtext = "(Tap to log)",
                     progress = null,
-                    onClick = { navController.navigate("health") }
+                    onClick = { navigateToTab(navController, "health") }
                 )
             }
             else -> TodayTileData(
