@@ -38,8 +38,7 @@ object HealthConnectManager {
         HealthPermission.getWritePermission(NutritionRecord::class),
         HealthPermission.getWritePermission(HydrationRecord::class),
         HealthPermission.getWritePermission(SleepSessionRecord::class),
-        HealthPermission.getWritePermission(ExerciseSessionRecord::class),
-        HealthPermission.getWritePermission(MindfulnessSessionRecord::class)
+        HealthPermission.getWritePermission(ExerciseSessionRecord::class)
     )
 
     fun isAvailable(context: Context): Boolean {
@@ -51,6 +50,22 @@ object HealthConnectManager {
             val client = HealthConnectClient.getOrCreate(context)
             val granted = client.permissionController.getGrantedPermissions()
             granted.containsAll(REQUIRED_PERMISSIONS)
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // Some newer/optional record types (HRV, Skin Temperature, Respiratory Rate, Mindfulness)
+    // aren't supported on every installed Health Connect version, so a device can permanently
+    // fail hasAllPermissions() even after the user has granted everything the OS actually offers.
+    // Use this wherever "is Health Connect usable at all" is the real question (e.g. gating a
+    // sync action) — syncWithHealthConnect() already reads each metric in its own try-catch and
+    // simply skips whatever wasn't granted, so a partial grant still works correctly.
+    suspend fun hasAnyPermissions(context: Context): Boolean {
+        return try {
+            val client = HealthConnectClient.getOrCreate(context)
+            val granted = client.permissionController.getGrantedPermissions()
+            granted.any { it in REQUIRED_PERMISSIONS }
         } catch (e: Exception) {
             false
         }
