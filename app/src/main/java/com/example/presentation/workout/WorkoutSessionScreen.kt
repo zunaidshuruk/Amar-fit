@@ -28,6 +28,7 @@ import com.example.data.model.WorkoutPlan
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
 import kotlinx.coroutines.delay
+import java.time.Instant
 
 enum class SessionStepType {
     EXERCISE,
@@ -106,6 +107,11 @@ fun WorkoutSessionScreen(
     var isCompleted by remember { mutableStateOf(false) }
     var showExitDialog by remember { mutableStateOf(false) }
 
+    // Wall-clock session timing and persistence guard
+    val sessionStartTime = remember { Instant.now() }
+    var sessionEndTime by remember { mutableStateOf<Instant?>(null) }
+    var sessionSaved by remember { mutableStateOf(false) }
+
     // Elapsed tracking
     var remainingSeconds by remember { mutableIntStateOf(0) }
     var currentStepElapsedSeconds by remember { mutableIntStateOf(0) }
@@ -146,6 +152,9 @@ fun WorkoutSessionScreen(
         if (currentStepIndex + 1 < sessionSteps.size) {
             currentStepIndex++
         } else {
+            if (sessionEndTime == null) {
+                sessionEndTime = Instant.now()
+            }
             isCompleted = true
         }
     }
@@ -189,6 +198,21 @@ fun WorkoutSessionScreen(
             }
         }
         return total
+    }
+
+    // Persist completed workout session to local metrics and Health Connect once
+    LaunchedEffect(isCompleted) {
+        if (isCompleted && !sessionSaved) {
+            sessionSaved = true
+            val end = sessionEndTime ?: Instant.now().also { sessionEndTime = it }
+            viewModel.saveCompletedWorkoutSession(
+                planTitle = plan.title,
+                startTime = sessionStartTime,
+                endTime = end,
+                totalElapsedSeconds = totalSessionElapsedSeconds,
+                caloriesBurned = computeCalories()
+            )
+        }
     }
 
     Scaffold(

@@ -18,5 +18,6 @@
         <item>android.permission.health.WRITE_NUTRITION</item>
         <item>android.permission.health.WRITE_HYDRATION</item>
         <item>android.permission.health.WRITE_SLEEP</item>
+        <item>android.permission.health.WRITE_EXERCISE</item>
     </array>
 </resources>

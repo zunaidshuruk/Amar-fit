@@ -48,6 +48,7 @@ import java.util.Locale
 
 class ShasthoViewModel(application: Application) : AndroidViewModel(application) {
     private val database = AppDatabase.getDatabase(application)
+    private val savedWorkoutSessionKeys = java.util.Collections.synchronizedSet(mutableSetOf<String>())
 
     fun syncDataOnLogin(onComplete: (Boolean) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -344,6 +345,65 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    suspend fun saveCompletedWorkoutSession(
+        planTitle: String,
+        startTime: Instant,
+        endTime: Instant,
+        totalElapsedSeconds: Int,
+        caloriesBurned: Double?
+    ) = withContext(Dispatchers.IO) {
+        val sessionKey = "${planTitle}_${startTime.toEpochMilli()}"
+        if (savedWorkoutSessionKeys.contains(sessionKey)) {
+            return@withContext
+        }
+        savedWorkoutSessionKeys.add(sessionKey)
+
+        // 1. Save locally first:
+        // Update today's DailyMetric locally: ADD (not overwrite) the session's total elapsed minutes
+        // to exerciseMinutes and the session's computed MET-based calorie total to activeCaloriesBurned.
+        // If calorie total is null, skip only the calorie increment, still record the duration.
+        val durationSeconds = if (totalElapsedSeconds > 0) {
+            totalElapsedSeconds
+        } else {
+            java.time.Duration.between(startTime, endTime).seconds.toInt().coerceAtLeast(0)
+        }
+        val elapsedMinutes = (durationSeconds / 60).coerceAtLeast(if (durationSeconds > 0) 1 else 0)
+        val calIncrement = caloriesBurned?.let { kotlin.math.round(it).toInt().coerceAtLeast(0) }
+
+        val current = todayMetrics.value ?: repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
+        val updated = current.copy(
+            exerciseMinutes = (current.exerciseMinutes + elapsedMinutes).coerceAtLeast(0),
+            activeCaloriesBurned = if (calIncrement != null) (current.activeCaloriesBurned + calIncrement).coerceAtLeast(0) else current.activeCaloriesBurned
+        )
+        repository.saveMetrics(updated)
+        repository.checkAndAwardBadges(updated)
+        val logMsg = if (calIncrement != null) {
+            "Completed workout '$planTitle' (${elapsedMinutes}m, ~${calIncrement} kcal)"
+        } else {
+            "Completed workout '$planTitle' (${elapsedMinutes}m)"
+        }
+        repository.logActivityEvent("workout", logMsg)
+
+        // 2. Health Connect write in its own try-catch (can never block or fail the local save)
+        try {
+            val healthConnectClient = HealthConnectClient.getOrCreate(getApplication())
+            val effectiveEndTime = if (endTime.isAfter(startTime)) endTime else startTime.plusSeconds(durationSeconds.toLong().coerceAtLeast(1L))
+            val startOffset = ZoneId.systemDefault().rules.getOffset(startTime)
+            val endOffset = ZoneId.systemDefault().rules.getOffset(effectiveEndTime)
+            val exerciseSession = ExerciseSessionRecord(
+                startTime = startTime,
+                startZoneOffset = startOffset,
+                endTime = effectiveEndTime,
+                endZoneOffset = endOffset,
+                exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT,
+                title = planTitle
+            )
+            healthConnectClient.insertRecords(listOf(exerciseSession))
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
     
