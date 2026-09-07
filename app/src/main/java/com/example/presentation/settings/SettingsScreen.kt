@@ -105,8 +105,20 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
     var isHealthConnectAvailable by remember { mutableStateOf(HealthConnectManager.isAvailable(context)) }
 
     val requestPermissionLauncher = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) { granted ->
-        if (granted.containsAll(HealthConnectManager.REQUIRED_PERMISSIONS)) {
-            Toast.makeText(context, "Health Connect connected!", Toast.LENGTH_SHORT).show()
+        if (granted.isNotEmpty()) {
+            // Some newer/optional Health Connect record types (HRV, Skin Temperature,
+            // Respiratory Rate, Mindfulness) aren't supported on every installed Health
+            // Connect version, so the system can grant most permissions while silently
+            // withholding one or two. Treat any non-empty grant as a successful connect —
+            // syncWithHealthConnect() already reads each metric in its own try-catch and
+            // simply skips whatever wasn't granted, so a partial grant still works correctly.
+            val missingCount = HealthConnectManager.REQUIRED_PERMISSIONS.size - granted.count { it in HealthConnectManager.REQUIRED_PERMISSIONS }
+            val message = if (missingCount > 0) {
+                "Health Connect connected! ($missingCount permission${if (missingCount == 1) "" else "s"} unavailable on this device)"
+            } else {
+                "Health Connect connected!"
+            }
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             viewModel.syncWithHealthConnect(context)
         } else {
             Toast.makeText(context, "Permissions denied", Toast.LENGTH_SHORT).show()
