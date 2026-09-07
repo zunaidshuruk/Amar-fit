@@ -219,7 +219,11 @@ fun resolveSmallTile(
                 icon = Icons.Default.Straighten,
                 accent = stepsAccent,
                 isMuted = false,
-                onClick = { navController.navigate("metric_detail/distance") }
+                // MetricDetailScreen has no "distance" drill-down (its metricKey switch has no
+                // matching branch — see hasData/latestVal/averageVal in MetricDetailScreen.kt),
+                // so this tile is display-only for now rather than opening a screen that would
+                // always show "Metric Detail" / "--" with no chart.
+                onClick = {}
             )
         }
         "cal_burned" -> {
@@ -231,7 +235,7 @@ fun resolveSmallTile(
                 icon = Icons.Default.LocalFireDepartment,
                 accent = caloriesAccent,
                 isMuted = false,
-                onClick = { navController.navigate("metric_detail/active_calories") }
+                onClick = { navController.navigate("metric_detail/activeCaloriesBurned") }
             )
         }
         "heart_rate" -> {
@@ -243,7 +247,7 @@ fun resolveSmallTile(
                 icon = Icons.Default.Favorite,
                 accent = if (heartRate > 0) heartRateAccent else null,
                 isMuted = heartRate <= 0,
-                onClick = { navController.navigate("metric_detail/heart_rate") }
+                onClick = { navController.navigate("metric_detail/heartRate") }
             )
         }
         "weight" -> {
@@ -339,7 +343,7 @@ fun resolveSmallTile(
                 icon = Icons.Default.Timeline,
                 accent = if (hrv > 0f) waterAccent else null,
                 isMuted = hrv <= 0f,
-                onClick = { navController.navigate("metric_detail/hrv") }
+                onClick = { navController.navigate("metric_detail/heartRateVariability") }
             )
         }
         "spo2" -> {
@@ -351,7 +355,7 @@ fun resolveSmallTile(
                 icon = Icons.Default.Air,
                 accent = if (spo2 > 0f) heartRateAccent else null,
                 isMuted = spo2 <= 0f,
-                onClick = { navController.navigate("metric_detail/spo2") }
+                onClick = { navController.navigate("metric_detail/oxygenSaturation") }
             )
         }
         "skin_temp" -> {
@@ -363,7 +367,7 @@ fun resolveSmallTile(
                 icon = Icons.Default.Thermostat,
                 accent = if (skinTemp > 0f) caloriesAccent else null,
                 isMuted = skinTemp <= 0f,
-                onClick = { navController.navigate("metric_detail/skin_temp") }
+                onClick = { navController.navigate("metric_detail/skinTemperatureCelsius") }
             )
         }
         "breathing_rate" -> {
@@ -375,7 +379,7 @@ fun resolveSmallTile(
                 icon = Icons.Default.Waves,
                 accent = if (rate > 0f) sleepAccent else null,
                 isMuted = rate <= 0f,
-                onClick = { navController.navigate("metric_detail/breathing_rate") }
+                onClick = { navController.navigate("metric_detail/respiratoryRate") }
             )
         }
         "resilience" -> {
