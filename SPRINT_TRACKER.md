@@ -41,7 +41,7 @@ Compiled from the Google Health screenshot review. Each will become its own scop
 2. [ ] **Health tab overhaul** — Key metrics as graphs/bars (Weight, Energy burned, Calories, Carbs/Fat/Protein, Steps, Exercise days), Focus areas category tiles, Health checks alerts, Personal info section
    - *(Partial: Focus areas, Health checks, and Personal info sections added; Key metrics graphs pending)*
 3. [x] **Today tab redesign** — 3-page swipeable stat carousel, action row (Log/Start/Edit), chronological activity timeline feed, tile customization ("Edit Focus" with 7 curated metrics)
-4. [ ] **Health Connect READ expansion** — Active calories burned, HRV, SpO2, Skin Temperature, Breathing Rate (all real Health Connect record types)
+4. [x] **Health Connect READ expansion** — Active calories burned, HRV, SpO2, Skin Temperature, Breathing Rate (all 5 verified non-experimental in connect-client 1.1.0-alpha11 and added to DailyMetric + syncWithHealthConnect)
 5. [ ] **Per-metric detail drill-down screens** — shared D/W/M/3M/Y template with variants (bar chart, zone bars, streak strip, hourly pills, status-only) for each tracked metric
 6. [ ] **Health Connect WRITE support** — Nutrition (food log/scan), Hydration (water log), Sleep (log sleep), Exercise (completed workouts)
 7. [ ] **Guided timed workouts** — structured JSON workout generation (exercise/duration/rest, replacing freeform text), interval timer with auto-advance, in-app embedded YouTube video per exercise, MET-based calorie calculation — feeds real session timing into #6's Exercise write

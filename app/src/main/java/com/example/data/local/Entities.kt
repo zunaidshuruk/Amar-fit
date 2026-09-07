@@ -44,7 +44,12 @@ data class DailyMetric(
     val heartRate: Int = 0,
     val distanceMeters: Float = 0f,
     val exerciseMinutes: Int = 0,
-    val externalNutritionCalories: Int = 0
+    val externalNutritionCalories: Int = 0,
+    val activeCaloriesBurned: Int = 0,
+    val heartRateVariability: Float = 0f,
+    val oxygenSaturation: Float = 0f,
+    val skinTemperatureCelsius: Float = 0f,
+    val respiratoryRate: Float = 0f
 )
 
 @Entity(tableName = "food_logs")

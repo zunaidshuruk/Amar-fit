@@ -264,4 +264,25 @@ class MigrationTest {
         assert(cursor.getString(nameIndex) == "Test User")
         cursor.close()
     }
+
+    @Test
+    @Throws(IOException::class)
+    fun migrate22To23() {
+        var db = helper.createDatabase(TEST_DB, 22)
+        // Insert daily metric in version 22
+        db.execSQL("INSERT INTO daily_metrics (date, caloriesConsumed, waterLiters, steps, bloodGlucoseMorning, bloodGlucoseNight, bloodPressure, weightKg, sleepHours, heartRate, distanceMeters, exerciseMinutes, externalNutritionCalories) VALUES ('2026-09-06', 2200, 2.5, 7500, 95.0, 110.0, '120/80', 70.0, 7.5, 68, 5200.0, 45, 300)")
+        db.close()
+
+        db = helper.runMigrationsAndValidate(TEST_DB, 23, true, AppDatabase.MIGRATION_22_23)
+
+        val cursor = db.query("SELECT activeCaloriesBurned, heartRateVariability, oxygenSaturation, skinTemperatureCelsius, respiratoryRate, caloriesConsumed FROM daily_metrics WHERE date = '2026-09-06'")
+        assert(cursor.moveToFirst())
+        assert(cursor.getInt(cursor.getColumnIndex("activeCaloriesBurned")) == 0)
+        assert(cursor.getFloat(cursor.getColumnIndex("heartRateVariability")) == 0.0f)
+        assert(cursor.getFloat(cursor.getColumnIndex("oxygenSaturation")) == 0.0f)
+        assert(cursor.getFloat(cursor.getColumnIndex("skinTemperatureCelsius")) == 0.0f)
+        assert(cursor.getFloat(cursor.getColumnIndex("respiratoryRate")) == 0.0f)
+        assert(cursor.getInt(cursor.getColumnIndex("caloriesConsumed")) == 2200)
+        cursor.close()
+    }
 }

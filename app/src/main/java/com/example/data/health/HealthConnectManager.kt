@@ -3,12 +3,17 @@ package com.example.data.health
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.NutritionRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
+import androidx.health.connect.client.records.RespiratoryRateRecord
+import androidx.health.connect.client.records.SkinTemperatureRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 
@@ -21,7 +26,12 @@ object HealthConnectManager {
         HealthPermission.getReadPermission(HeartRateRecord::class),
         HealthPermission.getReadPermission(DistanceRecord::class),
         HealthPermission.getReadPermission(ExerciseSessionRecord::class),
-        HealthPermission.getReadPermission(NutritionRecord::class)
+        HealthPermission.getReadPermission(NutritionRecord::class),
+        HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
+        HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
+        HealthPermission.getReadPermission(OxygenSaturationRecord::class),
+        HealthPermission.getReadPermission(SkinTemperatureRecord::class),
+        HealthPermission.getReadPermission(RespiratoryRateRecord::class)
     )
 
     fun isAvailable(context: Context): Boolean {

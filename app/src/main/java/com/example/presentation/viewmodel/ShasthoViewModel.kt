@@ -27,6 +27,11 @@ import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.NutritionRecord
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
+import androidx.health.connect.client.records.RespiratoryRateRecord
+import androidx.health.connect.client.records.SkinTemperatureRecord
 
 import androidx.health.connect.client.time.TimeRangeFilter
 import java.time.Instant
@@ -480,6 +485,88 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     externalNutritionCalories = totalEnergy.inKilocalories.toInt()
                 }
 
+                // 9. Active Calories Burned using Aggregate
+                var activeCaloriesBurned = 0
+                try {
+                    val activeCaloriesAggregate = healthConnectClient.aggregate(
+                        AggregateRequest(
+                            metrics = setOf(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL),
+                            timeRangeFilter = timeRangeFilter
+                        )
+                    )
+                    val totalActiveCalories = activeCaloriesAggregate[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]
+                    if (totalActiveCalories != null) {
+                        activeCaloriesBurned = totalActiveCalories.inKilocalories.toInt()
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                // 10. Latest Heart Rate Variability (HRV Rmssd)
+                var heartRateVariability = 0f
+                try {
+                    val hrvResponse = healthConnectClient.readRecords(
+                        ReadRecordsRequest(HeartRateVariabilityRmssdRecord::class, timeRangeFilter)
+                    )
+                    if (hrvResponse.records.isNotEmpty()) {
+                        val latestHrv = hrvResponse.records.maxByOrNull { it.time }
+                        if (latestHrv != null) {
+                            heartRateVariability = latestHrv.heartRateVariabilityMillis.toFloat()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                // 11. Latest Oxygen Saturation (SpO2)
+                var oxygenSaturation = 0f
+                try {
+                    val spo2Response = healthConnectClient.readRecords(
+                        ReadRecordsRequest(OxygenSaturationRecord::class, timeRangeFilter)
+                    )
+                    if (spo2Response.records.isNotEmpty()) {
+                        val latestSpo2 = spo2Response.records.maxByOrNull { it.time }
+                        if (latestSpo2 != null) {
+                            oxygenSaturation = latestSpo2.percentage.value.toFloat()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                // 12. Latest Skin Temperature
+                var skinTemperatureCelsius = 0f
+                try {
+                    val skinTempResponse = healthConnectClient.readRecords(
+                        ReadRecordsRequest(SkinTemperatureRecord::class, timeRangeFilter)
+                    )
+                    if (skinTempResponse.records.isNotEmpty()) {
+                        val latestSkinTemp = skinTempResponse.records.maxByOrNull { it.startTime }
+                        val baseline = latestSkinTemp?.baseline
+                        if (baseline != null) {
+                            skinTemperatureCelsius = baseline.inCelsius.toFloat()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                // 13. Latest Respiratory Rate (Breathing Rate)
+                var respiratoryRate = 0f
+                try {
+                    val respResponse = healthConnectClient.readRecords(
+                        ReadRecordsRequest(RespiratoryRateRecord::class, timeRangeFilter)
+                    )
+                    if (respResponse.records.isNotEmpty()) {
+                        val latestResp = respResponse.records.maxByOrNull { it.time }
+                        if (latestResp != null) {
+                            respiratoryRate = latestResp.rate.toFloat()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
                 val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
                 val updated = current.copy(
                     steps = if (totalSteps > 0) totalSteps else current.steps,
@@ -489,7 +576,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     heartRate = if (heartRate > 0) heartRate else current.heartRate,
                     distanceMeters = if (totalDistance > 0f) totalDistance else current.distanceMeters,
                     exerciseMinutes = if (exerciseMinutes > 0) exerciseMinutes else current.exerciseMinutes,
-                    externalNutritionCalories = if (externalNutritionCalories > 0) externalNutritionCalories else current.externalNutritionCalories
+                    externalNutritionCalories = if (externalNutritionCalories > 0) externalNutritionCalories else current.externalNutritionCalories,
+                    activeCaloriesBurned = if (activeCaloriesBurned > 0) activeCaloriesBurned else current.activeCaloriesBurned,
+                    heartRateVariability = if (heartRateVariability > 0f) heartRateVariability else current.heartRateVariability,
+                    oxygenSaturation = if (oxygenSaturation > 0f) oxygenSaturation else current.oxygenSaturation,
+                    skinTemperatureCelsius = if (skinTemperatureCelsius > 0f) skinTemperatureCelsius else current.skinTemperatureCelsius,
+                    respiratoryRate = if (respiratoryRate > 0f) respiratoryRate else current.respiratoryRate
                 )
                 repository.saveMetrics(updated)
             } catch (e: Exception) {
