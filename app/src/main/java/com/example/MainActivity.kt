@@ -345,6 +345,13 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                   composable("scanner") { ScannerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("medical_records") { com.example.presentation.health.MedicalRecordsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("exercise_library") { ExerciseLibraryScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                  composable(
+                      route = "metric_detail/{metricKey}",
+                      arguments = listOf(androidx.navigation.navArgument("metricKey") { type = androidx.navigation.NavType.StringType })
+                  ) { backStackEntry ->
+                      val key = backStackEntry.arguments?.getString("metricKey") ?: ""
+                      com.example.presentation.health.MetricDetailScreen(viewModel = viewModel, metricKey = key, onNavigateBack = { navController.popBackStack() })
+                  }
                 }
               }
             }

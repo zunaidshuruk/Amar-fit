@@ -479,7 +479,9 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
 
             // Card 2: Calories Burned
             Card(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { navController.navigate("metric_detail/activeCaloriesBurned") },
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = androidx.compose.foundation.BorderStroke(
@@ -560,7 +562,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
             Card(
                 modifier = Modifier
                     .weight(1f)
-                    .clickable { navigateToTab(navController, "fitness") },
+                    .clickable { navController.navigate("metric_detail/steps") },
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = androidx.compose.foundation.BorderStroke(
@@ -635,7 +637,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
             Card(
                 modifier = Modifier
                     .weight(1f)
-                    .clickable { navigateToTab(navController, "fitness") },
+                    .clickable { navController.navigate("metric_detail/exerciseDays") },
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = androidx.compose.foundation.BorderStroke(
@@ -701,6 +703,63 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                 )
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        // Additional Health Vitals section
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "More Health Vitals",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        val additionalMetrics = listOf(
+            Triple("Heart Rate", if (heartRate > 0) "$heartRate bpm" else "--", "heartRate"),
+            Triple("Blood Oxygen (SpO2)", metrics?.oxygenSaturation?.let { if (it > 0f) "${String.format(java.util.Locale.US, "%.1f", it)}%" else null } ?: "--", "oxygenSaturation"),
+            Triple("Heart Rate Variability (HRV)", metrics?.heartRateVariability?.let { if (it > 0f) "${String.format(java.util.Locale.US, "%.1f", it)} ms" else null } ?: "--", "heartRateVariability"),
+            Triple("Skin Temperature", metrics?.skinTemperatureCelsius?.let { if (it > 0f) "${String.format(java.util.Locale.US, "%.1f", it)} °C" else null } ?: "--", "skinTemperatureCelsius"),
+            Triple("Respiratory Rate", metrics?.respiratoryRate?.let { if (it > 0f) "${String.format(java.util.Locale.US, "%.1f", it)} rpm" else null } ?: "--", "respiratoryRate")
+        )
+
+        additionalMetrics.forEach { (label, value, key) ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { navController.navigate("metric_detail/$key") },
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = label,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = value,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Details",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }

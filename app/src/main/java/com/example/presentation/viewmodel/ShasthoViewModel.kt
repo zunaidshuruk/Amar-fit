@@ -168,6 +168,10 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         initialValue = emptyList()
     )
     
+    fun getMetricsHistoryFlow(days: Int): kotlinx.coroutines.flow.Flow<List<com.example.data.local.DailyMetric>> {
+        return repository.getMetricsHistory(days)
+    }
+    
     val recentFoodLogs = repository.getRecentFoodLogs().stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
