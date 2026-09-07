@@ -52,7 +52,7 @@ Compiled from the Google Health screenshot review. Each will become its own scop
 8. [ ] **Mindfulness** — real Health Connect `MindfulnessSessionRecord` read/write (Meditation/Breathing/Movement types), building on existing Breathwork & Meditation category. Feature-gate on `FEATURE_MINDFULNESS_SESSION` availability.
    - *(Partial: READ support implemented with feature-gating, Room v24 migration, and permissions; WRITE blocked on a future in-app mindfulness timer feature)*
 9. [ ] **Resilience** — Amar Fit's own custom recovery score, computed from existing sleep/HRV/activity data (not a Health Connect read — no such record type exists)
-10. [ ] **Searchable exercise library** — sourced from **free-exercise-db** (800+ exercises, public domain, image-based demos, no API key), with search + equipment/muscle filters, feeding into #7's structured workout builder
+10. [x] **Searchable exercise library** — bundled 876 exercises from free-exercise-db in `assets/exercises.json`, in-memory cached loader `AppRepository.getExerciseLibrary`, `ExerciseLibraryScreen` with case-insensitive search, dynamic equipment/muscle filter chips, multi-select, and structured `WorkoutPlan` generation saving into existing `viewModel.saveWorkout` without schema changes
 11. [ ] **Manually-entered Medical section** — Allergies, Conditions, Medications, Vaccines, Pregnancy, Social history, Procedures, Visits, Lab results — user-entered and stored like any other Amar Fit data (Room + Firestore), no Health Connect PHR dependency. "Vital signs" excluded (duplicates existing tracked metrics).
 
 **Explicitly out of scope, decided earlier — do not resurrect without a new discussion:**

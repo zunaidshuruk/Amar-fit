@@ -54,11 +54,14 @@ import com.example.presentation.settings.SettingsScreen
 import com.example.presentation.sleep.SleepScreen
 import com.example.presentation.today.TodayScreen
 import com.example.presentation.viewmodel.ShasthoViewModel
+import com.example.presentation.workout.ExerciseLibraryScreen
 import com.example.data.health.HealthConnectManager
 import com.example.ui.theme.*
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import kotlinx.coroutines.launch
+
+val LocalNavController = androidx.compose.runtime.staticCompositionLocalOf<NavHostController?> { null }
 
 sealed class TabScreen(val route: String, val label: String, val icon: ImageVector) {
     object Today : TabScreen("today", "Today", Icons.Default.Home)
@@ -293,53 +296,56 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 }
               }
 
-              NavHost(
-                navController = navController,
-                startDestination = initialRoute,
-                modifier = Modifier.padding(innerPadding)
-              ) {
-                composable("auth") {
-                  AuthScreen(
-                    onNavigateToOnboarding = {
-                      navController.navigate("onboarding") { popUpTo("auth") { inclusive = true } }
-                    },
-                    onNavigateToDashboard = {
-                      navController.navigate(TabScreen.Today.route) { popUpTo("auth") { inclusive = true } }
-                    }
-                  )
+              CompositionLocalProvider(LocalNavController provides navController) {
+                NavHost(
+                  navController = navController,
+                  startDestination = initialRoute,
+                  modifier = Modifier.padding(innerPadding)
+                ) {
+                  composable("auth") {
+                    AuthScreen(
+                      onNavigateToOnboarding = {
+                        navController.navigate("onboarding") { popUpTo("auth") { inclusive = true } }
+                      },
+                      onNavigateToDashboard = {
+                        navController.navigate(TabScreen.Today.route) { popUpTo("auth") { inclusive = true } }
+                      }
+                    )
+                  }
+                  composable("onboarding") {
+                    OnboardingScreen(viewModel = viewModel, onComplete = {
+                      navController.navigate(TabScreen.Today.route) { popUpTo("onboarding") { inclusive = true } }
+                    })
+                  }
+                  
+                  // MAIN TABS
+                  composable(TabScreen.Today.route) { TodayScreen(viewModel, navController) }
+                  composable(TabScreen.Fitness.route) { FitnessScreen(viewModel) }
+                  composable(TabScreen.Nutrition.route) { NutritionScreen(viewModel, navController) }
+                  composable(TabScreen.Sleep.route) { SleepScreen(viewModel, navController) }
+                  composable(TabScreen.Health.route) { HealthScreen(viewModel, navController) }
+                  
+                  // SUB-DESTINATIONS
+                  composable(
+                      route = "chat?openSavedChats={openSavedChats}",
+                      arguments = listOf(androidx.navigation.navArgument("openSavedChats") { type = androidx.navigation.NavType.BoolType; defaultValue = false })
+                  ) { backStackEntry ->
+                      val openSavedChats = backStackEntry.arguments?.getBoolean("openSavedChats") ?: false
+                      ChatScreen(viewModel = viewModel, initialTab = if (openSavedChats) 1 else 0, onNavigateBack = { navController.popBackStack() })
+                  }
+                  composable("coach") { CoachScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                  composable("dietplan") { DietChartScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                  composable("lifestyle") { LifestyleScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                  composable("mealplan") { MealPlanScreen(onNavigateBack = { navController.popBackStack() }) }
+                  composable("glucoselog") { GlucoseLogScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                  composable("weightlog") { WeightLogScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                  composable("recipe") { RecipeScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                  composable("foodlog") { FoodLogScreen(viewModel = viewModel, onNavigateToScanner = { navController.navigate("scanner") }, onNavigateBack = { navController.popBackStack() }) }
+                  composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }) }
+                  composable("scanner") { ScannerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                  composable("medical_records") { com.example.presentation.health.MedicalRecordsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                  composable("exercise_library") { ExerciseLibraryScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                 }
-                composable("onboarding") {
-                  OnboardingScreen(viewModel = viewModel, onComplete = {
-                    navController.navigate(TabScreen.Today.route) { popUpTo("onboarding") { inclusive = true } }
-                  })
-                }
-                
-                // MAIN TABS
-                composable(TabScreen.Today.route) { TodayScreen(viewModel, navController) }
-                composable(TabScreen.Fitness.route) { FitnessScreen(viewModel) }
-                composable(TabScreen.Nutrition.route) { NutritionScreen(viewModel, navController) }
-                composable(TabScreen.Sleep.route) { SleepScreen(viewModel, navController) }
-                composable(TabScreen.Health.route) { HealthScreen(viewModel, navController) }
-                
-                // SUB-DESTINATIONS
-                composable(
-                    route = "chat?openSavedChats={openSavedChats}",
-                    arguments = listOf(androidx.navigation.navArgument("openSavedChats") { type = androidx.navigation.NavType.BoolType; defaultValue = false })
-                ) { backStackEntry ->
-                    val openSavedChats = backStackEntry.arguments?.getBoolean("openSavedChats") ?: false
-                    ChatScreen(viewModel = viewModel, initialTab = if (openSavedChats) 1 else 0, onNavigateBack = { navController.popBackStack() })
-                }
-                composable("coach") { CoachScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
-                composable("dietplan") { DietChartScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
-                composable("lifestyle") { LifestyleScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
-                composable("mealplan") { MealPlanScreen(onNavigateBack = { navController.popBackStack() }) }
-                composable("glucoselog") { GlucoseLogScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
-                composable("weightlog") { WeightLogScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
-                composable("recipe") { RecipeScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
-                composable("foodlog") { FoodLogScreen(viewModel = viewModel, onNavigateToScanner = { navController.navigate("scanner") }, onNavigateBack = { navController.popBackStack() }) }
-                composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }) }
-                composable("scanner") { ScannerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
-                composable("medical_records") { com.example.presentation.health.MedicalRecordsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
               }
             }
         }

@@ -38,6 +38,7 @@ import java.util.Date
 
 @Composable
 fun WorkoutScreen(viewModel: ShasthoViewModel) {
+    val navController = com.example.LocalNavController.current
     val profile by viewModel.userProfile.collectAsState()
     val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
 
@@ -221,34 +222,49 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    // Action Buttons: Start Workout and Save Workout
+                    // Action Buttons: Start Workout, Save Workout, and Browse Exercises
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Button(
                             onClick = { activeSessionPlan = plan },
                             modifier = Modifier
                                 .weight(1f)
-                                .height(56.dp),
+                                .height(52.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                            shape = RoundedCornerShape(16.dp)
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
                         ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Start Workout", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Start Workout", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                         }
 
                         OutlinedButton(
                             onClick = { showSaveDialog = true },
                             modifier = Modifier
                                 .weight(1f)
-                                .height(56.dp),
-                            shape = RoundedCornerShape(16.dp)
+                                .height(52.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
                         ) {
-                            Icon(Icons.Default.Save, contentDescription = null)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Save Workout", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Save Workout", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        }
+
+                        OutlinedButton(
+                            onClick = { navController?.navigate("exercise_library") },
+                            modifier = Modifier
+                                .weight(1.1f)
+                                .height(52.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
+                        ) {
+                            Icon(Icons.Default.FitnessCenter, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Browse Exercises", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                         }
                     }
                     

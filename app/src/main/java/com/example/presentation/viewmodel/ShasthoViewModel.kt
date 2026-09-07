@@ -1147,6 +1147,10 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             }
         }
     }
+
+    suspend fun getExerciseLibrary(context: android.content.Context): List<com.example.data.local.LibraryExercise> {
+        return repository.getExerciseLibrary(context)
+    }
 }
 
 @com.squareup.moshi.JsonClass(generateAdapter = true)

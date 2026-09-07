@@ -941,4 +941,24 @@ class AppRepository(
             null
         }
     }
+
+    private var cachedExerciseLibrary: List<com.example.data.local.LibraryExercise>? = null
+
+    suspend fun getExerciseLibrary(context: android.content.Context): List<com.example.data.local.LibraryExercise> = withContext(Dispatchers.IO) {
+        cachedExerciseLibrary?.let { return@withContext it }
+        try {
+            val json = context.assets.open("exercises.json").bufferedReader().use { it.readText() }
+            val listType = com.squareup.moshi.Types.newParameterizedType(
+                List::class.java,
+                com.example.data.local.LibraryExercise::class.java
+            )
+            val adapter = com.example.data.remote.RetrofitClient.moshi.adapter<List<com.example.data.local.LibraryExercise>>(listType)
+            val parsed = adapter.fromJson(json) ?: emptyList()
+            cachedExerciseLibrary = parsed
+            parsed
+        } catch (e: Exception) {
+            android.util.Log.e("AppRepository", "Error loading exercise library", e)
+            emptyList()
+        }
+    }
 }
