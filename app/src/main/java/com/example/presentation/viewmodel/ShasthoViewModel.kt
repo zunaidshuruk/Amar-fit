@@ -73,7 +73,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 )
                 _scanResult.value = null
                 _coachAdvice.value = null
-                _workoutPlan.value = null
                 _dietChart.value = null
                 _shoppingList.value = null
                 _premiumRecipe.value = null
@@ -98,7 +97,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             )
             _scanResult.value = null
             _coachAdvice.value = null
-            _workoutPlan.value = null
             _dietChart.value = null
             _shoppingList.value = null
             _premiumRecipe.value = null
@@ -948,12 +946,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             _isLoadingCoach.value = false
         }
     }
-    
-    private val _workoutPlan = MutableStateFlow<String?>(null)
-    val workoutPlan: StateFlow<String?> = _workoutPlan.asStateFlow()
-    
-    private val _isLoadingWorkout = MutableStateFlow(false)
-    val isLoadingWorkout: StateFlow<Boolean> = _isLoadingWorkout.asStateFlow()
 
     private val _structuredWorkoutPlan = MutableStateFlow<com.example.data.model.WorkoutPlan?>(null)
     val structuredWorkoutPlan: StateFlow<com.example.data.model.WorkoutPlan?> = _structuredWorkoutPlan.asStateFlow()
@@ -967,10 +959,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     private val _structuredWorkoutError = MutableStateFlow<String?>(null)
     val structuredWorkoutError: StateFlow<String?> = _structuredWorkoutError.asStateFlow()
     
-    fun clearWorkoutPlan() {
-        _workoutPlan.value = null
-    }
-
     fun clearStructuredWorkoutPlan() {
         _structuredWorkoutPlan.value = null
         _rawStructuredWorkoutJson.value = ""
@@ -1002,25 +990,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             _isLoadingStructuredWorkout.value = false
         }
     }
-    
-    fun generateAIWorkout() {
-        viewModelScope.launch {
-            _isLoadingWorkout.value = true
-            _workoutPlan.value = ""
-            var accumulated = ""
-            try {
-                repository.generateWorkoutStream(userProfile.value).collect { chunk ->
-                    accumulated += chunk
-                    _workoutPlan.value = accumulated
-                }
-            } catch (e: Exception) {
-                _workoutPlan.value = "Sorry, I couldn't generate a workout right now. Please try again."
-            }
-            _isLoadingWorkout.value = false
-        }
-    }
-
-
 
     private val _syncErrorEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val syncErrorEvent: SharedFlow<String> = _syncErrorEvent.asSharedFlow()
