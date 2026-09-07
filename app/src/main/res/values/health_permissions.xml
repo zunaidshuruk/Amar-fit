@@ -9,5 +9,10 @@
         <item>android.permission.health.READ_DISTANCE</item>
         <item>android.permission.health.READ_EXERCISE</item>
         <item>android.permission.health.READ_NUTRITION</item>
+         <item>android.permission.health.READ_ACTIVE_CALORIES_BURNED</item>
+        <item>android.permission.health.READ_HEART_RATE_VARIABILITY</item>
+        <item>android.permission.health.READ_OXYGEN_SATURATION</item>
+        <item>android.permission.health.READ_SKIN_TEMPERATURE</item>
+        <item>android.permission.health.READ_RESPIRATORY_RATE</item>
     </array>
 </resources>
