@@ -254,6 +254,15 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun updateTodayTileSlots(slots: List<String>) {
+        viewModelScope.launch {
+            val current = userProfile.value ?: UserProfile()
+            val joined = slots.take(3).joinToString(",")
+            val updated = current.copy(todayTileSlots = joined)
+            repository.saveUserProfile(updated)
+        }
+    }
+
     suspend fun saveProfile(profile: UserProfile): Boolean {
         return try {
             repository.saveUserProfile(profile)

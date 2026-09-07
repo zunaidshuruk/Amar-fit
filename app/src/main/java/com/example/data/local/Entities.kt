@@ -26,7 +26,8 @@ data class UserProfile(
     val isDarkMode: Boolean = false,
     val notificationsEnabled: Boolean = true,
     val remindersEnabled: Boolean = true,
-    val selectedLanguage: String = "English"
+    val selectedLanguage: String = "English",
+    val todayTileSlots: String = ""
 )
 
 @Entity(tableName = "daily_metrics")

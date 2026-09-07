@@ -22,7 +22,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -32,6 +34,44 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+private data class TodayTileData(
+    val id: String,
+    val label: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val accent: AccentColors,
+    val valueText: String,
+    val unitText: String? = null,
+    val subtext: String? = null,
+    val progress: Float? = null,
+    val onClick: () -> Unit
+)
+
+private val CURATED_METRIC_KEYS = listOf("steps", "water", "calories", "weight", "sleep", "blood_glucose", "blood_pressure")
+
+private val CURATED_METRICS_LIST = listOf(
+    "steps" to "Steps",
+    "water" to "Water",
+    "calories" to "Calories",
+    "weight" to "Weight",
+    "sleep" to "Sleep",
+    "blood_glucose" to "Blood Glucose",
+    "blood_pressure" to "Blood Pressure"
+)
+
+private fun parseTodayTileSlots(raw: String?): List<String> {
+    val defaultSlots = listOf("steps", "water", "calories")
+    if (raw.isNullOrBlank()) return defaultSlots
+    val tokens = raw.split(",").map { it.trim().lowercase() }.map {
+        when (it) {
+            "glucose" -> "blood_glucose"
+            "bp" -> "blood_pressure"
+            else -> it
+        }
+    }.filter { it in CURATED_METRIC_KEYS }
+    if (tokens.size != 3) return defaultSlots
+    return tokens
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +108,114 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val badges = profile?.badges?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
     val points = profile?.points ?: 0
     val currentStreak = profile?.currentStreak ?: 0
+
+    val activeSlots = remember(profile?.todayTileSlots) { parseTodayTileSlots(profile?.todayTileSlots) }
+    var showEditTilesBottomSheet by remember { mutableStateOf(false) }
+
+    fun getTileData(slotId: String): TodayTileData {
+        return when (slotId) {
+            "steps" -> TodayTileData(
+                id = "steps",
+                label = "Steps",
+                icon = Icons.AutoMirrored.Filled.DirectionsWalk,
+                accent = stepsAccent,
+                valueText = "$steps",
+                unitText = "steps",
+                subtext = if (steps >= 10000) "Goal achieved!" else "${(10000 - steps).coerceAtLeast(0)} left",
+                progress = (steps.toFloat() / 10000f).coerceIn(0f, 1f),
+                onClick = { showStepsOptionDialog = true }
+            )
+            "water" -> TodayTileData(
+                id = "water",
+                label = "Water",
+                icon = Icons.Default.LocalDrink,
+                accent = waterAccent,
+                valueText = String.format(Locale.US, "%.1f", waterConsumed),
+                unitText = "L",
+                subtext = "/ ${String.format(Locale.US, "%.1f", waterLimit)} L",
+                progress = if (waterLimit > 0f) (waterConsumed / waterLimit).coerceIn(0f, 1f) else 0f,
+                onClick = { showWaterDialog = true }
+            )
+            "calories" -> TodayTileData(
+                id = "calories",
+                label = "Calories",
+                icon = Icons.Default.LocalFireDepartment,
+                accent = caloriesAccent,
+                valueText = "$totalCalories",
+                unitText = "kcal",
+                subtext = "/ $calorieLimit kcal",
+                progress = calorieProgress,
+                onClick = { navController.navigate("nutrition") }
+            )
+            "weight" -> {
+                val currentWeight = if ((metrics?.weightKg ?: 0f) > 0f) metrics?.weightKg ?: 0f else profile?.weightKg ?: 0f
+                TodayTileData(
+                    id = "weight",
+                    label = "Weight",
+                    icon = Icons.Default.MonitorWeight,
+                    accent = weightAccent,
+                    valueText = if (currentWeight > 0f) String.format(Locale.US, "%.1f", currentWeight) else "--",
+                    unitText = "kg",
+                    subtext = "(Tap to log)",
+                    progress = null,
+                    onClick = { navController.navigate("weightlog") }
+                )
+            }
+            "sleep" -> {
+                val sleepHrs = metrics?.sleepHours ?: 0f
+                TodayTileData(
+                    id = "sleep",
+                    label = "Sleep",
+                    icon = Icons.Default.Bedtime,
+                    accent = sleepAccent,
+                    valueText = if (sleepHrs > 0f) String.format(Locale.US, "%.1f", sleepHrs) else "--",
+                    unitText = "hrs",
+                    subtext = if (sleepHrs >= 7f) "Good rest" else "(Tap to log)",
+                    progress = if (sleepHrs > 0f) (sleepHrs / 8f).coerceIn(0f, 1f) else null,
+                    onClick = { navController.navigate("sleep") }
+                )
+            }
+            "blood_glucose" -> {
+                val glucose = maxOf(metrics?.bloodGlucoseMorning ?: 0f, metrics?.bloodGlucoseNight ?: 0f)
+                TodayTileData(
+                    id = "blood_glucose",
+                    label = "Blood Glucose",
+                    icon = Icons.Default.Favorite,
+                    accent = glucoseAccent,
+                    valueText = if (glucose > 0f) String.format(Locale.US, "%.1f", glucose) else "--",
+                    unitText = "mg/dL",
+                    subtext = "(Tap to log)",
+                    progress = null,
+                    onClick = { navController.navigate("glucoselog") }
+                )
+            }
+            "blood_pressure" -> {
+                val bp = metrics?.bloodPressure?.takeIf { it.isNotBlank() } ?: "--"
+                TodayTileData(
+                    id = "blood_pressure",
+                    label = "Blood Pressure",
+                    icon = Icons.Default.MonitorHeart,
+                    accent = bloodPressureAccent,
+                    valueText = bp,
+                    unitText = "mmHg",
+                    subtext = "(Tap to log)",
+                    progress = null,
+                    onClick = { navController.navigate("health") }
+                )
+            }
+            else -> TodayTileData(
+                id = "steps",
+                label = "Steps",
+                icon = Icons.AutoMirrored.Filled.DirectionsWalk,
+                accent = stepsAccent,
+                valueText = "$steps",
+                unitText = "steps",
+                subtext = if (steps >= 10000) "Goal achieved!" else "${(10000 - steps).coerceAtLeast(0)} left",
+                progress = (steps.toFloat() / 10000f).coerceIn(0f, 1f),
+                onClick = { showStepsOptionDialog = true }
+            )
+        }
+    }
 
     val pagerState = rememberPagerState(pageCount = { 3 })
     val coroutineScope = rememberCoroutineScope()
@@ -150,93 +298,38 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     }
                 }
                 1 -> {
-                    // Page 2 ("Activity"): Steps & Water Tiles
+                    // Page 2: Left & Right Tiles
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(148.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // 2. Steps Tile
-                        Box(
+                        TodayTile(
+                            tile = getTileData(activeSlots[0]),
                             modifier = Modifier
                                 .weight(1f)
-                                .fillMaxHeight()
-                                .shadow(2.dp, RoundedCornerShape(20.dp))
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(stepsAccent.bg)
-                                .clickable { showStepsOptionDialog = true }
-                                .padding(20.dp)
-                        ) {
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.AutoMirrored.Filled.DirectionsWalk, contentDescription = null, tint = stepsAccent.onBg, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(text = "Steps", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                }
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(text = "$steps", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = stepsAccent.onBg)
-                            }
-                        }
-                        
-                        // 3. Water Tile
-                        Box(
+                                .fillMaxHeight(),
+                            isFullWidth = false
+                        )
+                        TodayTile(
+                            tile = getTileData(activeSlots[1]),
                             modifier = Modifier
                                 .weight(1f)
-                                .fillMaxHeight()
-                                .shadow(2.dp, RoundedCornerShape(20.dp))
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(waterAccent.bg)
-                                .clickable { showWaterDialog = true }
-                                .padding(20.dp)
-                        ) {
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.LocalDrink, contentDescription = null, tint = waterAccent.onBg, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(text = "Water", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                }
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Row(verticalAlignment = Alignment.Bottom) {
-                                    Text(text = String.format("%.1f", waterConsumed), fontSize = 28.sp, fontWeight = FontWeight.Bold, color = waterAccent.onBg)
-                                    Text(text = " L", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = waterAccent.onBg, modifier = Modifier.padding(bottom = 4.dp))
-                                }
-                            }
-                        }
+                                .fillMaxHeight(),
+                            isFullWidth = false
+                        )
                     }
                 }
                 2 -> {
-                    // Page 3 ("Nutrition"): Calories Tile
-                    Box(
+                    // Page 3: Full-width Tile
+                    TodayTile(
+                        tile = getTileData(activeSlots[2]),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(148.dp)
-                            .shadow(2.dp, RoundedCornerShape(20.dp))
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(caloriesAccent.bg)
-                            .clickable { navController.navigate("nutrition") }
-                            .padding(20.dp)
-                    ) {
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.LocalFireDepartment, contentDescription = null, tint = caloriesAccent.onBg, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Calories", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                            }
-                            Spacer(modifier = Modifier.height(14.dp))
-                            Row(verticalAlignment = Alignment.Bottom) {
-                                Text(text = "$totalCalories", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = caloriesAccent.onBg)
-                                Text(text = " / $calorieLimit kcal", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = caloriesAccent.onBg, modifier = Modifier.padding(bottom = 4.dp))
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            LinearProgressIndicator(
-                                progress = { calorieProgress },
-                                modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
-                                color = Orange500,
-                                trackColor = Orange100,
-                            )
-                        }
-                    }
+                            .height(148.dp),
+                        isFullWidth = true
+                    )
                 }
             }
         }
@@ -270,16 +363,18 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
             }
         }
 
-        // Action Row (+ Log / Start)
+        // Action Row (+ Log / Start / Edit)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Button(
                 onClick = { showLogBottomSheet = true },
                 modifier = Modifier
                     .weight(1f)
-                    .height(56.dp),
+                    .height(56.dp)
+                    .testTag("today_log_button"),
                 shape = RoundedCornerShape(28.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isDark) Emerald700 else Primary,
@@ -304,7 +399,8 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 onClick = { navController.navigate("fitness") },
                 modifier = Modifier
                     .weight(1f)
-                    .height(56.dp),
+                    .height(56.dp)
+                    .testTag("today_start_button"),
                 shape = RoundedCornerShape(28.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isDark) Emerald800 else Emerald600,
@@ -322,6 +418,25 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     text = "Start",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            FilledTonalIconButton(
+                onClick = { showEditTilesBottomSheet = true },
+                modifier = Modifier
+                    .size(56.dp)
+                    .shadow(2.dp, CircleShape)
+                    .testTag("today_edit_tiles_button"),
+                shape = CircleShape,
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = if (isDark) Slate800 else Surface,
+                    contentColor = if (isDark) Color.White else Primary
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Edit Focus Tiles",
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
@@ -666,6 +781,283 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                         navController.navigate("sleep")
                     }
                 )
+            }
+        }
+    }
+
+    if (showEditTilesBottomSheet) {
+        var tempSlot0 by remember { mutableStateOf(activeSlots.getOrElse(0) { "steps" }) }
+        var tempSlot1 by remember { mutableStateOf(activeSlots.getOrElse(1) { "water" }) }
+        var tempSlot2 by remember { mutableStateOf(activeSlots.getOrElse(2) { "calories" }) }
+
+        ModalBottomSheet(
+            onDismissRequest = { showEditTilesBottomSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = if (isDark) MaterialTheme.colorScheme.surface else Surface,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            dragHandle = {
+                BottomSheetDefaults.DragHandle(
+                    color = if (isDark) MaterialTheme.colorScheme.outlineVariant else Slate200
+                )
+            }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 36.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Customize Today Tiles",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
+                )
+                Text(
+                    text = "Choose which metrics appear in your Today summary carousel (Pages 2–3).",
+                    fontSize = 14.sp,
+                    color = if (isDark) Slate400 else Slate600
+                )
+
+                MetricSelectorDropdownRow(
+                    label = "Left tile (Page 2)",
+                    selectedKey = tempSlot0,
+                    options = CURATED_METRICS_LIST,
+                    onSelect = { tempSlot0 = it },
+                    isDark = isDark
+                )
+
+                MetricSelectorDropdownRow(
+                    label = "Right tile (Page 2)",
+                    selectedKey = tempSlot1,
+                    options = CURATED_METRICS_LIST,
+                    onSelect = { tempSlot1 = it },
+                    isDark = isDark
+                )
+
+                MetricSelectorDropdownRow(
+                    label = "Full-width tile (Page 3)",
+                    selectedKey = tempSlot2,
+                    options = CURATED_METRICS_LIST,
+                    onSelect = { tempSlot2 = it },
+                    isDark = isDark
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = {
+                        viewModel.updateTodayTileSlots(listOf(tempSlot0, tempSlot1, tempSlot2))
+                        showEditTilesBottomSheet = false
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .testTag("save_today_tiles_button"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isDark) Emerald700 else Primary,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(
+                        text = "Save Tiles",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MetricSelectorDropdownRow(
+    label: String,
+    selectedKey: String,
+    options: List<Pair<String, String>>,
+    onSelect: (String) -> Unit,
+    isDark: Boolean
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val currentLabel = options.firstOrNull { it.first == selectedKey }?.second ?: "Select metric"
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedTextField(
+                value = currentLabel,
+                onValueChange = {},
+                readOnly = true,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Primary,
+                    unfocusedBorderColor = if (isDark) Slate600 else Slate200,
+                    focusedContainerColor = if (isDark) Slate800 else Surface,
+                    unfocusedContainerColor = if (isDark) Slate800 else Surface
+                ),
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth()
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(if (isDark) Slate800 else Surface)
+            ) {
+                options.forEach { (key, name) ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = name,
+                                fontWeight = if (key == selectedKey) FontWeight.Bold else FontWeight.Normal,
+                                color = if (key == selectedKey) Primary else if (isDark) Color.White else TextPrimary
+                            )
+                        },
+                        onClick = {
+                            onSelect(key)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TodayTile(
+    tile: TodayTileData,
+    modifier: Modifier = Modifier,
+    isFullWidth: Boolean
+) {
+    Box(
+        modifier = modifier
+            .shadow(2.dp, RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(20.dp))
+            .background(tile.accent.bg)
+            .clickable { tile.onClick() }
+            .padding(if (isFullWidth) 20.dp else 16.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = tile.icon,
+                    contentDescription = null,
+                    tint = tile.accent.onBg,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = tile.label,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            if (isFullWidth) {
+                Column {
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            text = tile.valueText,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = tile.accent.onBg
+                        )
+                        if (!tile.unitText.isNullOrBlank() && tile.subtext != null && tile.subtext.startsWith("/")) {
+                            Text(
+                                text = " ${tile.subtext}",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = tile.accent.onBg,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                        } else {
+                            if (!tile.unitText.isNullOrBlank() && tile.unitText != "steps") {
+                                Text(
+                                    text = " ${tile.unitText}",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = tile.accent.onBg,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+                            }
+                            if (!tile.subtext.isNullOrBlank()) {
+                                Text(
+                                    text = " ${tile.subtext}",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = tile.accent.onBg.copy(alpha = 0.85f),
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    if (tile.progress != null) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        LinearProgressIndicator(
+                            progress = { tile.progress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(CircleShape),
+                            color = tile.accent.onBg,
+                            trackColor = tile.accent.onBg.copy(alpha = 0.2f),
+                        )
+                    }
+                }
+            } else {
+                Column {
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            text = tile.valueText,
+                            fontSize = if (tile.valueText.length > 5) 22.sp else 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = tile.accent.onBg
+                        )
+                        if (!tile.unitText.isNullOrBlank() && tile.unitText != "steps") {
+                            Text(
+                                text = " ${tile.unitText}",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = tile.accent.onBg,
+                                modifier = Modifier.padding(bottom = 3.dp)
+                            )
+                        }
+                    }
+                    if (tile.subtext != null && tile.subtext.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = tile.subtext,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = tile.accent.onBg.copy(alpha = 0.8f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
         }
     }

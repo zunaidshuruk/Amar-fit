@@ -245,4 +245,23 @@ class MigrationTest {
         assert(metricCursor.getInt(0) == 1800)
         metricCursor.close()
     }
+
+    @Test
+    @Throws(IOException::class)
+    fun migrate21To22() {
+        var db = helper.createDatabase(TEST_DB, 21)
+        // Insert user profile in version 21
+        db.execSQL("INSERT INTO user_profile (id, name, age, dateOfBirth, gender, heightCm, weightKg, dietaryRestrictions, healthGoals, dailyCalorieLimit, dailyWaterLimitLiters, currentStreak, points, badges, lastActiveDate, isDarkMode, notificationsEnabled, remindersEnabled, selectedLanguage) VALUES (1, 'Test User', 25, '2000-01-01', 'Male', 180.0, 75.0, 'None', 'Fit', 2000, 2.0, 0, 0, '', '2026-09-06', 0, 1, 1, 'English')")
+        db.close()
+
+        db = helper.runMigrationsAndValidate(TEST_DB, 22, true, AppDatabase.MIGRATION_21_22)
+
+        val cursor = db.query("SELECT todayTileSlots, name FROM user_profile WHERE id = 1")
+        assert(cursor.moveToFirst())
+        val slotIndex = cursor.getColumnIndex("todayTileSlots")
+        val nameIndex = cursor.getColumnIndex("name")
+        assert(cursor.getString(slotIndex) == "")
+        assert(cursor.getString(nameIndex) == "Test User")
+        cursor.close()
+    }
 }
