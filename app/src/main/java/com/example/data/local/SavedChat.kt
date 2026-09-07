@@ -7,7 +7,7 @@ import java.util.UUID
 @Entity(tableName = "saved_chats")
 data class SavedChat(
     @PrimaryKey val cloudId: String = UUID.randomUUID().toString(),
-    val title: String,
-    val messages: String,
+    val title: String = "",
+    val messages: String = "",
     val createdAt: Long = System.currentTimeMillis()
 )

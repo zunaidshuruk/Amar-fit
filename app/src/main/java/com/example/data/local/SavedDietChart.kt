@@ -8,8 +8,8 @@ import java.util.UUID
 data class SavedDietChart(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val cloudId: String = UUID.randomUUID().toString(),
-    val name: String,
-    val chartContent: String,
-    val shoppingList: String,
+    val name: String = "",
+    val chartContent: String = "",
+    val shoppingList: String = "",
     val createdAt: Long = System.currentTimeMillis()
 )

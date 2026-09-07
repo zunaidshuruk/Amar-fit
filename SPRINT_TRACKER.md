@@ -29,6 +29,7 @@ Last verified: current session, against commit `91425ae`.
 
 - [x] **Chat save feature (SavedChat)** — built with Room (v20 migration), Moshi serialization of ChatMessage list, Firestore sync, and two-tab ChatScreen layout.
 - [x] **Account deletion re-authentication flow** — implemented real in-app re-auth prompt for password and Google Sign-In users, automatic retry on success, and missing `saved_chats` subcollection cleanup.
+- [x] **Firestore deserialization fix on login for saved items (SavedWorkout, SavedDietChart, SavedChat)** — added default parameter values to all three entity models so Firestore's zero-arg constructor reflection works on restore; isolated collection pulls into individual try-catches in FirebaseManager.pullDataOnLogin so failures in one collection cannot block others.
 - [ ] **Your own pending check:** confirm `saved_diet_charts` / `saved_workouts` actually appear in Firestore Console under your UID (this was flagged a while back and may still be unconfirmed).
 - [ ] Tab navigation fix — live-test after a fresh rebuild (see Part A note above).
 

@@ -7,7 +7,7 @@ import java.util.UUID
 @Entity(tableName = "saved_workouts")
 data class SavedWorkout(
     @PrimaryKey val cloudId: String = UUID.randomUUID().toString(),
-    val title: String,
-    val content: String,
+    val title: String = "",
+    val content: String = "",
     val createdAt: Long = System.currentTimeMillis()
 )

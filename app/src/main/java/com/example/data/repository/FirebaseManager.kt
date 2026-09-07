@@ -1,5 +1,6 @@
 package com.example.data.repository
 
+import android.util.Log
 import com.example.data.local.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -233,15 +234,20 @@ object FirebaseManager {
         if (user != null) {
             val db = FirebaseFirestore.getInstance()
             
+            // Pull Profile
             try {
-                // Pull Profile
                 val profileSnap = db.collection("users").document(user.uid).get().await()
                 val profile = profileSnap.toObject(UserProfile::class.java)
                 if (profile != null) {
                     userDao.insertProfile(profile)
                 }
+            } catch (e: Exception) {
+                Log.e("FirebaseManager", "Error pulling profile on login", e)
+                e.printStackTrace()
+            }
 
-                // Pull Metrics
+            // Pull Metrics
+            try {
                 val metricsSnap = db.collection("users").document(user.uid).collection("health_metrics").get().await()
                 for (doc in metricsSnap.documents) {
                     val metric = doc.toObject(DailyMetric::class.java)
@@ -249,8 +255,13 @@ object FirebaseManager {
                         metricsDao.insertMetrics(metric)
                     }
                 }
+            } catch (e: Exception) {
+                Log.e("FirebaseManager", "Error pulling metrics on login", e)
+                e.printStackTrace()
+            }
 
-                // Pull Food Logs
+            // Pull Food Logs
+            try {
                 val foodLogsSnap = db.collection("users").document(user.uid).collection("diet_logs").get().await()
                 for (doc in foodLogsSnap.documents) {
                     val log = doc.toObject(FoodLog::class.java)
@@ -259,9 +270,14 @@ object FirebaseManager {
                         metricsDao.insertFoodLog(resolvedLog)
                     }
                 }
+            } catch (e: Exception) {
+                Log.e("FirebaseManager", "Error pulling food logs on login", e)
+                e.printStackTrace()
+            }
 
-                // Pull Saved Diet Charts
-                if (savedDietChartDao != null) {
+            // Pull Saved Diet Charts
+            if (savedDietChartDao != null) {
+                try {
                     val chartsSnap = db.collection("users").document(user.uid).collection("saved_diet_charts").get().await()
                     for (doc in chartsSnap.documents) {
                         val chart = doc.toObject(SavedDietChart::class.java)
@@ -269,10 +285,15 @@ object FirebaseManager {
                             savedDietChartDao.insertChart(chart)
                         }
                     }
+                } catch (e: Exception) {
+                    Log.e("FirebaseManager", "Error pulling saved diet charts on login", e)
+                    e.printStackTrace()
                 }
+            }
 
-                // Pull Saved Workouts
-                if (savedWorkoutDao != null) {
+            // Pull Saved Workouts
+            if (savedWorkoutDao != null) {
+                try {
                     val workoutsSnap = db.collection("users").document(user.uid).collection("saved_workouts").get().await()
                     for (doc in workoutsSnap.documents) {
                         val workout = doc.toObject(SavedWorkout::class.java)
@@ -280,10 +301,15 @@ object FirebaseManager {
                             savedWorkoutDao.insertWorkout(workout)
                         }
                     }
+                } catch (e: Exception) {
+                    Log.e("FirebaseManager", "Error pulling saved workouts on login", e)
+                    e.printStackTrace()
                 }
+            }
 
-                // Pull Saved Chats
-                if (savedChatDao != null) {
+            // Pull Saved Chats
+            if (savedChatDao != null) {
+                try {
                     val chatsSnap = db.collection("users").document(user.uid).collection("saved_chats").get().await()
                     for (doc in chatsSnap.documents) {
                         val chat = doc.toObject(SavedChat::class.java)
@@ -291,10 +317,10 @@ object FirebaseManager {
                             savedChatDao.insertChat(chat)
                         }
                     }
+                } catch (e: Exception) {
+                    Log.e("FirebaseManager", "Error pulling saved chats on login", e)
+                    e.printStackTrace()
                 }
-
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
         }
     }
