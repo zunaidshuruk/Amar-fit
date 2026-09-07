@@ -1,5 +1,7 @@
 package com.example.presentation.workout
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -18,16 +20,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.local.LibraryExercise
 import com.example.data.local.UserProfile
+import com.example.data.local.findLibraryExerciseByName
 import com.example.data.model.WorkoutExercise
 import com.example.data.model.WorkoutPlan
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.Instant
 
 enum class SessionStepType {
@@ -55,6 +61,13 @@ fun WorkoutSessionScreen(
     onExit: () -> Unit
 ) {
     val isDark = userProfile?.isDarkMode ?: isSystemInDarkTheme()
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    var allExercises by remember { mutableStateOf<List<LibraryExercise>>(emptyList()) }
+    LaunchedEffect(Unit) {
+        allExercises = viewModel.getExerciseLibrary(context)
+    }
 
     // 1. Flatten warmup + mainExercises + cooldown into ordered steps with rest periods
     val sessionSteps = remember(plan) {
@@ -118,28 +131,23 @@ fun WorkoutSessionScreen(
     var totalSessionElapsedSeconds by remember { mutableIntStateOf(0) }
     val exerciseElapsedTimes = remember { mutableStateMapOf<Int, Int>() }
 
-    // Current exercise video state
-    var currentVideoId by remember { mutableStateOf<String?>(null) }
-    var isVideoLoading by remember { mutableStateOf(false) }
+    // YouTube external resolution state for the current exercise
+    var isResolvingYoutube by remember { mutableStateOf(false) }
 
     val currentStep = sessionSteps.getOrNull(currentStepIndex)
 
-    // Lazy / On-demand video resolution for the current exercise
+    val matchedExercise = remember(currentStep?.exercise?.name, allExercises) {
+        val name = currentStep?.exercise?.name
+        if (!name.isNullOrBlank() && allExercises.isNotEmpty()) {
+            findLibraryExerciseByName(name, allExercises)
+        } else null
+    }
+
     LaunchedEffect(currentStepIndex) {
         val step = sessionSteps.getOrNull(currentStepIndex)
         remainingSeconds = step?.durationSeconds ?: 0
         currentStepElapsedSeconds = 0
-
-        if (step?.type == SessionStepType.EXERCISE && step.exercise != null) {
-            isVideoLoading = true
-            currentVideoId = null
-            val query = step.exercise.youtubeSearchQuery.ifBlank { step.exercise.name }
-            currentVideoId = viewModel.resolveYoutubeVideoId(query)
-            isVideoLoading = false
-        } else {
-            currentVideoId = null
-            isVideoLoading = false
-        }
+        isResolvingYoutube = false
     }
 
     fun advanceStep() {
@@ -366,11 +374,68 @@ fun WorkoutSessionScreen(
 
                     // Media embed or Rest visual
                     if (currentStep.type == SessionStepType.EXERCISE && currentStep.exercise != null) {
-                        YouTubeVideoEmbed(
-                            videoId = currentVideoId,
-                            isLoading = isVideoLoading,
-                            searchQuery = currentStep.exercise.youtubeSearchQuery.ifBlank { currentStep.exercise.name }
+                        ExerciseImageDemo(
+                            exercise = matchedExercise,
+                            fallbackTitle = currentStep.exercise.name
                         )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Watch on YouTube button
+                        Button(
+                            onClick = {
+                                if (!isResolvingYoutube) {
+                                    coroutineScope.launch {
+                                        isResolvingYoutube = true
+                                        val query = currentStep.exercise.youtubeSearchQuery.ifBlank { currentStep.exercise.name }
+                                        val videoId = try {
+                                            viewModel.resolveYoutubeVideoId(query)
+                                        } catch (e: Exception) {
+                                            null
+                                        }
+                                        isResolvingYoutube = false
+
+                                        val intent = if (!videoId.isNullOrBlank()) {
+                                            Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$videoId"))
+                                        } else {
+                                            val fallbackQuery = query.ifBlank { "exercise tutorial" }
+                                            Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=${Uri.encode(fallbackQuery)}"))
+                                        }
+                                        try {
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                        }
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Red500,
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            if (isResolvingYoutube) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Finding Video...", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Watch on YouTube", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            }
+                        }
 
                         Spacer(modifier = Modifier.height(16.dp))
 

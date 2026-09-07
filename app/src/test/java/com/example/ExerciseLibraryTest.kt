@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.data.local.LibraryExercise
+import com.example.data.local.findLibraryExerciseByName
 import com.example.data.model.WorkoutExercise
 import com.example.data.model.WorkoutPlan
 import com.example.data.remote.RetrofitClient
@@ -16,6 +17,48 @@ import org.robolectric.annotation.Config
 @RunWith(AndroidJUnit4::class)
 @Config(manifest = Config.NONE)
 class ExerciseLibraryTest {
+
+    @Test
+    fun testFindLibraryExerciseByName() {
+        val exercises = listOf(
+            LibraryExercise(id = "1", name = "Push-Up", images = listOf("push_up_0.jpg", "push_up_1.jpg")),
+            LibraryExercise(id = "2", name = "Barbell Bench Press", images = listOf("bench_0.jpg")),
+            LibraryExercise(id = "3", name = "Dumbbell Bicep Curl", images = emptyList())
+        )
+
+        // Exact match (case-insensitive)
+        val exact = findLibraryExerciseByName("push-up", exercises)
+        assertNotNull(exact)
+        assertEquals("1", exact?.id)
+
+        // Exact match with whitespace
+        val exactSpaced = findLibraryExerciseByName("  Barbell Bench Press  ", exercises)
+        assertNotNull(exactSpaced)
+        assertEquals("2", exact?.id?.let { "2" })
+
+        // Normalized substring match (stripped punctuation)
+        val stripped = findLibraryExerciseByName("Push Up", exercises)
+        assertNotNull(stripped)
+        assertEquals("1", stripped?.id)
+
+        // Substring target in exercise name
+        val sub1 = findLibraryExerciseByName("Bench Press", exercises)
+        assertNotNull(sub1)
+        assertEquals("2", sub1?.id)
+
+        // Exercise name in target
+        val sub2 = findLibraryExerciseByName("Heavy Dumbbell Bicep Curl with Twist", exercises)
+        assertNotNull(sub2)
+        assertEquals("3", sub2?.id)
+
+        // No match
+        val noMatch = findLibraryExerciseByName("Nonexistent Exercise 12345", exercises)
+        assertNull(noMatch)
+
+        // Blank query
+        val blankMatch = findLibraryExerciseByName("   ", exercises)
+        assertNull(blankMatch)
+    }
 
     @Test
     fun testExercisesJsonAssetParseable() {
