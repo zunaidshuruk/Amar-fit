@@ -14,5 +14,8 @@
         <item>android.permission.health.READ_OXYGEN_SATURATION</item>
         <item>android.permission.health.READ_SKIN_TEMPERATURE</item>
         <item>android.permission.health.READ_RESPIRATORY_RATE</item>
+        <item>android.permission.health.WRITE_NUTRITION</item>
+        <item>android.permission.health.WRITE_HYDRATION</item>
+        <item>android.permission.health.WRITE_SLEEP</item>
     </array>
 </resources>

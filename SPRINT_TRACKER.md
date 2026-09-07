@@ -43,7 +43,7 @@ Compiled from the Google Health screenshot review. Each will become its own scop
 3. [x] **Today tab redesign** — 3-page swipeable stat carousel, action row (Log/Start/Edit), chronological activity timeline feed, tile customization ("Edit Focus" with 7 curated metrics)
 4. [x] **Health Connect READ expansion** — Active calories burned, HRV, SpO2, Skin Temperature, Breathing Rate (all 5 verified non-experimental in connect-client 1.1.0-alpha11 and added to DailyMetric + syncWithHealthConnect)
 5. [ ] **Per-metric detail drill-down screens** — shared D/W/M/3M/Y template with variants (bar chart, zone bars, streak strip, hourly pills, status-only) for each tracked metric
-6. [ ] **Health Connect WRITE support** — Nutrition (food log/scan), Hydration (water log), Sleep (log sleep), Exercise (completed workouts)
+6. [ ] **Health Connect WRITE support** — *(Partial: Nutrition, Hydration, and Sleep implemented; Exercise blocked on item 7 Guided timed workouts)*
 7. [ ] **Guided timed workouts** — structured JSON workout generation (exercise/duration/rest, replacing freeform text), interval timer with auto-advance, in-app embedded YouTube video per exercise, MET-based calorie calculation — feeds real session timing into #6's Exercise write
 8. [ ] **Mindfulness** — real Health Connect `MindfulnessSessionRecord` read/write (Meditation/Breathing/Movement types), building on existing Breathwork & Meditation category. Feature-gate on `FEATURE_MINDFULNESS_SESSION` availability.
 9. [ ] **Resilience** — Amar Fit's own custom recovery score, computed from existing sleep/HRV/activity data (not a Health Connect read — no such record type exists)

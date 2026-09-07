@@ -27,11 +27,14 @@ import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.NutritionRecord
+import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.SkinTemperatureRecord
+import androidx.health.connect.client.units.Energy
+import androidx.health.connect.client.units.Volume
 
 import androidx.health.connect.client.time.TimeRangeFilter
 import java.time.Instant
@@ -282,12 +285,32 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
     
-        fun setSleep(hours: Float) {
+    fun setSleep(hours: Float) {
         viewModelScope.launch {
             val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
             val updated = current.copy(sleepHours = hours)
             repository.saveMetrics(updated)
             repository.logActivityEvent("sleep", "Logged ${hours}h sleep")
+
+            // Write to Health Connect
+            try {
+                if (hours > 0f) {
+                    val healthConnectClient = HealthConnectClient.getOrCreate(getApplication())
+                    val endInstant = Instant.now()
+                    val startInstant = endInstant.minusSeconds((hours * 3600f).toLong().coerceAtLeast(1L))
+                    val zoneOffset = ZoneId.systemDefault().rules.getOffset(endInstant)
+                    val sleepSession = SleepSessionRecord(
+                        startTime = startInstant,
+                        startZoneOffset = zoneOffset,
+                        endTime = endInstant,
+                        endZoneOffset = zoneOffset,
+                        title = "Sleep"
+                    )
+                    healthConnectClient.insertRecords(listOf(sleepSession))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -298,6 +321,25 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("water", "Logged ${amountLiters}L water")
+
+            // Write to Health Connect
+            try {
+                if (amountLiters > 0f) {
+                    val healthConnectClient = HealthConnectClient.getOrCreate(getApplication())
+                    val now = Instant.now()
+                    val zoneOffset = ZoneId.systemDefault().rules.getOffset(now)
+                    val hydrationRecord = HydrationRecord(
+                        startTime = now,
+                        startZoneOffset = zoneOffset,
+                        endTime = now,
+                        endZoneOffset = zoneOffset,
+                        volume = Volume.liters(amountLiters.toDouble())
+                    )
+                    healthConnectClient.insertRecords(listOf(hydrationRecord))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
     
@@ -671,6 +713,26 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("food", "Logged $name")
+
+            // Write to Health Connect
+            try {
+                if (calories > 0) {
+                    val healthConnectClient = HealthConnectClient.getOrCreate(getApplication())
+                    val now = Instant.now()
+                    val zoneOffset = ZoneId.systemDefault().rules.getOffset(now)
+                    val nutritionRecord = NutritionRecord(
+                        startTime = now,
+                        startZoneOffset = zoneOffset,
+                        endTime = now,
+                        endZoneOffset = zoneOffset,
+                        energy = Energy.kilocalories(calories.toDouble()),
+                        name = name
+                    )
+                    healthConnectClient.insertRecords(listOf(nutritionRecord))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
     
