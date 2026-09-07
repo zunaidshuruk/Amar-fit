@@ -88,15 +88,52 @@ class AuthViewModelTest {
         viewModel.signInWithGoogle(fakeCredential)
         assertTrue(viewModel.uiState.value is AuthUiState.Error)
     }
+
+    @Test
+    fun `signIn with unverified email emits EmailVerificationRequired`() {
+        repository.shouldReturnEmailVerificationRequired = true
+        viewModel.signIn("test@test.com", "password123")
+        assertEquals(AuthUiState.EmailVerificationRequired, viewModel.uiState.value)
+    }
+
+    @Test
+    fun `signUp emits EmailVerificationRequired`() {
+        repository.shouldReturnEmailVerificationRequired = true
+        viewModel.signUp("test@test.com", "password123")
+        assertEquals(AuthUiState.EmailVerificationRequired, viewModel.uiState.value)
+    }
+
+    @Test
+    fun `checkVerificationStatus when verified emits Authenticated`() {
+        repository.isEmailVerified = true
+        viewModel.checkVerificationStatus()
+        assertEquals(AuthUiState.Authenticated, viewModel.uiState.value)
+    }
+
+    @Test
+    fun `checkVerificationStatus when still unverified emits EmailVerificationRequired`() {
+        repository.isEmailVerified = false
+        viewModel.checkVerificationStatus()
+        assertEquals(AuthUiState.EmailVerificationRequired, viewModel.uiState.value)
+    }
+
+    @Test
+    fun `resendVerificationEmail success keeps EmailVerificationRequired state`() {
+        viewModel.resendVerificationEmail()
+        assertEquals(AuthUiState.EmailVerificationRequired, viewModel.uiState.value)
+    }
 }
 
 class FakeAuthRepository : AuthRepository {
     var shouldReturnEmailNotFound = false
     var shouldReturnInvalidCredentials = false
     var shouldReturnError = false
+    var shouldReturnEmailVerificationRequired = false
+    var isEmailVerified = false
 
     override suspend fun signIn(email: String, password: String): AuthResult {
         return when {
+            shouldReturnEmailVerificationRequired -> AuthResult.EmailVerificationRequired
             shouldReturnEmailNotFound -> AuthResult.EmailNotFound
             shouldReturnInvalidCredentials -> AuthResult.InvalidCredentials
             shouldReturnError -> AuthResult.Error("Test Error")
@@ -105,10 +142,22 @@ class FakeAuthRepository : AuthRepository {
     }
 
     override suspend fun signUp(email: String, password: String): AuthResult {
-        return if (shouldReturnError) AuthResult.Error("Test Error") else AuthResult.Success
+        return when {
+            shouldReturnError -> AuthResult.Error("Test Error")
+            shouldReturnEmailVerificationRequired -> AuthResult.EmailVerificationRequired
+            else -> AuthResult.Success
+        }
     }
 
     override suspend fun signInWithGoogle(credential: androidx.credentials.Credential): AuthResult {
         return if (shouldReturnError) AuthResult.Error("Test Error") else AuthResult.Success
+    }
+
+    override suspend fun resendVerificationEmail(): AuthResult {
+        return if (shouldReturnError) AuthResult.Error("Test Error") else AuthResult.Success
+    }
+
+    override suspend fun checkEmailVerified(): AuthResult {
+        return if (isEmailVerified) AuthResult.Success else AuthResult.EmailVerificationRequired
     }
 }

@@ -9,6 +9,7 @@ sealed class AuthResult {
     data object Success : AuthResult()
     data object EmailNotFound : AuthResult()
     data object InvalidCredentials : AuthResult()
+    data object EmailVerificationRequired : AuthResult()
     data class Error(val message: String) : AuthResult()
 }
 
@@ -16,13 +17,20 @@ interface AuthRepository {
     suspend fun signIn(email: String, password: String): AuthResult
     suspend fun signUp(email: String, password: String): AuthResult
     suspend fun signInWithGoogle(credential: androidx.credentials.Credential): AuthResult
+    suspend fun resendVerificationEmail(): AuthResult
+    suspend fun checkEmailVerified(): AuthResult
 }
 
 class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
     override suspend fun signIn(email: String, password: String): AuthResult {
         return try {
             auth.signInWithEmailAndPassword(email, password).await()
-            AuthResult.Success
+            val user = auth.currentUser
+            if (user?.providerData?.any { it.providerId == "password" } == true && !user.isEmailVerified) {
+                AuthResult.EmailVerificationRequired
+            } else {
+                AuthResult.Success
+            }
         } catch (e: FirebaseAuthInvalidUserException) {
             AuthResult.EmailNotFound
         } catch (e: FirebaseAuthInvalidCredentialsException) {
@@ -43,9 +51,46 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
     override suspend fun signUp(email: String, password: String): AuthResult {
         return try {
             auth.createUserWithEmailAndPassword(email, password).await()
-            AuthResult.Success
+            try {
+                auth.currentUser?.sendEmailVerification()?.await()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            AuthResult.EmailVerificationRequired
         } catch (e: Exception) {
             AuthResult.Error(e.message ?: "Unknown sign up error")
+        }
+    }
+
+    override suspend fun resendVerificationEmail(): AuthResult {
+        return try {
+            val user = auth.currentUser
+            if (user != null) {
+                user.sendEmailVerification().await()
+                AuthResult.Success
+            } else {
+                AuthResult.Error("No user currently signed in.")
+            }
+        } catch (e: Exception) {
+            AuthResult.Error(e.message ?: "Failed to send verification email.")
+        }
+    }
+
+    override suspend fun checkEmailVerified(): AuthResult {
+        return try {
+            val user = auth.currentUser
+            if (user != null) {
+                user.reload().await()
+                if (user.isEmailVerified) {
+                    AuthResult.Success
+                } else {
+                    AuthResult.EmailVerificationRequired
+                }
+            } else {
+                AuthResult.Error("No user currently signed in.")
+            }
+        } catch (e: Exception) {
+            AuthResult.Error(e.message ?: "Failed to verify email status.")
         }
     }
 

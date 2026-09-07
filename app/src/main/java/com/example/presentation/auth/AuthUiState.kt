@@ -4,6 +4,7 @@ sealed interface AuthUiState {
     data object Idle : AuthUiState
     data object Loading : AuthUiState
     data object Authenticated : AuthUiState
+    data object EmailVerificationRequired : AuthUiState
     data object EmailNotFound : AuthUiState
     data object InvalidCredentials : AuthUiState
     data class ValidationError(val msg: String) : AuthUiState

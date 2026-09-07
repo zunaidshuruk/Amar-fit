@@ -27,6 +27,7 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
             _uiState.value = AuthUiState.Loading
             when (val result = repository.signIn(trimmedEmail, trimmedPassword)) {
                 is AuthResult.Success -> _uiState.value = AuthUiState.Authenticated
+                is AuthResult.EmailVerificationRequired -> _uiState.value = AuthUiState.EmailVerificationRequired
                 is AuthResult.EmailNotFound -> _uiState.value = AuthUiState.EmailNotFound
                 is AuthResult.InvalidCredentials -> _uiState.value = AuthUiState.InvalidCredentials
                 is AuthResult.Error -> _uiState.value = AuthUiState.Error(result.message)
@@ -44,8 +45,32 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
             _uiState.value = AuthUiState.Loading
             when (val result = repository.signUp(trimmedEmail, trimmedPassword)) {
                 is AuthResult.Success -> _uiState.value = AuthUiState.Authenticated
+                is AuthResult.EmailVerificationRequired -> _uiState.value = AuthUiState.EmailVerificationRequired
                 is AuthResult.Error -> _uiState.value = AuthUiState.Error(result.message)
                 else -> _uiState.value = AuthUiState.Error("Unexpected error during sign up")
+            }
+        }
+    }
+
+    fun resendVerificationEmail() {
+        viewModelScope.launch {
+            _uiState.value = AuthUiState.Loading
+            when (val result = repository.resendVerificationEmail()) {
+                is AuthResult.Success -> _uiState.value = AuthUiState.EmailVerificationRequired
+                is AuthResult.Error -> _uiState.value = AuthUiState.Error(result.message)
+                else -> _uiState.value = AuthUiState.EmailVerificationRequired
+            }
+        }
+    }
+
+    fun checkVerificationStatus() {
+        viewModelScope.launch {
+            _uiState.value = AuthUiState.Loading
+            when (val result = repository.checkEmailVerified()) {
+                is AuthResult.Success -> _uiState.value = AuthUiState.Authenticated
+                is AuthResult.EmailVerificationRequired -> _uiState.value = AuthUiState.EmailVerificationRequired
+                is AuthResult.Error -> _uiState.value = AuthUiState.Error(result.message)
+                else -> _uiState.value = AuthUiState.EmailVerificationRequired
             }
         }
     }

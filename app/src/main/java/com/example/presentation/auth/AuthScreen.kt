@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MarkEmailRead
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,10 +22,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.ui.theme.Background
+import com.example.ui.theme.Surface
+import com.example.ui.theme.Primary
+import com.example.ui.theme.Secondary
+import com.example.ui.theme.Emerald50
 import com.example.ui.theme.Emerald500
 import com.example.ui.theme.Emerald600
 import com.example.ui.theme.Emerald700
@@ -57,8 +64,17 @@ fun AuthScreen(
     
     val uiState by authViewModel.uiState.collectAsState()
     val isLoading = uiState is com.example.presentation.auth.AuthUiState.Loading
+    val isVerificationRequired = uiState is com.example.presentation.auth.AuthUiState.EmailVerificationRequired
     var showEmailNotFoundDialog by remember { mutableStateOf(false) }
     var showErrorDialog by remember { mutableStateOf<String?>(null) }
+    var resendCooldownSeconds by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(resendCooldownSeconds) {
+        if (resendCooldownSeconds > 0) {
+            kotlinx.coroutines.delay(1000L)
+            resendCooldownSeconds -= 1
+        }
+    }
 
     LaunchedEffect(uiState) {
         when (val state = uiState) {
@@ -179,175 +195,297 @@ fun AuthScreen(
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            // App Icon
-            Box(
+        if (isVerificationRequired) {
+            val userEmail = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.email ?: email
+            Column(
                 modifier = Modifier
-                    .size(100.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Color.White)
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                    contentDescription = "App Icon",
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            Text(
-                text = "আমার Fit",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = Emerald600
-            )
-            
-            Text(
-                text = txtWelcome,
-                fontSize = 16.sp,
-                color = Slate500,
-                modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
-            )
-
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text(txtEmail) },
-                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black
-                )
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text(txtPassword) },
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black
-                )
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            Button(
-                onClick = { 
-                    if (isLogin) {
-                        authViewModel.signIn(email, password)
-                    } else {
-                        authViewModel.signUp(email, password)
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Emerald600),
-                shape = RoundedCornerShape(12.dp),
-                enabled = !isLoading
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                } else {
-                    Text(
-                        text = txtBtn,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Emerald50)
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MarkEmailRead,
+                        contentDescription = "Verify Email",
+                        tint = Emerald600,
+                        modifier = Modifier.size(48.dp)
                     )
                 }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Divider(modifier = Modifier.weight(1f), color = Slate100)
-                Text(txtOr, color = Slate500, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp))
-                Divider(modifier = Modifier.weight(1f), color = Slate100)
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            OutlinedButton(
-                onClick = { 
-                    if (isLoading) return@OutlinedButton
-                    coroutineScope.launch {
-                        try {
-                            val googleIdOption = GetGoogleIdOption.Builder()
-                                .setFilterByAuthorizedAccounts(false)
-                                .setServerClientId(context.getString(R.string.default_web_client_id))
-                                .build()
-                                
-                            val request = GetCredentialRequest.Builder()
-                                .addCredentialOption(googleIdOption)
-                                .build()
-                                
-                            val credentialManager = CredentialManager.create(context)
-                            val result = credentialManager.getCredential(context = context, request = request)
-                            authViewModel.signInWithGoogle(result.credential)
-                        } catch (e: GetCredentialCancellationException) {
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = if (isBn) "ইমেইল ভেরিফাই করুন" else "Verify your email",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = if (isBn) {
+                        "আমরা $userEmail ঠিকানায় একটি যাচাইকরণ লিঙ্ক পাঠিয়েছি। চালিয়ে যাওয়ার আগে অনুগ্রহ করে আপনার ইমেইল চেক করুন।"
+                    } else {
+                        "We've sent a verification link to $userEmail. Please check your inbox and verify your email to continue."
+                    },
+                    fontSize = 15.sp,
+                    color = Slate500,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Button(
+                    onClick = { authViewModel.checkVerificationStatus() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    shape = RoundedCornerShape(16.dp),
+                    enabled = !isLoading
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (isBn) "আমি ভেরিফাই করেছি" else "I've verified",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        if (resendCooldownSeconds == 0) {
+                            resendCooldownSeconds = 30
+                            authViewModel.resendVerificationEmail()
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    enabled = resendCooldownSeconds == 0 && !isLoading
+                ) {
+                    Text(
+                        text = if (resendCooldownSeconds > 0) {
+                            if (isBn) "পুনরায় পাঠান ($resendCooldownSeconds সে.)" else "Resend email (${resendCooldownSeconds}s)"
+                        } else {
+                            if (isBn) "পুনরায় ইমেইল পাঠান" else "Resend email"
+                        },
+                        color = if (resendCooldownSeconds == 0 && !isLoading) Primary else Slate500,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = if (isBn) "ভিন্ন অ্যাকাউন্ট ব্যবহার করুন" else "Use a different account",
+                    color = Emerald600,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable {
+                        viewModel.logout {
                             authViewModel.resetState()
-                        } catch (e: GetCredentialException) {
-                            authViewModel.setCustomError(e.message ?: "Google Sign-In failed")
-                        } catch (e: Exception) {
-                            authViewModel.setCustomError(e.message ?: "Unknown error")
                         }
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(
-                    text = txtSso,
-                    color = TextPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
                 )
             }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
+                // App Icon
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color.White)
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                        contentDescription = "App Icon",
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
                 Text(
-                    text = txtPrompt,
-                    color = Slate500
-                )
-                Text(
-                    text = txtToggle,
-                    color = Emerald600,
+                    text = "আমার Fit",
+                    fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { isLogin = !isLogin }
+                    color = Emerald600
                 )
+                
+                Text(
+                    text = txtWelcome,
+                    fontSize = 16.sp,
+                    color = Slate500,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
+                )
+
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text(txtEmail) },
+                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
+                    )
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text(txtPassword) },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
+                    )
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Button(
+                    onClick = { 
+                        if (isLogin) {
+                            authViewModel.signIn(email, password)
+                        } else {
+                            authViewModel.signUp(email, password)
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Emerald600),
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isLoading
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text(
+                            text = txtBtn,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Divider(modifier = Modifier.weight(1f), color = Slate100)
+                    Text(txtOr, color = Slate500, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp))
+                    Divider(modifier = Modifier.weight(1f), color = Slate100)
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                OutlinedButton(
+                    onClick = { 
+                        if (isLoading) return@OutlinedButton
+                        coroutineScope.launch {
+                            try {
+                                val googleIdOption = GetGoogleIdOption.Builder()
+                                    .setFilterByAuthorizedAccounts(false)
+                                    .setServerClientId(context.getString(R.string.default_web_client_id))
+                                    .build()
+                                    
+                                val request = GetCredentialRequest.Builder()
+                                    .addCredentialOption(googleIdOption)
+                                    .build()
+                                    
+                                val credentialManager = CredentialManager.create(context)
+                                val result = credentialManager.getCredential(context = context, request = request)
+                                authViewModel.signInWithGoogle(result.credential)
+                            } catch (e: GetCredentialCancellationException) {
+                                authViewModel.resetState()
+                            } catch (e: GetCredentialException) {
+                                authViewModel.setCustomError(e.message ?: "Google Sign-In failed")
+                            } catch (e: Exception) {
+                                authViewModel.setCustomError(e.message ?: "Unknown error")
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = txtSso,
+                        color = TextPrimary,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = txtPrompt,
+                        color = Slate500
+                    )
+                    Text(
+                        text = txtToggle,
+                        color = Emerald600,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { isLogin = !isLogin }
+                    )
+                }
             }
         }
     }
