@@ -51,6 +51,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
     var selectedSavedWorkout by remember { mutableStateOf<SavedWorkout?>(null) }
     var showSaveDialog by remember { mutableStateOf(false) }
     var workoutTitle by remember { mutableStateOf("") }
+    var activeSessionPlan by remember { mutableStateOf<WorkoutPlan?>(null) }
 
     val bodyTextColor = if (isDark) {
         android.graphics.Color.parseColor("#E2E8F0")
@@ -70,6 +71,16 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
         }
     }
 
+    if (activeSessionPlan != null) {
+        WorkoutSessionScreen(
+            plan = activeSessionPlan!!,
+            userProfile = profile,
+            viewModel = viewModel,
+            onExit = { activeSessionPlan = null }
+        )
+        return
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -81,6 +92,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
             SavedWorkoutDetailView(
                 workout = selectedSavedWorkout!!,
                 isDark = isDark,
+                onStartWorkout = { plan -> activeSessionPlan = plan },
                 onBack = { selectedSavedWorkout = null }
             )
         } else {
@@ -209,16 +221,35 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    // Save Button
-                    Button(
-                        onClick = { showSaveDialog = true },
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                        shape = RoundedCornerShape(16.dp)
+                    // Action Buttons: Start Workout and Save Workout
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(Icons.Default.Save, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Save Workout", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Button(
+                            onClick = { activeSessionPlan = plan },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(56.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Start Workout", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        OutlinedButton(
+                            onClick = { showSaveDialog = true },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(56.dp),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Save Workout", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                     
                     Spacer(modifier = Modifier.height(24.dp))
@@ -444,7 +475,12 @@ fun ExerciseItemRow(exercise: WorkoutExercise) {
 }
 
 @Composable
-fun SavedWorkoutDetailView(workout: SavedWorkout, isDark: Boolean, onBack: () -> Unit) {
+fun SavedWorkoutDetailView(
+    workout: SavedWorkout,
+    isDark: Boolean,
+    onStartWorkout: (WorkoutPlan) -> Unit,
+    onBack: () -> Unit
+) {
     val bodyTextColor = if (isDark) {
         android.graphics.Color.parseColor("#E2E8F0")
     } else {
@@ -525,6 +561,22 @@ fun SavedWorkoutDetailView(workout: SavedWorkout, isDark: Boolean, onBack: () ->
                         }
                     )
                 }
+            }
+        }
+
+        if (parsedPlan != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = { onStartWorkout(parsedPlan) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(Icons.Default.PlayArrow, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Start Workout", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

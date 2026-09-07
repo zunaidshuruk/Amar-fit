@@ -112,7 +112,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         database.savedDietChartDao(),
         database.savedWorkoutDao(),
         database.savedChatDao(),
-        database.activityEventDao()
+        database.activityEventDao(),
+        database.youtubeVideoCacheDao()
     )
 
     private val startOfDayMillis: Long
@@ -852,6 +853,10 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         _structuredWorkoutPlan.value = null
         _rawStructuredWorkoutJson.value = ""
         _structuredWorkoutError.value = null
+    }
+
+    suspend fun resolveYoutubeVideoId(searchQuery: String): String? {
+        return repository.resolveYoutubeVideoId(searchQuery)
     }
 
     fun generateAIStructuredWorkout() {

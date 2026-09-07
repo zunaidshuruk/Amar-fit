@@ -20,7 +20,8 @@ class AppRepository(
     private val savedDietChartDao: com.example.data.local.SavedDietChartDao,
     private val savedWorkoutDao: com.example.data.local.SavedWorkoutDao,
     private val savedChatDao: com.example.data.local.SavedChatDao,
-    private val activityEventDao: com.example.data.local.ActivityEventDao? = null
+    private val activityEventDao: com.example.data.local.ActivityEventDao? = null,
+    private val youtubeVideoCacheDao: com.example.data.local.YoutubeVideoCacheDao? = null
 ) {
 
     suspend fun logActivityEvent(type: String, description: String, timestamp: Long = System.currentTimeMillis()) {
@@ -873,5 +874,57 @@ class AppRepository(
     suspend fun deleteChat(chat: com.example.data.local.SavedChat): Boolean {
         savedChatDao.deleteChat(chat)
         return FirebaseManager.deleteSavedChat(chat)
+    }
+
+    suspend fun resolveYoutubeVideoId(searchQuery: String): String? = withContext(Dispatchers.IO) {
+        val trimmedQuery = searchQuery.trim()
+        val normalizedQuery = trimmedQuery.lowercase()
+        if (normalizedQuery.isBlank()) return@withContext null
+
+        try {
+            val cached = youtubeVideoCacheDao?.getByQuery(normalizedQuery)
+            if (cached != null && cached.videoId.isNotBlank()) {
+                return@withContext cached.videoId
+            }
+        } catch (e: Exception) {
+            // Proceed to network on cache failure
+        }
+
+        val apiKey = try {
+            val key = com.example.BuildConfig.YOUTUBE_API_KEY
+            if (key.isBlank() || key.startsWith("MY_YOUTUBE_API_KEY") || key == "default") null else key
+        } catch (e: Throwable) {
+            null
+        }
+
+        if (apiKey == null) {
+            return@withContext null
+        }
+
+        try {
+            val response = com.example.data.remote.YouTubeClient.service.searchVideo(
+                query = trimmedQuery,
+                apiKey = apiKey
+            )
+            val videoId = response.items?.firstOrNull()?.id?.videoId
+            if (!videoId.isNullOrBlank()) {
+                try {
+                    youtubeVideoCacheDao?.insert(
+                        com.example.data.local.YoutubeVideoCache(
+                            query = normalizedQuery,
+                            videoId = videoId
+                        )
+                    )
+                } catch (e: Exception) {
+                    // Ignore cache insert error
+                }
+                videoId
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            // 403 quota exceeded, bad key, or network failure - return null without crashing
+            null
+        }
     }
 }
