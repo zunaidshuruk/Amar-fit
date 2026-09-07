@@ -145,7 +145,7 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF8F9FA))
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .padding(horizontal = 24.dp)
             .verticalScroll(rememberScrollState())
@@ -155,13 +155,13 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
             text = "Welcome to Amar-Fit AI",
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF1E1E1E),
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(top = 24.dp)
         )
         Text(
             text = "Let's set up your profile to personalize your diet & health plans.",
             fontSize = 14.sp,
-            color = Color(0xFF1E1E1E).copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
         )
 
@@ -250,7 +250,7 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
             Text(text = weightError!!, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))
         }
 
-        Text("Dietary Restrictions", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp, bottom = 8.dp), color = Color(0xFF1E1E1E))
+        Text("Dietary Restrictions", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp, bottom = 8.dp), color = MaterialTheme.colorScheme.onBackground)
         FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             dietOptions.forEach { option ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -267,7 +267,7 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
                             selectedDietsList = current.toList()
                         }
                     )
-                    Text(option, fontSize = 14.sp, color = Color(0xFF1E1E1E))
+                    Text(option, fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground)
                 }
             }
         }
@@ -282,7 +282,7 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
         }
 
         Spacer(modifier = Modifier.height(8.dp))
-        Text("Health Goals", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp, bottom = 8.dp), color = Color(0xFF1E1E1E))
+        Text("Health Goals", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp, bottom = 8.dp), color = MaterialTheme.colorScheme.onBackground)
         FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             goalOptions.forEach { option ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -294,7 +294,7 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
                             selectedGoalsList = current.toList()
                         }
                     )
-                    Text(option, fontSize = 14.sp, color = Color(0xFF1E1E1E))
+                    Text(option, fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground)
                 }
             }
         }

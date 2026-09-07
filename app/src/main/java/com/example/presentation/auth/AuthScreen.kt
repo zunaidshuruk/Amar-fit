@@ -26,17 +26,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
-import com.example.ui.theme.Background
-import com.example.ui.theme.Surface
 import com.example.ui.theme.Primary
 import com.example.ui.theme.Secondary
 import com.example.ui.theme.Emerald50
-import com.example.ui.theme.Emerald500
 import com.example.ui.theme.Emerald600
-import com.example.ui.theme.Emerald700
-import com.example.ui.theme.Slate100
-import com.example.ui.theme.Slate500
-import com.example.ui.theme.TextPrimary
 
 import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager
@@ -165,7 +158,7 @@ fun AuthScreen(
 
 
     Scaffold(
-        containerColor = Background,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { },
@@ -227,7 +220,7 @@ fun AuthScreen(
                     text = if (isBn) "ইমেইল ভেরিফাই করুন" else "Verify your email",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -239,7 +232,7 @@ fun AuthScreen(
                         "We've sent a verification link to $userEmail. Please check your inbox and verify your email to continue."
                     },
                     fontSize = 15.sp,
-                    color = Slate500,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
@@ -295,7 +288,7 @@ fun AuthScreen(
                         } else {
                             if (isBn) "পুনরায় ইমেইল পাঠান" else "Resend email"
                         },
-                        color = if (resendCooldownSeconds == 0 && !isLoading) Primary else Slate500,
+                        color = if (resendCooldownSeconds == 0 && !isLoading) Primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -352,7 +345,7 @@ fun AuthScreen(
                 Text(
                     text = txtWelcome,
                     fontSize = 16.sp,
-                    color = Slate500,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
                 )
 
@@ -364,11 +357,7 @@ fun AuthScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.Black,
-                        unfocusedTextColor = Color.Black
-                    )
+                    singleLine = true
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -382,11 +371,7 @@ fun AuthScreen(
                     shape = RoundedCornerShape(12.dp),
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.Black,
-                        unfocusedTextColor = Color.Black
-                    )
+                    singleLine = true
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -423,9 +408,9 @@ fun AuthScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Divider(modifier = Modifier.weight(1f), color = Slate100)
-                    Text(txtOr, color = Slate500, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp))
-                    Divider(modifier = Modifier.weight(1f), color = Slate100)
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+                    Text(txtOr, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp))
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
                 }
                 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -463,7 +448,7 @@ fun AuthScreen(
                 ) {
                     Text(
                         text = txtSso,
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -477,7 +462,7 @@ fun AuthScreen(
                 ) {
                     Text(
                         text = txtPrompt,
-                        color = Slate500
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = txtToggle,

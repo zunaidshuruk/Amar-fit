@@ -12,67 +12,72 @@ data class AccentColors(
 
 object AccentTokens {
     fun stepsAccent(isDark: Boolean): AccentColors {
-        // Emerald domain
+        // Steps / positive-progress domain (teal-green)
         return if (isDark) {
-            AccentColors(bg = Color(0xFF064E3B), onBg = Color(0xFF6EE7B7)) // Emerald900, Emerald300
+            AccentColors(bg = Color(0xFF123832), onBg = Color(0xFF5FE0C4))
         } else {
             AccentColors(bg = Emerald50, onBg = Emerald700)
         }
     }
 
     fun caloriesAccent(isDark: Boolean): AccentColors {
-        // Orange domain
+        // Orange domain - muted dark bg with soft light tint
         return if (isDark) {
-            AccentColors(bg = Color(0xFF7C2D12), onBg = Color(0xFFFDBA74)) // Orange900, Orange300
+            AccentColors(bg = Color(0xFF382014), onBg = Color(0xFFFFB27D))
         } else {
             AccentColors(bg = Orange50, onBg = Orange700)
         }
     }
 
     fun waterAccent(isDark: Boolean): AccentColors {
-        // Blue domain
+        // Blue / cardio / water domain
         return if (isDark) {
-            AccentColors(bg = Color(0xFF1E3A8A), onBg = Color(0xFF93C5FD)) // Blue900, Blue300
+            AccentColors(bg = Color(0xFF152A52), onBg = Color(0xFF8FB8FF))
         } else {
             AccentColors(bg = BlueBg, onBg = Blue700)
         }
     }
 
     fun streakAccent(isDark: Boolean): AccentColors {
+        // Orange domain - muted dark bg with soft light tint
         return if (isDark) {
-            AccentColors(bg = Color(0xFF451A03), onBg = Orange500)
+            AccentColors(bg = Color(0xFF351C0C), onBg = Color(0xFFFFB076))
         } else {
             AccentColors(bg = OrangeBg, onBg = Orange700)
         }
     }
     
     fun pointsAccent(isDark: Boolean): AccentColors {
+        // Indigo domain - deep muted purple-indigo
         return if (isDark) {
-            AccentColors(bg = Color(0xFF1E1B4B), onBg = Indigo500) // Indigo900 deeper, Indigo500
+            AccentColors(bg = Color(0xFF221F45), onBg = Color(0xFFA5B4FC))
         } else {
             AccentColors(bg = IndigoBg, onBg = Indigo700)
         }
     }
     
     fun badgesAccent(isDark: Boolean): AccentColors {
+        // Emerald domain - deep muted dark green
         return if (isDark) {
-            AccentColors(bg = Color(0xFF022C22), onBg = Emerald500) // Deeper emerald
+            AccentColors(bg = Color(0xFF0F3324), onBg = Color(0xFF6EE7B7))
         } else {
             AccentColors(bg = Emerald50, onBg = Emerald700)
         }
     }
 
     fun glucoseAccent(isDark: Boolean): AccentColors {
+        // Indigo domain - deep muted indigo
         return if (isDark) {
-            AccentColors(bg = Color(0xFF1E1B4B), onBg = Indigo500)
+            AccentColors(bg = Color(0xFF1C2248), onBg = Color(0xFFA5B4FC))
         } else {
             AccentColors(bg = Indigo50, onBg = Indigo700)
         }
     }
 
     fun weightAccent(isDark: Boolean): AccentColors {
+        // Orange domain - muted warm amber/orange
         return if (isDark) {
-            AccentColors(bg = Color(0xFF7C2D12), onBg = Color(0xFFFDBA74))
+            AccentColors(bg = Color(0xFF382014), onBg = Color(0xFFFFB27D))
         } else {
             AccentColors(bg = Orange50, onBg = Orange700)
         }
@@ -80,25 +85,36 @@ object AccentTokens {
 
     fun bmiAccent(isDark: Boolean): AccentColors {
         return if (isDark) {
-            AccentColors(bg = Color(0xFF064E3B), onBg = Color(0xFF6EE7B7))
+            AccentColors(bg = Color(0xFF123832), onBg = Color(0xFF5FE0C4))
         } else {
             AccentColors(bg = Emerald50, onBg = Emerald700)
         }
     }
 
     fun heartRateAccent(isDark: Boolean): AccentColors {
+        // Red domain - muted dark wine/red bg with soft light rose onBg
         return if (isDark) {
-            AccentColors(bg = Red900, onBg = Color(0xFFFCA5A5))
+            AccentColors(bg = Color(0xFF3E1719), onBg = Color(0xFFFFA6A6))
         } else {
             AccentColors(bg = Red50, onBg = Red700)
         }
     }
 
     fun bloodPressureAccent(isDark: Boolean): AccentColors {
+        // Blue domain - deep muted blue
         return if (isDark) {
-            AccentColors(bg = Blue900, onBg = Color(0xFF93C5FD))
+            AccentColors(bg = Color(0xFF152A52), onBg = Color(0xFF8FB8FF))
         } else {
             AccentColors(bg = BlueBg, onBg = Blue700)
+        }
+    }
+
+    fun mindfulnessAccent(isDark: Boolean): AccentColors {
+        // Mindfulness / calm domain (purple)
+        return if (isDark) {
+            AccentColors(bg = Color(0xFF332352), onBg = Color(0xFFC9B6F5))
+        } else {
+            AccentColors(bg = Color(0xFFF3E8FF), onBg = Color(0xFF7E22CE))
         }
     }
 
@@ -110,7 +126,7 @@ object AccentTokens {
 
     fun recipeAccent(isDark: Boolean): AccentColors = heartRateAccent(isDark)
 
-    fun sleepAccent(isDark: Boolean): AccentColors = pointsAccent(isDark)
+    fun sleepAccent(isDark: Boolean): AccentColors = mindfulnessAccent(isDark)
 
     fun coachAccent(isDark: Boolean): AccentColors = waterAccent(isDark)
 }
