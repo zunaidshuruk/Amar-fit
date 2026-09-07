@@ -49,6 +49,7 @@ import java.util.Locale
 class ShasthoViewModel(application: Application) : AndroidViewModel(application) {
     private val database = AppDatabase.getDatabase(application)
     private val savedWorkoutSessionKeys = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+    private val savedMindfulnessSessionKeys = java.util.Collections.synchronizedSet(mutableSetOf<String>())
 
     fun syncDataOnLogin(onComplete: (Boolean) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -407,6 +408,62 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 title = planTitle
             )
             healthConnectClient.insertRecords(listOf(exerciseSession))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    suspend fun saveCompletedMindfulnessSession(
+        sessionType: Int,
+        startTime: Instant,
+        endTime: Instant
+    ) = withContext(Dispatchers.IO) {
+        val sessionKey = "${sessionType}_${startTime.toEpochMilli()}"
+        if (savedMindfulnessSessionKeys.contains(sessionKey)) {
+            return@withContext
+        }
+        savedMindfulnessSessionKeys.add(sessionKey)
+
+        // 1. Save locally first:
+        // Increment (never overwrite) today's DailyMetric.mindfulnessMinutes by the real elapsed minutes between startTime and endTime
+        val durationSeconds = if (endTime.isAfter(startTime)) {
+            java.time.Duration.between(startTime, endTime).seconds.toInt().coerceAtLeast(0)
+        } else {
+            0
+        }
+        val elapsedMinutes = (durationSeconds / 60).coerceAtLeast(if (durationSeconds > 0) 1 else 0)
+
+        val current = todayMetrics.value ?: repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
+        val updated = current.copy(
+            mindfulnessMinutes = (current.mindfulnessMinutes + elapsedMinutes).coerceAtLeast(0)
+        )
+        repository.saveMetrics(updated)
+        repository.checkAndAwardBadges(updated)
+
+        val sessionTitle = when (sessionType) {
+            MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MEDITATION -> "Meditation"
+            MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_BREATHING -> "Breathing"
+            MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT -> "Mindful Movement"
+            else -> "Mindfulness"
+        }
+        val logMsg = "Completed $sessionTitle session (${elapsedMinutes}m)"
+        repository.logActivityEvent("mindfulness", logMsg)
+
+        // 2. Health Connect write in its own try-catch (can never block or fail the local save)
+        try {
+            val healthConnectClient = HealthConnectClient.getOrCreate(getApplication())
+            val effectiveEndTime = if (endTime.isAfter(startTime)) endTime else startTime.plusSeconds(durationSeconds.toLong().coerceAtLeast(1L))
+            val startOffset = ZoneId.systemDefault().rules.getOffset(startTime)
+            val endOffset = ZoneId.systemDefault().rules.getOffset(effectiveEndTime)
+            val mindfulnessRecord = MindfulnessSessionRecord(
+                startTime = startTime,
+                startZoneOffset = startOffset,
+                endTime = effectiveEndTime,
+                endZoneOffset = endOffset,
+                mindfulnessSessionType = sessionType,
+                title = sessionTitle
+            )
+            healthConnectClient.insertRecords(listOf(mindfulnessRecord))
         } catch (e: Exception) {
             e.printStackTrace()
         }

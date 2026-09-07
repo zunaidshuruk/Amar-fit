@@ -19,5 +19,6 @@
         <item>android.permission.health.WRITE_HYDRATION</item>
         <item>android.permission.health.WRITE_SLEEP</item>
         <item>android.permission.health.WRITE_EXERCISE</item>
+        <item>android.permission.health.WRITE_MINDFULNESS</item>
     </array>
 </resources>

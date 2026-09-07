@@ -299,7 +299,8 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                     description = "Diaphragmatic breathing to activate the parasympathetic nervous system and reduce cortisol.",
                     icon = Icons.Default.SelfImprovement,
                     accent = AccentTokens.stepsAccent(isDark),
-                    videoQuery = "Wim Hof method breathing tutorial"
+                    videoQuery = "Wim Hof method breathing tutorial",
+                    onStartSession = { navController?.navigate("mindfulness_timer") }
                 )
             } else {
                 // Saved View
@@ -604,7 +605,8 @@ fun ProtocolPracticeCard(
     description: String,
     icon: ImageVector,
     accent: AccentColors,
-    videoQuery: String
+    videoQuery: String,
+    onStartSession: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     Row(
@@ -633,14 +635,24 @@ fun ProtocolPracticeCard(
             }
         }
         Spacer(modifier = Modifier.width(12.dp))
-        IconButton(
-            onClick = {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=${Uri.encode(videoQuery)}"))
-                context.startActivity(intent)
-            },
-            modifier = Modifier.background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
-        ) {
-            Icon(Icons.Default.PlayArrow, contentDescription = "Watch", tint = accent.onBg)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (onStartSession != null) {
+                IconButton(
+                    onClick = onStartSession,
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
+                ) {
+                    Icon(Icons.Default.Timer, contentDescription = "Start Guided Session", tint = accent.onBg)
+                }
+            }
+            IconButton(
+                onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=${Uri.encode(videoQuery)}"))
+                    context.startActivity(intent)
+                },
+                modifier = Modifier.background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
+            ) {
+                Icon(Icons.Default.PlayArrow, contentDescription = "Watch", tint = accent.onBg)
+            }
         }
     }
 }
