@@ -346,6 +346,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                   composable("medical_records") { com.example.presentation.health.MedicalRecordsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("exercise_library") { ExerciseLibraryScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("mindfulness_timer") { com.example.presentation.mindfulness.MindfulnessTimerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                  composable("edit_focus") { com.example.presentation.today.EditFocusScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable(
                       route = "metric_detail/{metricKey}",
                       arguments = listOf(androidx.navigation.navArgument("metricKey") { type = androidx.navigation.NavType.StringType })

@@ -1,12 +1,11 @@
 package com.example.presentation.today
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,44 +35,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private data class TodayTileData(
-    val id: String,
-    val label: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
-    val accent: AccentColors,
-    val valueText: String,
-    val unitText: String? = null,
-    val subtext: String? = null,
-    val progress: Float? = null,
-    val onClick: () -> Unit
-)
-
-private val CURATED_METRIC_KEYS = listOf("steps", "water", "calories", "weight", "sleep", "blood_glucose", "blood_pressure")
-
-private val CURATED_METRICS_LIST = listOf(
-    "steps" to "Steps",
-    "water" to "Water",
-    "calories" to "Calories",
-    "weight" to "Weight",
-    "sleep" to "Sleep",
-    "blood_glucose" to "Blood Glucose",
-    "blood_pressure" to "Blood Pressure"
-)
-
-private fun parseTodayTileSlots(raw: String?): List<String> {
-    val defaultSlots = listOf("steps", "water", "calories")
-    if (raw.isNullOrBlank()) return defaultSlots
-    val tokens = raw.split(",").map { it.trim().lowercase() }.map {
-        when (it) {
-            "glucose" -> "blood_glucose"
-            "bp" -> "blood_pressure"
-            else -> it
-        }
-    }.filter { it in CURATED_METRIC_KEYS }
-    if (tokens.size != 3) return defaultSlots
-    return tokens
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
@@ -92,6 +53,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val sleepAccent = AccentTokens.sleepAccent(isDark = isDark)
 
     val metrics by viewModel.todayMetrics.collectAsState()
+    val last7Metrics by viewModel.getMetricsHistoryFlow(7).collectAsState(initial = emptyList())
     val todayFoodLogs by viewModel.todayFoodLogs.collectAsState()
     val todayActivityEvents by viewModel.todayActivityEvents.collectAsState()
     
@@ -106,120 +68,15 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val waterLimit = profile?.dailyWaterLimitLiters ?: 3.0f
     val waterConsumed = metrics?.waterLiters ?: 0f
     val steps = metrics?.steps ?: 0
+    val stepsProgress = (steps.toFloat() / 10000f).coerceIn(0f, 1f)
+    val exerciseDays = remember(last7Metrics) { last7Metrics.count { it.exerciseMinutes > 0 } }
     val badges = profile?.badges?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
     val points = profile?.points ?: 0
     val currentStreak = profile?.currentStreak ?: 0
 
-    val activeSlots = remember(profile?.todayTileSlots) { parseTodayTileSlots(profile?.todayTileSlots) }
-    var showEditTilesBottomSheet by remember { mutableStateOf(false) }
-
-    fun getTileData(slotId: String): TodayTileData {
-        return when (slotId) {
-            "steps" -> TodayTileData(
-                id = "steps",
-                label = "Steps",
-                icon = Icons.AutoMirrored.Filled.DirectionsWalk,
-                accent = stepsAccent,
-                valueText = "$steps",
-                unitText = "steps",
-                subtext = if (steps >= 10000) "Goal achieved!" else "${(10000 - steps).coerceAtLeast(0)} left",
-                progress = (steps.toFloat() / 10000f).coerceIn(0f, 1f),
-                onClick = { showStepsOptionDialog = true }
-            )
-            "water" -> TodayTileData(
-                id = "water",
-                label = "Water",
-                icon = Icons.Default.LocalDrink,
-                accent = waterAccent,
-                valueText = String.format(Locale.US, "%.1f", waterConsumed),
-                unitText = "L",
-                subtext = "/ ${String.format(Locale.US, "%.1f", waterLimit)} L",
-                progress = if (waterLimit > 0f) (waterConsumed / waterLimit).coerceIn(0f, 1f) else 0f,
-                onClick = { showWaterDialog = true }
-            )
-            "calories" -> TodayTileData(
-                id = "calories",
-                label = "Calories",
-                icon = Icons.Default.LocalFireDepartment,
-                accent = caloriesAccent,
-                valueText = "$totalCalories",
-                unitText = "kcal",
-                subtext = "/ $calorieLimit kcal",
-                progress = calorieProgress,
-                onClick = { navigateToTab(navController, "nutrition") }
-            )
-            "weight" -> {
-                val currentWeight = if ((metrics?.weightKg ?: 0f) > 0f) metrics?.weightKg ?: 0f else profile?.weightKg ?: 0f
-                TodayTileData(
-                    id = "weight",
-                    label = "Weight",
-                    icon = Icons.Default.MonitorWeight,
-                    accent = weightAccent,
-                    valueText = if (currentWeight > 0f) String.format(Locale.US, "%.1f", currentWeight) else "--",
-                    unitText = "kg",
-                    subtext = "(Tap to log)",
-                    progress = null,
-                    onClick = { navController.navigate("weightlog") }
-                )
-            }
-            "sleep" -> {
-                val sleepHrs = metrics?.sleepHours ?: 0f
-                TodayTileData(
-                    id = "sleep",
-                    label = "Sleep",
-                    icon = Icons.Default.Bedtime,
-                    accent = sleepAccent,
-                    valueText = if (sleepHrs > 0f) String.format(Locale.US, "%.1f", sleepHrs) else "--",
-                    unitText = "hrs",
-                    subtext = if (sleepHrs >= 7f) "Good rest" else "(Tap to log)",
-                    progress = if (sleepHrs > 0f) (sleepHrs / 8f).coerceIn(0f, 1f) else null,
-                    onClick = { navigateToTab(navController, "sleep") }
-                )
-            }
-            "blood_glucose" -> {
-                val glucose = maxOf(metrics?.bloodGlucoseMorning ?: 0f, metrics?.bloodGlucoseNight ?: 0f)
-                TodayTileData(
-                    id = "blood_glucose",
-                    label = "Blood Glucose",
-                    icon = Icons.Default.Favorite,
-                    accent = glucoseAccent,
-                    valueText = if (glucose > 0f) String.format(Locale.US, "%.1f", glucose) else "--",
-                    unitText = "mg/dL",
-                    subtext = "(Tap to log)",
-                    progress = null,
-                    onClick = { navController.navigate("glucoselog") }
-                )
-            }
-            "blood_pressure" -> {
-                val bp = metrics?.bloodPressure?.takeIf { it.isNotBlank() } ?: "--"
-                TodayTileData(
-                    id = "blood_pressure",
-                    label = "Blood Pressure",
-                    icon = Icons.Default.MonitorHeart,
-                    accent = bloodPressureAccent,
-                    valueText = bp,
-                    unitText = "mmHg",
-                    subtext = "(Tap to log)",
-                    progress = null,
-                    onClick = { navigateToTab(navController, "health") }
-                )
-            }
-            else -> TodayTileData(
-                id = "steps",
-                label = "Steps",
-                icon = Icons.AutoMirrored.Filled.DirectionsWalk,
-                accent = stepsAccent,
-                valueText = "$steps",
-                unitText = "steps",
-                subtext = if (steps >= 10000) "Goal achieved!" else "${(10000 - steps).coerceAtLeast(0)} left",
-                progress = (steps.toFloat() / 10000f).coerceIn(0f, 1f),
-                onClick = { showStepsOptionDialog = true }
-            )
-        }
+    val (activeLargeIds, activeSmallIds) = remember(profile?.todayTileSlots) {
+        parseTodayTileSlots(profile?.todayTileSlots)
     }
-
-    val pagerState = rememberPagerState(pageCount = { 3 })
-    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -228,146 +85,83 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 3-Page Swipeable Stat Carousel
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxWidth(),
-            pageSpacing = 12.dp
-        ) { page ->
-            when (page) {
-                0 -> {
-                    // Page 1 ("Today"): Streak / Points / Badges Hero Row
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(148.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .shadow(2.dp, RoundedCornerShape(20.dp))
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(streakAccent.bg)
-                                .padding(12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(Icons.Default.LocalFireDepartment, contentDescription = "Streak", tint = streakAccent.onBg)
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(text = "$currentStreak Days", fontWeight = FontWeight.Bold, color = streakAccent.onBg, fontSize = 14.sp)
-                                Text(text = "Streak", fontSize = 10.sp, color = TextPrimary)
-                            }
-                        }
-                        
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .shadow(2.dp, RoundedCornerShape(20.dp))
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(pointsAccent.bg)
-                                .padding(12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(Icons.Default.Star, contentDescription = "Points", tint = pointsAccent.onBg)
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(text = "$points", fontWeight = FontWeight.Bold, color = pointsAccent.onBg, fontSize = 14.sp)
-                                Text(text = "Points", fontSize = 10.sp, color = TextPrimary)
-                            }
-                        }
-                        
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .shadow(2.dp, RoundedCornerShape(20.dp))
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(badgesAccent.bg)
-                                .padding(12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(Icons.Default.EmojiEvents, contentDescription = "Badges", tint = badgesAccent.onBg)
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(text = "${badges.size}", fontWeight = FontWeight.Bold, color = badgesAccent.onBg, fontSize = 14.sp)
-                                Text(text = "Badges", fontSize = 10.sp, color = TextPrimary)
-                            }
-                        }
-                    }
-                }
-                1 -> {
-                    // Page 2: Left & Right Tiles
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(148.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        TodayTile(
-                            tile = getTileData(activeSlots[0]),
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight(),
-                            isFullWidth = false
-                        )
-                        TodayTile(
-                            tile = getTileData(activeSlots[1]),
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight(),
-                            isFullWidth = false
-                        )
-                    }
-                }
-                2 -> {
-                    // Page 3: Full-width Tile
-                    TodayTile(
-                        tile = getTileData(activeSlots[2]),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(148.dp),
-                        isFullWidth = true
+        // Large Ring Tiles (Full-width)
+        if (activeLargeIds.isNotEmpty()) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                activeLargeIds.forEach { largeId ->
+                    val resolved = resolveLargeTile(
+                        id = largeId,
+                        metrics = metrics,
+                        last7Metrics = last7Metrics,
+                        isDark = isDark,
+                        onOpenStepsDialog = { showStepsOptionDialog = true },
+                        onNavigateToFitness = { navigateToTab(navController, "fitness") }
                     )
+                    if (resolved != null) {
+                        LargeRingTileCard(
+                            tile = resolved,
+                            isDark = isDark
+                        )
+                    }
                 }
             }
         }
 
-        // Page Indicator Dots
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 0.dp, bottom = 4.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            repeat(3) { pageIndex ->
-                val isSelected = pagerState.currentPage == pageIndex
-                Box(
-                    modifier = Modifier
-                        .padding(horizontal = 4.dp)
-                        .height(8.dp)
-                        .width(if (isSelected) 24.dp else 8.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isSelected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.outlineVariant
-                        )
-                        .clickable {
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(pageIndex)
+        // Small Metric Tiles (2-Column Grid)
+        if (activeSmallIds.isNotEmpty()) {
+            val smallChunked = activeSmallIds.chunked(2)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                smallChunked.forEach { rowIds ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        rowIds.forEach { smallId ->
+                            val resolved = resolveSmallTile(
+                                id = smallId,
+                                metrics = metrics,
+                                profile = profile,
+                                last7Metrics = last7Metrics,
+                                todayFoodLogs = todayFoodLogs,
+                                isDark = isDark,
+                                navController = navController,
+                                onOpenStepsDialog = { showStepsOptionDialog = true },
+                                onOpenWaterDialog = { showWaterDialog = true },
+                                onNavigateToTab = { tab -> navigateToTab(navController, tab) }
+                            )
+                            if (resolved != null) {
+                                TodayPillCard(
+                                    modifier = Modifier.weight(1f),
+                                    label = resolved.label,
+                                    value = resolved.value,
+                                    icon = resolved.icon,
+                                    accent = resolved.accent,
+                                    isMuted = resolved.isMuted,
+                                    isDark = isDark,
+                                    onClick = resolved.onClick
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.weight(1f))
                             }
                         }
-                )
+                        if (rowIds.size == 1) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
             }
         }
 
-        // Action Row (+ Log / Start / Edit)
+        // Action Row (+ Log / Start / Edit Focus)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Button(
@@ -422,22 +216,20 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 )
             }
 
-            FilledTonalIconButton(
-                onClick = { showEditTilesBottomSheet = true },
+            IconButton(
+                onClick = { navController.navigate("edit_focus") },
                 modifier = Modifier
                     .size(56.dp)
                     .shadow(2.dp, CircleShape)
-                    .testTag("today_edit_tiles_button"),
-                shape = CircleShape,
-                colors = IconButtonDefaults.filledTonalIconButtonColors(
-                    containerColor = if (isDark) Slate800 else Surface,
-                    contentColor = if (isDark) Color.White else Primary
-                )
+                    .clip(CircleShape)
+                    .background(if (isDark) Slate800 else Surface)
+                    .testTag("today_edit_tiles_button")
             ) {
                 Icon(
                     imageVector = Icons.Default.Edit,
-                    contentDescription = "Edit Focus Tiles",
-                    modifier = Modifier.size(20.dp)
+                    contentDescription = "Edit Focus",
+                    tint = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
@@ -785,279 +577,177 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
             }
         }
     }
-
-    if (showEditTilesBottomSheet) {
-        var tempSlot0 by remember { mutableStateOf(activeSlots.getOrElse(0) { "steps" }) }
-        var tempSlot1 by remember { mutableStateOf(activeSlots.getOrElse(1) { "water" }) }
-        var tempSlot2 by remember { mutableStateOf(activeSlots.getOrElse(2) { "calories" }) }
-
-        ModalBottomSheet(
-            onDismissRequest = { showEditTilesBottomSheet = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = if (isDark) MaterialTheme.colorScheme.surface else Surface,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            dragHandle = {
-                BottomSheetDefaults.DragHandle(
-                    color = if (isDark) MaterialTheme.colorScheme.outlineVariant else Slate200
-                )
-            }
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 36.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = "Customize Today Tiles",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
-                )
-                Text(
-                    text = "Choose which metrics appear in your Today summary carousel (Pages 2–3).",
-                    fontSize = 14.sp,
-                    color = if (isDark) Slate400 else Slate600
-                )
-
-                MetricSelectorDropdownRow(
-                    label = "Left tile (Page 2)",
-                    selectedKey = tempSlot0,
-                    options = CURATED_METRICS_LIST,
-                    onSelect = { tempSlot0 = it },
-                    isDark = isDark
-                )
-
-                MetricSelectorDropdownRow(
-                    label = "Right tile (Page 2)",
-                    selectedKey = tempSlot1,
-                    options = CURATED_METRICS_LIST,
-                    onSelect = { tempSlot1 = it },
-                    isDark = isDark
-                )
-
-                MetricSelectorDropdownRow(
-                    label = "Full-width tile (Page 3)",
-                    selectedKey = tempSlot2,
-                    options = CURATED_METRICS_LIST,
-                    onSelect = { tempSlot2 = it },
-                    isDark = isDark
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Button(
-                    onClick = {
-                        viewModel.updateTodayTileSlots(listOf(tempSlot0, tempSlot1, tempSlot2))
-                        showEditTilesBottomSheet = false
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .testTag("save_today_tiles_button"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isDark) Emerald700 else Primary,
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text(
-                        text = "Save Tiles",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun MetricSelectorDropdownRow(
-    label: String,
-    selectedKey: String,
-    options: List<Pair<String, String>>,
-    onSelect: (String) -> Unit,
-    isDark: Boolean
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val currentLabel = options.firstOrNull { it.first == selectedKey }?.second ?: "Select metric"
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
-            modifier = Modifier.padding(bottom = 6.dp)
-        )
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            OutlinedTextField(
-                value = currentLabel,
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                shape = RoundedCornerShape(16.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Primary,
-                    unfocusedBorderColor = if (isDark) Slate600 else Slate200,
-                    focusedContainerColor = if (isDark) Slate800 else Surface,
-                    unfocusedContainerColor = if (isDark) Slate800 else Surface
-                ),
-                modifier = Modifier
-                    .menuAnchor()
-                    .fillMaxWidth()
-            )
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.background(if (isDark) Slate800 else Surface)
-            ) {
-                options.forEach { (key, name) ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = name,
-                                fontWeight = if (key == selectedKey) FontWeight.Bold else FontWeight.Normal,
-                                color = if (key == selectedKey) Primary else if (isDark) Color.White else TextPrimary
-                            )
-                        },
-                        onClick = {
-                            onSelect(key)
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
-    }
 }
 
 @Composable
-private fun TodayTile(
-    tile: TodayTileData,
+private fun TodayPillCard(
     modifier: Modifier = Modifier,
-    isFullWidth: Boolean
+    label: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accent: AccentColors? = null,
+    isMuted: Boolean = false,
+    isDark: Boolean,
+    onClick: (() -> Unit)? = null
 ) {
+    val containerBg = when {
+        isMuted -> if (isDark) Slate800.copy(alpha = 0.5f) else Slate100.copy(alpha = 0.8f)
+        accent != null -> accent.bg
+        else -> if (isDark) Slate800 else Surface
+    }
+    val contentTint = when {
+        isMuted -> if (isDark) Slate500 else Slate400
+        accent != null -> accent.onBg
+        else -> if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
+    }
+
     Box(
         modifier = modifier
-            .shadow(2.dp, RoundedCornerShape(20.dp))
-            .clip(RoundedCornerShape(20.dp))
-            .background(tile.accent.bg)
-            .clickable { tile.onClick() }
-            .padding(if (isFullWidth) 20.dp else 16.dp)
+            .shadow(if (isMuted) 0.dp else 1.dp, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(16.dp))
+            .background(containerBg)
+            .then(
+                if (onClick != null && !isMuted) Modifier.clickable { onClick() }
+                else Modifier
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isMuted) (if (isDark) Slate600 else Slate200)
+                        else if (accent != null) accent.onBg.copy(alpha = 0.15f)
+                        else (if (isDark) Slate600 else Slate100)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
-                    imageVector = tile.icon,
+                    imageVector = icon,
                     contentDescription = null,
-                    tint = tile.accent.onBg,
+                    tint = contentTint,
                     modifier = Modifier.size(16.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+            }
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = tile.label,
+                    text = label,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (isDark) Slate400 else Slate500,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = value,
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
+                    fontWeight = if (isMuted) FontWeight.Normal else FontWeight.Bold,
+                    color = if (isMuted) (if (isDark) Slate500 else Slate400) else if (accent != null) accent.onBg else (if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
+        }
+    }
+}
 
-            if (isFullWidth) {
-                Column {
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(
-                            text = tile.valueText,
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = tile.accent.onBg
+@Composable
+private fun LargeRingTileCard(
+    tile: ResolvedLargeTile,
+    isDark: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(2.dp, RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (isDark) Slate800 else Surface)
+            .clickable { tile.onClick() }
+            .padding(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = tile.title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
+                modifier = Modifier.align(Alignment.Start)
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Box(
+                modifier = Modifier
+                    .size(130.dp)
+                    .padding(vertical = 4.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val strokeWidth = 11.dp.toPx()
+                    val diameter = size.minDimension - strokeWidth
+                    val topLeftOffset = androidx.compose.ui.geometry.Offset(
+                        (size.width - diameter) / 2f,
+                        (size.height - diameter) / 2f
+                    )
+                    val arcSize = androidx.compose.ui.geometry.Size(diameter, diameter)
+
+                    // Background Track
+                    drawArc(
+                        color = if (isDark) tile.accent.bg else tile.accent.onBg.copy(alpha = 0.15f),
+                        startAngle = 0f,
+                        sweepAngle = 360f,
+                        useCenter = false,
+                        topLeft = topLeftOffset,
+                        size = arcSize,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(
+                            width = strokeWidth,
+                            cap = StrokeCap.Round
                         )
-                        if (!tile.unitText.isNullOrBlank() && tile.subtext != null && tile.subtext.startsWith("/")) {
-                            Text(
-                                text = " ${tile.subtext}",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = tile.accent.onBg,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                        } else {
-                            if (!tile.unitText.isNullOrBlank() && tile.unitText != "steps") {
-                                Text(
-                                    text = " ${tile.unitText}",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = tile.accent.onBg,
-                                    modifier = Modifier.padding(bottom = 4.dp)
-                                )
-                            }
-                            if (!tile.subtext.isNullOrBlank()) {
-                                Text(
-                                    text = " ${tile.subtext}",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Normal,
-                                    color = tile.accent.onBg.copy(alpha = 0.85f),
-                                    modifier = Modifier.padding(bottom = 4.dp)
-                                )
-                            }
-                        }
-                    }
+                    )
 
-                    if (tile.progress != null) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        LinearProgressIndicator(
-                            progress = { tile.progress },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(CircleShape),
+                    // Progress Arc
+                    if (tile.progress > 0f) {
+                        drawArc(
                             color = tile.accent.onBg,
-                            trackColor = tile.accent.onBg.copy(alpha = 0.2f),
+                            startAngle = -90f,
+                            sweepAngle = 360f * tile.progress,
+                            useCenter = false,
+                            topLeft = topLeftOffset,
+                            size = arcSize,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                width = strokeWidth,
+                                cap = StrokeCap.Round
+                            )
                         )
                     }
                 }
-            } else {
-                Column {
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(
-                            text = tile.valueText,
-                            fontSize = if (tile.valueText.length > 5) 22.sp else 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = tile.accent.onBg
-                        )
-                        if (!tile.unitText.isNullOrBlank() && tile.unitText != "steps") {
-                            Text(
-                                text = " ${tile.unitText}",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = tile.accent.onBg,
-                                modifier = Modifier.padding(bottom = 3.dp)
-                            )
-                        }
-                    }
-                    if (tile.subtext != null && tile.subtext.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = tile.subtext,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = tile.accent.onBg.copy(alpha = 0.8f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = tile.insideValue,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
+                    )
+                    Text(
+                        text = tile.insideSubtext,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (isDark) Slate400 else Slate500
+                    )
                 }
             }
         }

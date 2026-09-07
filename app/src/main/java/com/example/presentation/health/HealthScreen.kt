@@ -61,47 +61,13 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
     }
 
     // Resilience calculation
-    val recent7Days = remember(metricsHistory) { metricsHistory.take(7) }
-    val recentSleepDay = remember(recent7Days) { recent7Days.firstOrNull { it.sleepHours > 0f } }
-
-    val sleepScore = remember(recentSleepDay) {
-        recentSleepDay?.let {
-            (100f - kotlin.math.abs(it.sleepHours - 8f) * 20f).coerceIn(0f, 100f)
-        }
+    val resilienceResult = remember(metricsHistory) {
+        ShasthoViewModel.calculateResilienceScore(metricsHistory)
     }
-
-    val hrvScore = remember(recent7Days, metricsHistory) {
-        val mostRecentHrvDay = recent7Days.firstOrNull { it.heartRateVariability > 0f }
-        if (mostRecentHrvDay != null) {
-            val todayHrv = mostRecentHrvDay.heartRateVariability
-            val priorHrvDays = metricsHistory.filter { it.date < mostRecentHrvDay.date && it.heartRateVariability > 0f }.take(7)
-            if (priorHrvDays.size >= 3) {
-                val avgHrv = priorHrvDays.map { it.heartRateVariability }.average().toFloat()
-                if (avgHrv > 0f) {
-                    (50f + ((todayHrv - avgHrv) / avgHrv) * 200f).coerceIn(0f, 100f)
-                } else null
-            } else null
-        } else null
-    }
-
-    val resilienceScore = remember(sleepScore, hrvScore) {
-        when {
-            sleepScore == null -> null
-            hrvScore == null -> kotlin.math.round(sleepScore).toInt().coerceIn(0, 100)
-            else -> kotlin.math.round(0.6f * sleepScore + 0.4f * hrvScore).toInt().coerceIn(0, 100)
-        }
-    }
-
-    val resilienceBucket = remember(resilienceScore) {
-        resilienceScore?.let { score ->
-            when {
-                score >= 80 -> "Great"
-                score >= 60 -> "Good"
-                score >= 40 -> "Fair"
-                else -> "Low"
-            }
-        }
-    }
+    val resilienceScore = resilienceResult.score
+    val resilienceBucket = resilienceResult.bucket
+    val sleepScore = resilienceResult.sleepScore
+    val hrvScore = resilienceResult.hrvScore
     
     val glucose = maxOf(metrics?.bloodGlucoseMorning ?: 0f, metrics?.bloodGlucoseNight ?: 0f)
     val heartRate = metrics?.heartRate ?: 0

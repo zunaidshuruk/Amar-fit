@@ -274,7 +274,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     fun updateTodayTileSlots(slots: List<String>) {
         viewModelScope.launch {
             val current = userProfile.value ?: UserProfile()
-            val joined = slots.take(3).joinToString(",")
+            val joined = slots.joinToString(",")
             val updated = current.copy(todayTileSlots = joined)
             repository.saveUserProfile(updated)
         }
@@ -1181,7 +1181,61 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     suspend fun getExerciseLibrary(context: android.content.Context): List<com.example.data.local.LibraryExercise> {
         return repository.getExerciseLibrary(context)
     }
+
+    companion object {
+        fun calculateResilienceScore(metricsHistory: List<DailyMetric>): ResilienceResult {
+            val recent7Days = metricsHistory.take(7)
+            val recentSleepDay = recent7Days.firstOrNull { it.sleepHours > 0f }
+
+            val sleepScore = recentSleepDay?.let {
+                (100f - kotlin.math.abs(it.sleepHours - 8f) * 20f).coerceIn(0f, 100f)
+            }
+
+            val hrvScore = run {
+                val mostRecentHrvDay = recent7Days.firstOrNull { it.heartRateVariability > 0f }
+                if (mostRecentHrvDay != null) {
+                    val todayHrv = mostRecentHrvDay.heartRateVariability
+                    val priorHrvDays = metricsHistory.filter { it.date < mostRecentHrvDay.date && it.heartRateVariability > 0f }.take(7)
+                    if (priorHrvDays.size >= 3) {
+                        val avgHrv = priorHrvDays.map { it.heartRateVariability }.average().toFloat()
+                        if (avgHrv > 0f) {
+                            (50f + ((todayHrv - avgHrv) / avgHrv) * 200f).coerceIn(0f, 100f)
+                        } else null
+                    } else null
+                } else null
+            }
+
+            val resilienceScore = when {
+                sleepScore == null -> null
+                hrvScore == null -> kotlin.math.round(sleepScore).toInt().coerceIn(0, 100)
+                else -> kotlin.math.round(0.6f * sleepScore + 0.4f * hrvScore).toInt().coerceIn(0, 100)
+            }
+
+            val resilienceBucket = resilienceScore?.let { score ->
+                when {
+                    score >= 80 -> "Great"
+                    score >= 60 -> "Good"
+                    score >= 40 -> "Fair"
+                    else -> "Low"
+                }
+            }
+
+            return ResilienceResult(
+                score = resilienceScore,
+                bucket = resilienceBucket,
+                sleepScore = sleepScore,
+                hrvScore = hrvScore
+            )
+        }
+    }
 }
+
+data class ResilienceResult(
+    val score: Int?,
+    val bucket: String?,
+    val sleepScore: Float? = null,
+    val hrvScore: Float? = null
+)
 
 @com.squareup.moshi.JsonClass(generateAdapter = true)
 data class ChatMessage(
