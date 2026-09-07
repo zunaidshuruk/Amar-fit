@@ -16,6 +16,8 @@ import java.util.Date
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.HealthConnectFeatures
+import androidx.health.connect.client.feature.ExperimentalFeatureAvailabilityApi
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.BloodPressureRecord
@@ -30,6 +32,7 @@ import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.SkinTemperatureRecord
@@ -402,7 +405,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     }
     
     
-        fun syncWithHealthConnect(context: Context) {
+    @OptIn(ExperimentalFeatureAvailabilityApi::class)
+    fun syncWithHealthConnect(context: Context) {
         viewModelScope.launch {
             try {
                 if (HealthConnectClient.getSdkStatus(context) != HealthConnectClient.SDK_AVAILABLE) return@launch
@@ -609,6 +613,38 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     e.printStackTrace()
                 }
 
+                // 14. Mindfulness Session Duration (Feature-Gated)
+                var mindfulnessMinutes = 0
+                try {
+                    val isMindfulnessAvailable = healthConnectClient.features.getFeatureStatus(
+                        HealthConnectFeatures.FEATURE_MINDFULNESS_SESSION
+                    ) == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+
+                    if (isMindfulnessAvailable) {
+                        val mindfulnessAggregate = healthConnectClient.aggregate(
+                            AggregateRequest(
+                                metrics = setOf(MindfulnessSessionRecord.MINDFULNESS_DURATION_TOTAL),
+                                timeRangeFilter = timeRangeFilter
+                            )
+                        )
+                        val totalMindfulnessDuration = mindfulnessAggregate[MindfulnessSessionRecord.MINDFULNESS_DURATION_TOTAL]
+                        if (totalMindfulnessDuration != null) {
+                            mindfulnessMinutes = totalMindfulnessDuration.toMinutes().toInt()
+                        } else {
+                            val mindfulnessResponse = healthConnectClient.readRecords(
+                                ReadRecordsRequest(MindfulnessSessionRecord::class, timeRangeFilter)
+                            )
+                            var fallbackMinutes = 0L
+                            for (record in mindfulnessResponse.records) {
+                                fallbackMinutes += java.time.Duration.between(record.startTime, record.endTime).toMinutes()
+                            }
+                            mindfulnessMinutes = fallbackMinutes.toInt()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
                 val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
                 val updated = current.copy(
                     steps = if (totalSteps > 0) totalSteps else current.steps,
@@ -623,7 +659,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     heartRateVariability = if (heartRateVariability > 0f) heartRateVariability else current.heartRateVariability,
                     oxygenSaturation = if (oxygenSaturation > 0f) oxygenSaturation else current.oxygenSaturation,
                     skinTemperatureCelsius = if (skinTemperatureCelsius > 0f) skinTemperatureCelsius else current.skinTemperatureCelsius,
-                    respiratoryRate = if (respiratoryRate > 0f) respiratoryRate else current.respiratoryRate
+                    respiratoryRate = if (respiratoryRate > 0f) respiratoryRate else current.respiratoryRate,
+                    mindfulnessMinutes = if (mindfulnessMinutes > 0) mindfulnessMinutes else current.mindfulnessMinutes
                 )
                 repository.saveMetrics(updated)
             } catch (e: Exception) {
