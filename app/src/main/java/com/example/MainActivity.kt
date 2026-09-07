@@ -170,7 +170,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                                   IconButton(
                                       onClick = {
                                           coroutineScope.launch {
-                                              if (HealthConnectManager.hasAllPermissions(context)) {
+                                              if (HealthConnectManager.hasAnyPermissions(context)) {
                                                   android.widget.Toast.makeText(context, "Syncing with Health Connect...", android.widget.Toast.LENGTH_SHORT).show()
                                                   viewModel.syncWithHealthConnect(context)
                                               } else {
@@ -345,7 +345,6 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                   composable("scanner") { ScannerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("medical_records") { com.example.presentation.health.MedicalRecordsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("exercise_library") { ExerciseLibraryScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
-                  composable("mindfulness_timer") { com.example.presentation.mindfulness.MindfulnessTimerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable(
                       route = "metric_detail/{metricKey}",
                       arguments = listOf(androidx.navigation.navArgument("metricKey") { type = androidx.navigation.NavType.StringType })
