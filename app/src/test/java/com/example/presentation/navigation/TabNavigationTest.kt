@@ -18,16 +18,6 @@ class TabNavigationTest {
 
     private lateinit var navController: NavHostController
 
-    private fun navigateToTab(route: String) {
-        navController.navigate(route) {
-            popUpTo(navController.graph.findStartDestination().id) {
-                saveState = true
-            }
-            launchSingleTop = true
-            restoreState = true
-        }
-    }
-
     @Before
     fun setup() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
@@ -71,37 +61,37 @@ class TabNavigationTest {
 
     @Test
     fun testNavigationFromNutritionToToday() {
-        navigateToTab(TabScreen.Nutrition.route)
+        navigateToTab(navController, TabScreen.Nutrition.route)
         assertEquals(TabScreen.Nutrition.route, navController.currentDestination?.route)
 
-        navigateToTab(TabScreen.Today.route)
+        navigateToTab(navController, TabScreen.Today.route)
         assertEquals(TabScreen.Today.route, navController.currentDestination?.route)
     }
 
     @Test
     fun testNavigationFromFitnessToToday() {
-        navigateToTab(TabScreen.Fitness.route)
+        navigateToTab(navController, TabScreen.Fitness.route)
         assertEquals(TabScreen.Fitness.route, navController.currentDestination?.route)
 
-        navigateToTab(TabScreen.Today.route)
+        navigateToTab(navController, TabScreen.Today.route)
         assertEquals(TabScreen.Today.route, navController.currentDestination?.route)
     }
 
     @Test
     fun testNavigationFromSleepToToday() {
-        navigateToTab(TabScreen.Sleep.route)
+        navigateToTab(navController, TabScreen.Sleep.route)
         assertEquals(TabScreen.Sleep.route, navController.currentDestination?.route)
 
-        navigateToTab(TabScreen.Today.route)
+        navigateToTab(navController, TabScreen.Today.route)
         assertEquals(TabScreen.Today.route, navController.currentDestination?.route)
     }
 
     @Test
     fun testNavigationFromHealthToToday() {
-        navigateToTab(TabScreen.Health.route)
+        navigateToTab(navController, TabScreen.Health.route)
         assertEquals(TabScreen.Health.route, navController.currentDestination?.route)
 
-        navigateToTab(TabScreen.Today.route)
+        navigateToTab(navController, TabScreen.Today.route)
         assertEquals(TabScreen.Today.route, navController.currentDestination?.route)
     }
 
@@ -116,8 +106,38 @@ class TabNavigationTest {
         )
 
         for (tab in tabs) {
-            navigateToTab(tab.route)
+            navigateToTab(navController, tab.route)
             assertEquals(tab.route, navController.currentDestination?.route)
         }
+    }
+
+    @Test
+    fun testBackStackReturnsDirectlyToStartDestinationOnBackPress() {
+        // Navigate to nutrition via navigateToTab
+        navigateToTab(navController, TabScreen.Nutrition.route)
+        assertEquals(TabScreen.Nutrition.route, navController.currentDestination?.route)
+
+        // System back should pop back directly to Today (start destination)
+        val popped = navController.popBackStack()
+        assertEquals(true, popped)
+        assertEquals(TabScreen.Today.route, navController.currentDestination?.route)
+
+        // Further back pops off graph / exits app
+        val poppedAgain = navController.popBackStack()
+        assertEquals(false, poppedAgain)
+    }
+
+    @Test
+    fun testRepeatedTabNavigationDoesNotDuplicateBackStack() {
+        // Repeatedly navigate to fitness and nutrition via navigateToTab
+        navigateToTab(navController, TabScreen.Fitness.route)
+        navigateToTab(navController, TabScreen.Nutrition.route)
+        navigateToTab(navController, TabScreen.Fitness.route)
+        assertEquals(TabScreen.Fitness.route, navController.currentDestination?.route)
+
+        // A single back press should return to start destination (Today), not a duplicate Fitness or Nutrition instance
+        val popped = navController.popBackStack()
+        assertEquals(true, popped)
+        assertEquals(TabScreen.Today.route, navController.currentDestination?.route)
     }
 }

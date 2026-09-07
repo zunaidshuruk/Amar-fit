@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.presentation.navigation.navigateToTab
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
 import kotlinx.coroutines.launch
@@ -145,7 +146,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 unitText = "kcal",
                 subtext = "/ $calorieLimit kcal",
                 progress = calorieProgress,
-                onClick = { navController.navigate("nutrition") }
+                onClick = { navigateToTab(navController, "nutrition") }
             )
             "weight" -> {
                 val currentWeight = if ((metrics?.weightKg ?: 0f) > 0f) metrics?.weightKg ?: 0f else profile?.weightKg ?: 0f
@@ -396,7 +397,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
             }
 
             Button(
-                onClick = { navController.navigate("fitness") },
+                onClick = { navigateToTab(navController, "fitness") },
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp)
@@ -463,7 +464,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 bgColor = Surface,
                 iconColor = Primary,
                 textColor = TextPrimary,
-                onClick = { navController.navigate("fitness") }
+                onClick = { navigateToTab(navController, "fitness") }
             )
         }
         Row(
@@ -766,7 +767,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     isDark = isDark,
                     onClick = {
                         showLogBottomSheet = false
-                        navController.navigate("health")
+                        navigateToTab(navController, "health")
                     }
                 )
 
@@ -778,7 +779,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     isDark = isDark,
                     onClick = {
                         showLogBottomSheet = false
-                        navController.navigate("sleep")
+                        navigateToTab(navController, "sleep")
                     }
                 )
             }

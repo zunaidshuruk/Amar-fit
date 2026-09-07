@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.presentation.navigation.navigateToTab
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
 
@@ -219,10 +220,10 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
         )
 
         val focusAreas = listOf(
-            FocusAreaItem("Heart", heartRate > 0, AccentTokens.heartRateAccent(isDark)) { navController.navigate("health") },
+            FocusAreaItem("Heart", heartRate > 0, AccentTokens.heartRateAccent(isDark)) { navigateToTab(navController, "health") },
             FocusAreaItem("Metabolic", glucose > 0f, AccentTokens.glucoseAccent(isDark)) { navController.navigate("glucoselog") },
-            FocusAreaItem("Fitness", (metrics?.steps ?: 0) > 0 || (metrics?.exerciseMinutes ?: 0) > 0, AccentTokens.stepsAccent(isDark)) { navController.navigate("fitness") },
-            FocusAreaItem("Sleep", (metrics?.sleepHours ?: 0f) > 0f, AccentTokens.sleepAccent(isDark)) { navController.navigate("sleep") },
+            FocusAreaItem("Fitness", (metrics?.steps ?: 0) > 0 || (metrics?.exerciseMinutes ?: 0) > 0, AccentTokens.stepsAccent(isDark)) { navigateToTab(navController, "fitness") },
+            FocusAreaItem("Sleep", (metrics?.sleepHours ?: 0f) > 0f, AccentTokens.sleepAccent(isDark)) { navigateToTab(navController, "sleep") },
             FocusAreaItem("Nutrition", todayFoodLogs.isNotEmpty() || (metrics?.caloriesConsumed ?: 0) > 0, AccentTokens.foodLogAccent(isDark)) { navController.navigate("foodlog") },
             FocusAreaItem("Vitals", bloodPressure.isNotBlank(), AccentTokens.bloodPressureAccent(isDark)) { showBpDialog = true },
             FocusAreaItem("Respiratory", false, AccentTokens.waterAccent(isDark)) {},
