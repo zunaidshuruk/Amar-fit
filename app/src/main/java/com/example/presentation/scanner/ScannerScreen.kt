@@ -67,6 +67,9 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
     var parsedName by remember { mutableStateOf("") }
     var parsedCategory by remember { mutableStateOf("") }
     var parsedCalories by remember { mutableStateOf(0) }
+    var parsedCarbs by remember { mutableStateOf(0f) }
+    var parsedProtein by remember { mutableStateOf(0f) }
+    var parsedFat by remember { mutableStateOf(0f) }
     var parsedDescription by remember { mutableStateOf("") }
     var selectedMealType by remember { mutableStateOf("Snack") }
 
@@ -80,12 +83,18 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                 parsedName = json.optString("name", "Unknown Food")
                 parsedCategory = json.optString("category", "Uncategorized")
                 parsedCalories = json.optInt("calories", 0)
+                parsedCarbs = json.optDouble("carbs", 0.0).toFloat()
+                parsedProtein = json.optDouble("protein", 0.0).toFloat()
+                parsedFat = json.optDouble("fat", 0.0).toFloat()
                 parsedDescription = json.optString("description", "")
             } catch (e: Exception) {
                 parsedName = "Scan Failed"
                 parsedDescription = "Could not parse AI response: ${e.message}"
                 parsedCategory = "Error"
                 parsedCalories = 0
+                parsedCarbs = 0f
+                parsedProtein = 0f
+                parsedFat = 0f
             }
         }
     }
@@ -175,7 +184,10 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                                         category = parsedCategory,
                                         calories = parsedCalories,
                                         description = parsedDescription,
-                                        mealType = selectedMealType
+                                        mealType = selectedMealType,
+                                        carbsG = parsedCarbs,
+                                        proteinG = parsedProtein,
+                                        fatG = parsedFat
                                     )
                                 }
                                 viewModel.clearScanResult() 

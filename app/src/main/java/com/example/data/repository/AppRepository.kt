@@ -421,10 +421,10 @@ class AppRepository(
         
         val systemInstruction = """
             You are an expert AI food analyzer specializing in nutrition.
-            Based on the provided text description of a meal, identify the food, estimate the portion size, and provide a rough estimate of the total calories and macronutrients.
+            Based on the provided text description of a meal, identify the food, estimate the portion size, and provide a rough estimate of the total calories and macronutrients (carbs, protein, fat in grams).
             You MUST return ONLY a raw JSON object with NO markdown formatting, NO code blocks, and NO extra text.
             The JSON MUST have these exact keys:
-            "name" (string), "category" (string), "calories" (integer), "description" (string, include macros and details here).
+            "name" (string), "category" (string), "calories" (integer), "carbs" (number, grams), "protein" (number, grams), "fat" (number, grams), "description" (string).
         """.trimIndent()
         
         val request = GenerateContentRequest(
@@ -440,12 +440,12 @@ class AppRepository(
         
         try {
             val response = executeGeminiCallWithBackoff(request)
-            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: """{"name": "Error", "category": "Error", "calories": 0, "description": "Could not analyze the food."}"""
+            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "Could not analyze the food."}"""
         } catch (e: HttpException) {
             val msg = if (e.code() == 429) "AI quota exceeded. Retries exhausted (429)." else "Error: ${e.message}"
-            """{"name": "Error", "category": "Error", "calories": 0, "description": "$msg"}"""
+            """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "$msg"}"""
         } catch (e: Exception) {
-            """{"name": "Error", "category": "Error", "calories": 0, "description": "Error: ${e.message}"}"""
+            """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "Error: ${e.message}"}"""
         }
     }
 
@@ -454,10 +454,10 @@ class AppRepository(
         
         val systemInstruction = """
             You are an expert AI food analyzer specializing in Bangladeshi cuisine.
-            Identify the food, estimate the portion size, and provide a rough estimate of the total calories and macronutrients.
+            Identify the food, estimate the portion size, and provide a rough estimate of the total calories and macronutrients (carbs, protein, fat in grams).
             You MUST return ONLY a raw JSON object with NO markdown formatting, NO code blocks, and NO extra text.
             The JSON MUST have these exact keys:
-            "name" (string), "category" (string), "calories" (integer), "description" (string, include macros and details here).
+            "name" (string), "category" (string), "calories" (integer), "carbs" (number, grams), "protein" (number, grams), "fat" (number, grams), "description" (string).
         """.trimIndent()
         
         val request = GenerateContentRequest(
@@ -474,12 +474,12 @@ class AppRepository(
         
         try {
             val response = executeGeminiCallWithBackoff(request, model = "gemini-3.5-flash-lite")
-            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: """{"name": "Error", "category": "Error", "calories": 0, "description": "Could not analyze the image."}"""
+            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "Could not analyze the image."}"""
         } catch (e: HttpException) {
             val msg = if (e.code() == 429) "AI quota exceeded. Retries exhausted (429)." else "Error: ${e.message}"
-            """{"name": "Error", "category": "Error", "calories": 0, "description": "$msg"}"""
+            """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "$msg"}"""
         } catch (e: Exception) {
-            """{"name": "Error", "category": "Error", "calories": 0, "description": "Error: ${e.message}"}"""
+            """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "Error: ${e.message}"}"""
         }
     }
 

@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [UserProfile::class, DailyMetric::class, FoodLog::class, SavedDietChart::class, SavedWorkout::class, SavedChat::class, ActivityEvent::class, YoutubeVideoCache::class, MedicalRecord::class], version = 28, exportSchema = true)
+@Database(entities = [UserProfile::class, DailyMetric::class, FoodLog::class, SavedDietChart::class, SavedWorkout::class, SavedChat::class, ActivityEvent::class, YoutubeVideoCache::class, MedicalRecord::class], version = 29, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun metricsDao(): MetricsDao
@@ -133,6 +133,16 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             }
         }
+        val MIGRATION_28_29 = object : Migration(28, 29) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE food_logs ADD COLUMN carbsG REAL NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE food_logs ADD COLUMN proteinG REAL NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE food_logs ADD COLUMN fatG REAL NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE daily_metrics ADD COLUMN carbsG REAL NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE daily_metrics ADD COLUMN proteinG REAL NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE daily_metrics ADD COLUMN fatG REAL NOT NULL DEFAULT 0")
+            }
+        }
 
         @Volatile
         private var INSTANCE: AppDatabase? = null
@@ -144,7 +154,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "shastho_database"
                 )
-                .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28)
+                .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29)
                 .build()
                 INSTANCE = instance
                 instance

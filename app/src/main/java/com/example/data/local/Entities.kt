@@ -51,7 +51,10 @@ data class DailyMetric(
     val oxygenSaturation: Float = 0f,
     val skinTemperatureCelsius: Float = 0f,
     val respiratoryRate: Float = 0f,
-    val mindfulnessMinutes: Int = 0
+    val mindfulnessMinutes: Int = 0,
+    val carbsG: Float = 0f,
+    val proteinG: Float = 0f,
+    val fatG: Float = 0f
 )
 
 @Entity(tableName = "food_logs", indices = [Index(value = ["cloudId"], unique = true)])
@@ -64,5 +67,8 @@ data class FoodLog(
     val calories: Int = 0,
     val description: String = "",
     val time: String = "",
-    val mealType: String = ""
+    val mealType: String = "",
+    val carbsG: Float = 0f,
+    val proteinG: Float = 0f,
+    val fatG: Float = 0f
 )

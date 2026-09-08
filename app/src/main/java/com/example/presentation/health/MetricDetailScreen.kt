@@ -57,6 +57,10 @@ fun MetricDetailScreen(
     val metricTitle = when (metricKey) {
         "steps" -> "Steps"
         "activeCaloriesBurned" -> "Active Calories Burned"
+        "caloriesConsumed" -> "Calories Consumed"
+        "carbsG" -> "Carbs"
+        "proteinG" -> "Protein"
+        "fatG" -> "Fat"
         "exerciseDays" -> "Exercise Days"
         "heartRate" -> "Heart Rate"
         "oxygenSaturation" -> "Blood Oxygen (SpO2)"
@@ -71,6 +75,10 @@ fun MetricDetailScreen(
             when (metricKey) {
                 "steps" -> it.steps > 0
                 "activeCaloriesBurned" -> it.activeCaloriesBurned > 0
+                "caloriesConsumed" -> it.caloriesConsumed > 0
+                "carbsG" -> it.carbsG > 0f
+                "proteinG" -> it.proteinG > 0f
+                "fatG" -> it.fatG > 0f
                 "exerciseDays" -> it.exerciseMinutes > 0
                 "heartRate" -> it.heartRate > 0
                 "oxygenSaturation" -> it.oxygenSaturation > 0
@@ -86,6 +94,10 @@ fun MetricDetailScreen(
         when (metricKey) {
             "steps" -> it.steps > 0
             "activeCaloriesBurned" -> it.activeCaloriesBurned > 0
+            "caloriesConsumed" -> it.caloriesConsumed > 0
+            "carbsG" -> it.carbsG > 0f
+            "proteinG" -> it.proteinG > 0f
+            "fatG" -> it.fatG > 0f
             "exerciseDays" -> it.exerciseMinutes > 0
             "heartRate" -> it.heartRate > 0
             "oxygenSaturation" -> it.oxygenSaturation > 0
@@ -100,6 +112,10 @@ fun MetricDetailScreen(
         when (metricKey) {
             "steps" -> "${latestVal.steps} steps"
             "activeCaloriesBurned" -> "${latestVal.activeCaloriesBurned} kcal"
+            "caloriesConsumed" -> "${latestVal.caloriesConsumed} kcal"
+            "carbsG" -> "${String.format(java.util.Locale.US, "%.1f", latestVal.carbsG)} g"
+            "proteinG" -> "${String.format(java.util.Locale.US, "%.1f", latestVal.proteinG)} g"
+            "fatG" -> "${String.format(java.util.Locale.US, "%.1f", latestVal.fatG)} g"
             "exerciseDays" -> "${chronologicalData.count { it.exerciseMinutes > 0 }} active days"
             "heartRate" -> "${latestVal.heartRate} bpm"
             "oxygenSaturation" -> "${String.format(java.util.Locale.US, "%.1f", latestVal.oxygenSaturation)}%"
@@ -117,6 +133,10 @@ fun MetricDetailScreen(
             when (metricKey) {
                 "steps" -> if (it.steps > 0) it.steps.toFloat() else null
                 "activeCaloriesBurned" -> if (it.activeCaloriesBurned > 0) it.activeCaloriesBurned.toFloat() else null
+                "caloriesConsumed" -> if (it.caloriesConsumed > 0) it.caloriesConsumed.toFloat() else null
+                "carbsG" -> if (it.carbsG > 0f) it.carbsG else null
+                "proteinG" -> if (it.proteinG > 0f) it.proteinG else null
+                "fatG" -> if (it.fatG > 0f) it.fatG else null
                 "heartRate" -> if (it.heartRate > 0) it.heartRate.toFloat() else null
                 "oxygenSaturation" -> if (it.oxygenSaturation > 0f) it.oxygenSaturation else null
                 "heartRateVariability" -> if (it.heartRateVariability > 0f) it.heartRateVariability else null
@@ -132,6 +152,10 @@ fun MetricDetailScreen(
         when (metricKey) {
             "steps" -> "${String.format(java.util.Locale.US, "%,.0f", averageVal)} steps"
             "activeCaloriesBurned" -> "${String.format(java.util.Locale.US, "%.0f", averageVal)} kcal"
+            "caloriesConsumed" -> "${String.format(java.util.Locale.US, "%.0f", averageVal)} kcal"
+            "carbsG" -> "${String.format(java.util.Locale.US, "%.1f", averageVal)} g"
+            "proteinG" -> "${String.format(java.util.Locale.US, "%.1f", averageVal)} g"
+            "fatG" -> "${String.format(java.util.Locale.US, "%.1f", averageVal)} g"
             "heartRate" -> "${String.format(java.util.Locale.US, "%.1f", averageVal)} bpm"
             "oxygenSaturation" -> "${String.format(java.util.Locale.US, "%.1f", averageVal)}%"
             "heartRateVariability" -> "${String.format(java.util.Locale.US, "%.1f", averageVal)} ms"
@@ -275,7 +299,7 @@ fun MetricDetailScreen(
                     }
                 } else {
                     when (metricKey) {
-                        "steps", "activeCaloriesBurned" -> {
+                        "steps", "activeCaloriesBurned", "caloriesConsumed", "carbsG", "proteinG", "fatG" -> {
                             StepsCaloriesBarChart(
                                 data = chronologicalData,
                                 metricKey = metricKey,
@@ -329,8 +353,26 @@ private fun StepsCaloriesBarChart(
         ) {
             Canvas(modifier = Modifier.width(contentWidth).fillMaxHeight().padding(vertical = 16.dp)) {
                 val maxVal = (data.map {
-                    if (metricKey == "steps") it.steps.toFloat() else it.activeCaloriesBurned.toFloat()
+                    when (metricKey) {
+                        "steps" -> it.steps.toFloat()
+                        "activeCaloriesBurned" -> it.activeCaloriesBurned.toFloat()
+                        "caloriesConsumed" -> it.caloriesConsumed.toFloat()
+                        "carbsG" -> it.carbsG
+                        "proteinG" -> it.proteinG
+                        "fatG" -> it.fatG
+                        else -> 0f
+                    }
                 }.maxOrNull() ?: 100f).coerceAtLeast(1f)
+
+                val barColor = when (metricKey) {
+                    "steps" -> Emerald500
+                    "activeCaloriesBurned" -> Orange500
+                    "caloriesConsumed" -> if (isDark) Color(0xFFFFB27D) else Orange700
+                    "carbsG" -> if (isDark) Color(0xFFFCD34D) else Color(0xFFD97706)
+                    "proteinG" -> if (isDark) Color(0xFF6EE7B7) else Emerald700
+                    "fatG" -> if (isDark) Color(0xFFC4B5FD) else Color(0xFF7C3AED)
+                    else -> Emerald500
+                }
 
                 val count = data.size
                 val width = size.width
@@ -339,15 +381,23 @@ private fun StepsCaloriesBarChart(
                 val spacing = if (count > 1) (width - (count * barWidth)) / (count - 1) else 0f
 
                 data.forEachIndexed { index, metric ->
-                    val value = if (metricKey == "steps") metric.steps else metric.activeCaloriesBurned
-                    if (value > 0) {
+                    val value = when (metricKey) {
+                        "steps" -> metric.steps.toFloat()
+                        "activeCaloriesBurned" -> metric.activeCaloriesBurned.toFloat()
+                        "caloriesConsumed" -> metric.caloriesConsumed.toFloat()
+                        "carbsG" -> metric.carbsG
+                        "proteinG" -> metric.proteinG
+                        "fatG" -> metric.fatG
+                        else -> 0f
+                    }
+                    if (value > 0f) {
                         val x = if (count > 1) index * (barWidth + spacing) else (width - barWidth) / 2f
-                        val ratio = (value.toFloat() / maxVal).coerceIn(0f, 1f)
+                        val ratio = (value / maxVal).coerceIn(0f, 1f)
                         val barHeight = (ratio * (height - 8.dp.toPx())).coerceAtLeast(4.dp.toPx())
                         val y = height - barHeight
 
                         drawRoundRect(
-                            color = if (metricKey == "steps") Emerald500 else Orange500,
+                            color = barColor,
                             topLeft = Offset(x, y),
                             size = Size(barWidth, barHeight),
                             cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
