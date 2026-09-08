@@ -547,34 +547,134 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
         var waterInput by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showWaterDialog = false },
-            title = { Text("Log Water") },
-            text = {
-                OutlinedTextField(
-                    value = waterInput,
-                    onValueChange = { waterInput = it },
-                    label = { Text("Water (Liters)") },
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+            title = {
+                Text(
+                    text = "Log Water",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
                 )
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    val w = waterInput.toFloatOrNull()
-                    if (w != null) {
-                        viewModel.addWater(w) { success ->
-                            if (!success) {
-                                android.widget.Toast.makeText(
-                                    navController.context,
-                                    "Water logged (didn't sync to Health Connect)",
-                                    android.widget.Toast.LENGTH_SHORT
-                                ).show()
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Quick add",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val quickOptions = listOf(
+                            Triple("Glass", "+0.25L", 0.25f),
+                            Triple("Bottle", "+0.5L", 0.5f),
+                            Triple("Large Bottle", "+1.0L", 1.0f)
+                        )
+                        quickOptions.forEach { (name, label, amount) ->
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        viewModel.addWater(amount) { success ->
+                                            if (!success) {
+                                                android.widget.Toast.makeText(
+                                                    navController.context,
+                                                    "Water logged (didn't sync to Health Connect)",
+                                                    android.widget.Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                        }
+                                        showWaterDialog = false
+                                    },
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isDark) Emerald900.copy(alpha = 0.4f) else Emerald50,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) Emerald700 else Emerald200)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = name,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        maxLines = 1
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = label,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isDark) Emerald300 else Emerald700
+                                    )
+                                }
                             }
                         }
                     }
-                    showWaterDialog = false
-                }) {
-                    Text("Save")
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+
+                    Text(
+                        text = "Other amount",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = waterInput,
+                            onValueChange = { waterInput = it },
+                            label = { Text("Water (Liters)") },
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+                            ),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        Button(
+                            onClick = {
+                                val w = waterInput.toFloatOrNull()
+                                if (w != null && w > 0f) {
+                                    viewModel.addWater(w) { success ->
+                                        if (!success) {
+                                            android.widget.Toast.makeText(
+                                                navController.context,
+                                                "Water logged (didn't sync to Health Connect)",
+                                                android.widget.Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+                                    showWaterDialog = false
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Emerald600),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.height(56.dp)
+                        ) {
+                            Text("Add")
+                        }
+                    }
                 }
             },
+            confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showWaterDialog = false }) { Text("Cancel") }
             }

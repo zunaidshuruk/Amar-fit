@@ -69,4 +69,20 @@ object HealthGoalCalculator {
         // Round to nearest 50 kcal
         return ((tdee / 50f).roundToInt() * 50)
     }
+
+    enum class HeartRateZone { PEAK, VIGOROUS, MODERATE, LIGHT, RESTING }
+
+    fun maxHeartRate(age: Int): Int = if (age > 0) 220 - age else 190
+
+    fun heartRateZoneFor(bpm: Int, age: Int): HeartRateZone {
+        val maxHr = maxHeartRate(age)
+        val pct = bpm.toFloat() / maxHr.toFloat()
+        return when {
+            pct >= 0.85f -> HeartRateZone.PEAK
+            pct >= 0.70f -> HeartRateZone.VIGOROUS
+            pct >= 0.50f -> HeartRateZone.MODERATE
+            bpm > 0 -> HeartRateZone.LIGHT
+            else -> HeartRateZone.RESTING
+        }
+    }
 }

@@ -842,6 +842,33 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    @OptIn(ExperimentalFeatureAvailabilityApi::class)
+    suspend fun getHeartRateSamplesForDate(date: java.time.LocalDate): List<Pair<java.time.Instant, Int>> {
+        return try {
+            if (HealthConnectClient.getSdkStatus(getApplication()) != HealthConnectClient.SDK_AVAILABLE) {
+                return emptyList()
+            }
+            val healthConnectClient = HealthConnectClient.getOrCreate(getApplication())
+            val zoneId = ZoneId.systemDefault()
+            val startOfDay = date.atStartOfDay(zoneId).toInstant()
+            val endOfDay = date.plusDays(1).atStartOfDay(zoneId).toInstant()
+            val timeRangeFilter = TimeRangeFilter.between(startOfDay, endOfDay)
+            val hrResponse = healthConnectClient.readRecords(
+                ReadRecordsRequest(HeartRateRecord::class, timeRangeFilter)
+            )
+            val samples = mutableListOf<Pair<java.time.Instant, Int>>()
+            for (record in hrResponse.records) {
+                for (sample in record.samples) {
+                    samples.add(sample.time to sample.beatsPerMinute.toInt())
+                }
+            }
+            samples.sortBy { it.first }
+            samples
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
         fun setSteps(steps: Int) {
         viewModelScope.launch {
             val current = todayMetrics.value ?: DailyMetric(date = todayDateString)

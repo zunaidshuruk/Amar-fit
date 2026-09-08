@@ -26,15 +26,24 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.graphics.Paint
+import com.example.data.health.HealthGoalCalculator
 import com.example.data.local.DailyMetric
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,6 +63,23 @@ fun MetricDetailScreen(
     }
     val history by historyFlow.collectAsState(initial = emptyList())
     val chronologicalData = remember(history) { history.reversed() }
+
+    val selectedDayDate = remember(periodOffset) {
+        LocalDate.now().minusDays(periodOffset.toLong())
+    }
+
+    val heartRateDaySamples by produceState<List<Pair<Instant, Int>>>(
+        initialValue = emptyList(),
+        key1 = metricKey,
+        key2 = selectedRange,
+        key3 = selectedDayDate
+    ) {
+        if (metricKey == "heartRate" && selectedRange == "D") {
+            value = viewModel.getHeartRateSamplesForDate(selectedDayDate)
+        } else {
+            value = emptyList()
+        }
+    }
 
     val periodLabel = remember(selectedRange, periodOffset) {
         val windowDays = when (selectedRange) {
@@ -432,6 +458,41 @@ fun MetricDetailScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+
+            if (metricKey == "heartRate" && selectedRange == "D") {
+                Text(
+                    text = "Intraday Heart Rate",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                IntradayHeartRateChart(
+                    samples = heartRateDaySamples,
+                    age = profile?.age ?: 0,
+                    selectedDate = selectedDayDate,
+                    isDark = isDark
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = "Time in Heart Rate Zones",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                HeartRateZonesCard(
+                    samples = heartRateDaySamples,
+                    age = profile?.age ?: 0,
+                    isDark = isDark
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+            }
 
             // Day-by-Day Entries Section
             Text(
@@ -852,3 +913,296 @@ private fun formatMetricValueForEntry(metric: DailyMetric, metricKey: String): S
         else -> "--"
     }
 }
+
+@Composable
+private fun IntradayHeartRateChart(
+    samples: List<Pair<Instant, Int>>,
+    age: Int,
+    selectedDate: LocalDate,
+    isDark: Boolean
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        if (samples.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No heart rate data for this day",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            Column(modifier = Modifier.padding(16.dp)) {
+                val maxHr = HealthGoalCalculator.maxHeartRate(age)
+                val peakBpm = (maxHr * 0.85f).roundToInt()
+                val vigorousBpm = (maxHr * 0.70f).roundToInt()
+                val moderateBpm = (maxHr * 0.50f).roundToInt()
+
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp)
+                ) {
+                    val width = size.width
+                    val height = size.height
+
+                    val leftPadding = 8.dp.toPx()
+                    val rightPadding = 8.dp.toPx()
+                    val topPadding = 16.dp.toPx()
+                    val bottomPadding = 24.dp.toPx()
+
+                    val chartWidth = width - leftPadding - rightPadding
+                    val chartHeight = height - topPadding - bottomPadding
+
+                    val sampleMin = samples.minOf { it.second }.toFloat()
+                    val sampleMax = samples.maxOf { it.second }.toFloat()
+                    val minY = (minOf(sampleMin - 10f, moderateBpm - 20f)).coerceAtLeast(30f)
+                    val maxY = (maxOf(sampleMax + 10f, maxHr.toFloat(), peakBpm + 10f)).coerceAtLeast(120f)
+                    val bpmRange = (maxY - minY).coerceAtLeast(1f)
+
+                    fun getY(bpm: Float): Float {
+                        val ratio = ((bpm - minY) / bpmRange).coerceIn(0f, 1f)
+                        return topPadding + chartHeight * (1f - ratio)
+                    }
+
+                    val zoneId = ZoneId.systemDefault()
+                    val startOfDaySec = selectedDate.atStartOfDay(zoneId).toEpochSecond()
+                    val totalSecInDay = 86400f
+
+                    fun getX(instant: Instant): Float {
+                        val secFromStart = instant.epochSecond - startOfDaySec
+                        val ratio = (secFromStart / totalSecInDay).coerceIn(0f, 1f)
+                        return leftPadding + chartWidth * ratio
+                    }
+
+                    val dashEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+
+                    // Draw 3 horizontal dashed reference lines with zone labels
+                    val zones = listOf(
+                        Triple(peakBpm.toFloat(), "Peak ($peakBpm)", if (isDark) Color(0xFFFF6B6B) else Red500),
+                        Triple(vigorousBpm.toFloat(), "Vigorous ($vigorousBpm)", if (isDark) Color(0xFFFFB074) else Orange500),
+                        Triple(moderateBpm.toFloat(), "Moderate ($moderateBpm)", if (isDark) Color(0xFF6EE7B7) else Emerald600)
+                    )
+
+                    zones.forEach { (bpm, label, color) ->
+                        val y = getY(bpm)
+                        drawLine(
+                            color = color.copy(alpha = 0.5f),
+                            start = Offset(leftPadding, y),
+                            end = Offset(width - rightPadding, y),
+                            strokeWidth = 1.dp.toPx(),
+                            pathEffect = dashEffect
+                        )
+
+                        val textPaint = Paint().apply {
+                            this.color = color.toArgb()
+                            this.textSize = 10.sp.toPx()
+                            this.isAntiAlias = true
+                            this.textAlign = Paint.Align.RIGHT
+                        }
+                        drawIntoCanvas { canvas ->
+                            canvas.nativeCanvas.drawText(label, width - rightPadding, y - 4.dp.toPx(), textPaint)
+                        }
+                    }
+
+                    // Plot heart rate line & points
+                    val path = Path()
+                    var hasMoved = false
+
+                    samples.forEach { sample ->
+                        val x = getX(sample.first)
+                        val y = getY(sample.second.toFloat())
+
+                        if (!hasMoved) {
+                            path.moveTo(x, y)
+                            hasMoved = true
+                        } else {
+                            path.lineTo(x, y)
+                        }
+
+                        val zone = HealthGoalCalculator.heartRateZoneFor(sample.second, age)
+                        val dotColor = when (zone) {
+                            HealthGoalCalculator.HeartRateZone.PEAK -> if (isDark) Color(0xFFFF6B6B) else Red500
+                            HealthGoalCalculator.HeartRateZone.VIGOROUS -> if (isDark) Color(0xFFFFB074) else Orange500
+                            HealthGoalCalculator.HeartRateZone.MODERATE -> if (isDark) Color(0xFF6EE7B7) else Emerald600
+                            else -> Slate500
+                        }
+
+                        drawCircle(
+                            color = dotColor,
+                            radius = 3.dp.toPx(),
+                            center = Offset(x, y)
+                        )
+                    }
+
+                    drawPath(
+                        path = path,
+                        color = (if (isDark) Emerald500 else Emerald600).copy(alpha = 0.75f),
+                        style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
+                    )
+
+                    // Draw time ticks along bottom (12 AM, 6 AM, 12 PM, 6 PM, 12 AM)
+                    val timeTicks = listOf(
+                        0f to "12 AM",
+                        0.25f to "6 AM",
+                        0.5f to "12 PM",
+                        0.75f to "6 PM",
+                        1f to "12 AM"
+                    )
+
+                    val timePaint = Paint().apply {
+                        this.color = (if (isDark) Slate400 else Slate600).toArgb()
+                        this.textSize = 10.sp.toPx()
+                        this.isAntiAlias = true
+                        this.textAlign = Paint.Align.CENTER
+                    }
+
+                    timeTicks.forEach { (ratio, label) ->
+                        val x = (leftPadding + chartWidth * ratio).coerceIn(leftPadding + 14.dp.toPx(), width - rightPadding - 14.dp.toPx())
+                        val y = height - 4.dp.toPx()
+                        drawIntoCanvas { canvas ->
+                            canvas.nativeCanvas.drawText(label, x, y, timePaint)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeartRateZonesCard(
+    samples: List<Pair<Instant, Int>>,
+    age: Int,
+    isDark: Boolean
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        if (samples.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No heart rate data for this day",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            val totalSamples = samples.size
+            val totalSpanMinutes = if (samples.size >= 2) {
+                val firstInstant = samples.first().first
+                val lastInstant = samples.last().first
+                Duration.between(firstInstant, lastInstant).toMinutes().coerceAtLeast(1L)
+            } else {
+                1L
+            }
+
+            val zoneDefs = listOf(
+                Triple(HealthGoalCalculator.HeartRateZone.PEAK, "Peak (≥85%)", if (isDark) Color(0xFFFF6B6B) else Red500),
+                Triple(HealthGoalCalculator.HeartRateZone.VIGOROUS, "Vigorous (70-84%)", if (isDark) Color(0xFFFFB074) else Orange500),
+                Triple(HealthGoalCalculator.HeartRateZone.MODERATE, "Moderate (50-69%)", if (isDark) Color(0xFF6EE7B7) else Emerald600),
+                Triple(HealthGoalCalculator.HeartRateZone.LIGHT, "Light (<50%)", Slate500)
+            )
+
+            val activeZones = zoneDefs.mapNotNull { (zone, label, color) ->
+                val count = samples.count { HealthGoalCalculator.heartRateZoneFor(it.second, age) == zone }
+                if (count > 0) {
+                    val pct = (count.toFloat() / totalSamples.toFloat()) * 100f
+                    val minutes = ((count.toFloat() / totalSamples.toFloat()) * totalSpanMinutes).roundToInt()
+                    ZoneStat(zone = zone, label = label, color = color, percentage = pct, minutes = minutes)
+                } else {
+                    null
+                }
+            }
+
+            if (activeZones.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No active zone data recorded",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                    activeZones.forEachIndexed { index, stat ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(12.dp)
+                                        .clip(androidx.compose.foundation.shape.CircleShape)
+                                        .background(stat.color)
+                                )
+                                Text(
+                                    text = stat.label,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            Text(
+                                text = "${String.format(Locale.US, "%.0f", stat.percentage)}% (${stat.minutes} min)",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        if (index < activeZones.size - 1) {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private data class ZoneStat(
+    val zone: HealthGoalCalculator.HeartRateZone,
+    val label: String,
+    val color: Color,
+    val percentage: Float,
+    val minutes: Int
+)
