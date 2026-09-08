@@ -20,8 +20,8 @@ interface MetricsDao {
     @Query("SELECT * FROM daily_metrics WHERE date = :date")
     fun getMetricsForDate(date: String): Flow<DailyMetric?>
 
-    @Query("SELECT * FROM daily_metrics ORDER BY date DESC LIMIT :limit")
-    fun getMetricsHistory(limit: Int): Flow<List<DailyMetric>>
+    @Query("SELECT * FROM daily_metrics WHERE date >= :startDate ORDER BY date DESC")
+    fun getMetricsHistory(startDate: String): Flow<List<DailyMetric>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMetrics(metrics: DailyMetric)
