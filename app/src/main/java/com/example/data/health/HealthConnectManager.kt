@@ -71,4 +71,25 @@ object HealthConnectManager {
             false
         }
     }
+
+    fun getPermissionDisplayName(permission: String): String {
+        return when {
+            permission.contains("Hydration", ignoreCase = true) -> "Hydration"
+            permission.contains("Steps", ignoreCase = true) -> "Steps"
+            permission.contains("Sleep", ignoreCase = true) -> "Sleep"
+            permission.contains("Exercise", ignoreCase = true) -> "Exercise"
+            permission.contains("Nutrition", ignoreCase = true) -> "Nutrition"
+            permission.contains("HeartRateVariability", ignoreCase = true) -> "Heart Rate Variability (HRV)"
+            permission.contains("HeartRate", ignoreCase = true) -> "Heart Rate"
+            permission.contains("BloodPressure", ignoreCase = true) -> "Blood Pressure"
+            permission.contains("BloodGlucose", ignoreCase = true) -> "Blood Glucose"
+            permission.contains("Distance", ignoreCase = true) -> "Distance"
+            permission.contains("ActiveCaloriesBurned", ignoreCase = true) -> "Active Calories"
+            permission.contains("OxygenSaturation", ignoreCase = true) -> "Oxygen Saturation (SpO2)"
+            permission.contains("SkinTemperature", ignoreCase = true) -> "Skin Temperature"
+            permission.contains("RespiratoryRate", ignoreCase = true) -> "Respiratory Rate"
+            permission.contains("Mindfulness", ignoreCase = true) -> "Mindfulness"
+            else -> permission.substringAfterLast('.').replace("Record", "")
+        }
+    }
 }

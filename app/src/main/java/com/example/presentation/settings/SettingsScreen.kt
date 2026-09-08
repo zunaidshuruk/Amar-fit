@@ -104,24 +104,22 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
     val coroutineScope = rememberCoroutineScope()
     var isHealthConnectAvailable by remember { mutableStateOf(HealthConnectManager.isAvailable(context)) }
 
+    var showMissingPermissionsDialog by remember { mutableStateOf(false) }
+    var missingPermissionCategories by remember { mutableStateOf<List<String>>(emptyList()) }
+
     val requestPermissionLauncher = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) { granted ->
-        if (granted.isNotEmpty()) {
-            // Some newer/optional Health Connect record types (HRV, Skin Temperature,
-            // Respiratory Rate, Mindfulness) aren't supported on every installed Health
-            // Connect version, so the system can grant most permissions while silently
-            // withholding one or two. Treat any non-empty grant as a successful connect —
-            // syncWithHealthConnect() already reads each metric in its own try-catch and
-            // simply skips whatever wasn't granted, so a partial grant still works correctly.
-            val missingCount = HealthConnectManager.REQUIRED_PERMISSIONS.size - granted.count { it in HealthConnectManager.REQUIRED_PERMISSIONS }
-            val message = if (missingCount > 0) {
-                "Health Connect connected! ($missingCount permission${if (missingCount == 1) "" else "s"} unavailable on this device)"
-            } else {
-                "Health Connect connected!"
+        val missingPermissions = HealthConnectManager.REQUIRED_PERMISSIONS.filter { it !in granted }
+        val missingCount = missingPermissions.size
+
+        if (missingCount > 0) {
+            missingPermissionCategories = missingPermissions.map { HealthConnectManager.getPermissionDisplayName(it) }.distinct()
+            showMissingPermissionsDialog = true
+            if (granted.isNotEmpty()) {
+                viewModel.syncWithHealthConnect(context)
             }
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-            viewModel.syncWithHealthConnect(context)
         } else {
-            Toast.makeText(context, "Permissions denied", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Health Connect connected!", Toast.LENGTH_SHORT).show()
+            viewModel.syncWithHealthConnect(context)
         }
     }
 
@@ -631,6 +629,88 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
                     Text("Cancel")
                 }
             }
+        )
+    }
+
+    if (showMissingPermissionsDialog) {
+        AlertDialog(
+            onDismissRequest = { showMissingPermissionsDialog = false },
+            title = {
+                Text(
+                    text = "Health Connect Permissions",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Some permissions were not granted or may need to be enabled manually in Health Connect settings:",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (missingPermissionCategories.isNotEmpty()) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                missingPermissionCategories.forEach { category ->
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("• ", fontWeight = FontWeight.Bold, color = Emerald600)
+                                        Text(
+                                            category,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Text(
+                        text = "Note: Some record types (such as HRV, Skin Temperature, or Mindfulness) may be unavailable on this device if not supported by the installed Health Connect version or hardware.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val launchIntent = context.packageManager.getLaunchIntentForPackage("com.google.android.apps.healthdata")
+                        if (launchIntent != null) {
+                            context.startActivity(launchIntent)
+                        } else {
+                            Toast.makeText(context, "Look under Permissions > Health Connect", Toast.LENGTH_LONG).show()
+                            val appSettingsIntent = android.content.Intent(
+                                android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                            ).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                            }
+                            context.startActivity(appSettingsIntent)
+                        }
+                        showMissingPermissionsDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Emerald600),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Open Health Connect Settings", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showMissingPermissionsDialog = false }) {
+                    Text("Dismiss", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 }

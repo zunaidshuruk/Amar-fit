@@ -426,7 +426,15 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 TextButton(onClick = {
                     val w = waterInput.toFloatOrNull()
                     if (w != null) {
-                        viewModel.addWater(w)
+                        viewModel.addWater(w) { success ->
+                            if (!success) {
+                                android.widget.Toast.makeText(
+                                    navController.context,
+                                    "Water logged (didn't sync to Health Connect)",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
                     }
                     showWaterDialog = false
                 }) {

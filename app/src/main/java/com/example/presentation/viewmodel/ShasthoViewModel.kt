@@ -353,7 +353,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun addWater(amountLiters: Float) {
+    fun addWater(amountLiters: Float, onHealthConnectSyncResult: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
             val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
             val updated = current.copy(waterLiters = current.waterLiters + amountLiters)
@@ -375,9 +375,13 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                         volume = Volume.liters(amountLiters.toDouble())
                     )
                     healthConnectClient.insertRecords(listOf(hydrationRecord))
+                    onHealthConnectSyncResult(true)
+                } else {
+                    onHealthConnectSyncResult(true)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                onHealthConnectSyncResult(false)
             }
         }
     }
