@@ -100,10 +100,6 @@ fun SettingsScreen(
     var notificationsEnabled by remember { mutableStateOf(true) }
     var remindersEnabled by remember { mutableStateOf(true) }
 
-    var expandedLanguage by remember { mutableStateOf(false) }
-    val languages = listOf("English", "Bengali")
-    var selectedLanguage by remember { mutableStateOf(languages[0]) }
-
     var profilePictureUri by remember { mutableStateOf<String?>(null) }
 
     val context = LocalContext.current
@@ -145,7 +141,6 @@ fun SettingsScreen(
             isDarkMode = profile!!.isDarkMode
             notificationsEnabled = profile!!.notificationsEnabled
             remindersEnabled = profile!!.remindersEnabled
-            selectedLanguage = profile!!.selectedLanguage
         }
     }
 
@@ -331,8 +326,7 @@ fun SettingsScreen(
                                     profilePictureUri = finalPhotoUrl,
                                     isDarkMode = isDarkMode,
                                     notificationsEnabled = notificationsEnabled,
-                                    remindersEnabled = remindersEnabled,
-                                    selectedLanguage = selectedLanguage
+                                    remindersEnabled = remindersEnabled
                                 )
                                 viewModel.saveProfile(updated)
                                 showSavedMessage = true
@@ -416,33 +410,6 @@ fun SettingsScreen(
                         onCheckedChange = { remindersEnabled = it },
                         colors = SwitchDefaults.colors(checkedThumbColor = Emerald600, checkedTrackColor = Emerald200)
                     )
-                }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp).clickable { expandedLanguage = true },
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Language", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(selectedLanguage, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Icon(Icons.Default.ArrowDropDown, contentDescription = "Select Language", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    DropdownMenu(
-                        expanded = expandedLanguage,
-                        onDismissRequest = { expandedLanguage = false }
-                    ) {
-                        languages.forEach { lang ->
-                            DropdownMenuItem(
-                                text = { Text(lang) },
-                                onClick = {
-                                    selectedLanguage = lang
-                                    expandedLanguage = false
-                                }
-                            )
-                        }
-                    }
                 }
             }
         }
