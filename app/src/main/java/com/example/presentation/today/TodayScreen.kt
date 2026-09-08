@@ -696,10 +696,10 @@ private fun LargeRingTileCard(
                 )
                 val arcSize = androidx.compose.ui.geometry.Size(diameter, diameter)
 
-                // Background Track (Open gauge 270 degrees starting at bottom-left 135 deg)
+                // Background Track (Open gauge 270 degrees, gap centered at the top so it doesn't collide with the title text)
                 drawArc(
                     color = tile.accent.onBg.copy(alpha = 0.15f),
-                    startAngle = 135f,
+                    startAngle = 315f,
                     sweepAngle = 270f,
                     useCenter = false,
                     topLeft = topLeftOffset,
@@ -714,7 +714,7 @@ private fun LargeRingTileCard(
                 if (tile.progress > 0f) {
                     drawArc(
                         color = tile.accent.onBg,
-                        startAngle = 135f,
+                        startAngle = 315f,
                         sweepAngle = 270f * tile.progress,
                         useCenter = false,
                         topLeft = topLeftOffset,
