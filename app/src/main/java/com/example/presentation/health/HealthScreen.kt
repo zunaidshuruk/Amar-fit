@@ -414,30 +414,36 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                             val range = (maxW - minW).takeIf { it > 0.001f } ?: 1f
                             val width = size.width
                             val height = size.height
-                            val count = validWeights.size
+                            val count = last7Days.size
 
                             val stepX = if (count > 1) width / (count - 1) else 0f
                             val weightPath = Path()
+                            var lastValidIndex: Int? = null
 
-                            validWeights.forEachIndexed { index, metric ->
-                                val x = if (count > 1) index * stepX else width / 2f
-                                val normY = ((metric.weightKg - minW) / range).coerceIn(0f, 1f)
-                                val y = height - (normY * (height - 16.dp.toPx())) - 8.dp.toPx()
+                            last7Days.forEachIndexed { index, metric ->
+                                if (metric.weightKg > 0f) {
+                                    val x = if (count > 1) index * stepX else width / 2f
+                                    val normY = ((metric.weightKg - minW) / range).coerceIn(0f, 1f)
+                                    val y = height - (normY * (height - 16.dp.toPx())) - 8.dp.toPx()
 
-                                if (index == 0) weightPath.moveTo(x, y) else weightPath.lineTo(x, y)
-                                drawCircle(
-                                    color = weightAccent.onBg,
-                                    radius = 4.dp.toPx(),
-                                    center = Offset(x, y)
-                                )
+                                    if (lastValidIndex == null || lastValidIndex != index - 1) {
+                                        weightPath.moveTo(x, y)
+                                    } else {
+                                        weightPath.lineTo(x, y)
+                                    }
+                                    lastValidIndex = index
+                                    drawCircle(
+                                        color = weightAccent.onBg,
+                                        radius = 4.dp.toPx(),
+                                        center = Offset(x, y)
+                                    )
+                                }
                             }
-                            if (count > 1) {
-                                drawPath(
-                                    path = weightPath,
-                                    color = weightAccent.onBg,
-                                    style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
-                                )
-                            }
+                            drawPath(
+                                path = weightPath,
+                                color = weightAccent.onBg,
+                                style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
+                            )
                         }
                     }
                 }
@@ -662,7 +668,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                 val isMoved = metric.exerciseMinutes > 0
 
                                 drawRoundRect(
-                                    color = if (isMoved) stepsAccent.onBg else stepsAccent.onBg.copy(alpha = 0.2f),
+                                    color = if (isMoved) stepsAccent.onBg else stepsAccent.onBg.copy(alpha = 0.38f),
                                     topLeft = Offset(x, y),
                                     size = Size(pillWidth, pillHeight),
                                     cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())

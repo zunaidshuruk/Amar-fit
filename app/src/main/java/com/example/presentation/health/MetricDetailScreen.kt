@@ -355,10 +355,10 @@ private fun StepsCaloriesBarChart(
                     } else {
                         val x = if (count > 1) index * (barWidth + spacing) else (width - barWidth) / 2f
                         drawRoundRect(
-                            color = if (metricKey == "steps") Emerald500.copy(alpha = 0.1f) else Orange500.copy(alpha = 0.1f),
-                            topLeft = Offset(x, height - 4.dp.toPx()),
-                            size = Size(barWidth, 4.dp.toPx()),
-                            cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
+                            color = Slate500.copy(alpha = 0.35f),
+                            topLeft = Offset(x, height - 8.dp.toPx()),
+                            size = Size(barWidth, 8.dp.toPx()),
+                            cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
                         )
                     }
                 }
@@ -400,7 +400,7 @@ private fun ExerciseStreakStrip(
                     val isMoved = metric.exerciseMinutes > 0
 
                     drawRoundRect(
-                        color = if (isMoved) Emerald500 else Emerald500.copy(alpha = 0.2f),
+                        color = if (isMoved) Emerald500 else Emerald500.copy(alpha = 0.38f),
                         topLeft = Offset(x, y),
                         size = Size(pillWidth, pillHeight),
                         cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
@@ -471,10 +471,10 @@ private fun ZoneBarChart(
                     } else {
                         val x = if (count > 1) index * (barWidth + spacing) else (width - barWidth) / 2f
                         drawRoundRect(
-                            color = Slate500.copy(alpha = 0.1f),
-                            topLeft = Offset(x, height - 4.dp.toPx()),
-                            size = Size(barWidth, 4.dp.toPx()),
-                            cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
+                            color = Slate500.copy(alpha = 0.35f),
+                            topLeft = Offset(x, height - 8.dp.toPx()),
+                            size = Size(barWidth, 8.dp.toPx()),
+                            cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
                         )
                     }
                 }
@@ -488,19 +488,19 @@ private fun LineChartMetric(
     data: List<DailyMetric>,
     metricKey: String
 ) {
-    val validData = remember(data, metricKey) {
-        data.filter {
+    val validValues = remember(data, metricKey) {
+        data.mapNotNull {
             val value = when (metricKey) {
                 "heartRateVariability" -> it.heartRateVariability
                 "skinTemperatureCelsius" -> it.skinTemperatureCelsius
                 "respiratoryRate" -> it.respiratoryRate
                 else -> 0f
             }
-            value > 0f
+            if (value > 0f) value else null
         }
     }
 
-    if (validData.isEmpty()) {
+    if (validValues.isEmpty()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -518,8 +518,8 @@ private fun LineChartMetric(
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(250.dp)) {
         val totalWidth = maxWidth
-        val contentWidth = if (validData.size > 15) {
-            (validData.size * 20).dp.coerceAtLeast(totalWidth)
+        val contentWidth = if (data.size > 15) {
+            (data.size * 20).dp.coerceAtLeast(totalWidth)
         } else {
             totalWidth
         }
@@ -530,39 +530,38 @@ private fun LineChartMetric(
                 .horizontalScroll(rememberScrollState())
         ) {
             Canvas(modifier = Modifier.width(contentWidth).fillMaxHeight().padding(vertical = 16.dp)) {
-                val values = validData.map {
-                    when (metricKey) {
-                        "heartRateVariability" -> it.heartRateVariability
-                        "skinTemperatureCelsius" -> it.skinTemperatureCelsius
-                        "respiratoryRate" -> it.respiratoryRate
-                        else -> 0f
-                    }
-                }
-                val minW = (values.minOfOrNull { it } ?: 0f) * 0.9f
-                val maxW = (values.maxOfOrNull { it } ?: 100f) * 1.1f
+                val minW = (validValues.minOfOrNull { it } ?: 0f) * 0.9f
+                val maxW = (validValues.maxOfOrNull { it } ?: 100f) * 1.1f
                 val range = (maxW - minW).takeIf { it > 0.001f } ?: 1f
                 val width = size.width
                 val height = size.height
+                val count = data.size
 
-                val stepX = if (validData.size > 1) width / (validData.size - 1) else width
+                val stepX = if (count > 1) width / (count - 1) else width
                 val path = Path()
+                var lastValidIndex: Int? = null
 
-                validData.forEachIndexed { index, metric ->
+                data.forEachIndexed { index, metric ->
                     val value = when (metricKey) {
                         "heartRateVariability" -> metric.heartRateVariability
                         "skinTemperatureCelsius" -> metric.skinTemperatureCelsius
                         "respiratoryRate" -> metric.respiratoryRate
                         else -> 0f
                     }
-                    val x = index * stepX
-                    val y = height - (((value - minW) / range) * height)
+                    if (value > 0f) {
+                        val x = if (count > 1) index * stepX else width / 2f
+                        val y = height - (((value - minW) / range) * height)
 
-                    if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
-                    drawCircle(color = Emerald500, radius = 6.dp.toPx(), center = Offset(x, y))
+                        if (lastValidIndex == null || lastValidIndex != index - 1) {
+                            path.moveTo(x, y)
+                        } else {
+                            path.lineTo(x, y)
+                        }
+                        lastValidIndex = index
+                        drawCircle(color = Emerald500, radius = 6.dp.toPx(), center = Offset(x, y))
+                    }
                 }
-                if (validData.size > 1) {
-                    drawPath(path, color = Emerald500, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
-                }
+                drawPath(path, color = Emerald500, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
             }
         }
     }
