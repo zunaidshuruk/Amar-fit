@@ -9,7 +9,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MarkEmailRead
 import androidx.compose.material3.*
@@ -52,8 +51,6 @@ fun AuthScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLogin by remember { mutableStateOf(true) }
-    var showLanguageMenu by remember { mutableStateOf(false) }
-    var selectedLanguage by remember { mutableStateOf("English") }
     
     val uiState by authViewModel.uiState.collectAsState()
     val isLoading = uiState is com.example.presentation.auth.AuthUiState.Loading
@@ -146,15 +143,14 @@ fun AuthScreen(
         )
     }
 
-    val isBn = selectedLanguage == "বাংলা (Bengali)"
-    val txtWelcome = if (isBn) (if (isLogin) "আবার স্বাগতম" else "অ্যাকাউন্ট তৈরি করুন") else (if (isLogin) "Welcome back" else "Create an account")
-    val txtEmail = if (isBn) "ইমেইল" else "Email"
-    val txtPassword = if (isBn) "পাসওয়ার্ড" else "Password"
-    val txtBtn = if (isBn) (if (isLogin) "লগইন" else "সাইন আপ") else (if (isLogin) "Login" else "Sign Up")
-    val txtOr = if (isBn) " অথবা " else " OR "
-    val txtSso = if (isBn) "গুগল দিয়ে চালিয়ে যান (SSO)" else "Continue with Google (SSO)"
-    val txtPrompt = if (isBn) (if (isLogin) "অ্যাকাউন্ট নেই? " else "ইতিমধ্যেই অ্যাকাউন্ট আছে? ") else (if (isLogin) "Don't have an account? " else "Already have an account? ")
-    val txtToggle = if (isBn) (if (isLogin) "সাইন আপ" else "লগইন") else (if (isLogin) "Sign Up" else "Login")
+    val txtWelcome = if (isLogin) "Welcome back" else "Create an account"
+    val txtEmail = "Email"
+    val txtPassword = "Password"
+    val txtBtn = if (isLogin) "Login" else "Sign Up"
+    val txtOr = " OR "
+    val txtSso = "Continue with Google (SSO)"
+    val txtPrompt = if (isLogin) "Don't have an account? " else "Already have an account? "
+    val txtToggle = if (isLogin) "Sign Up" else "Login"
 
 
     Scaffold(
@@ -162,28 +158,6 @@ fun AuthScreen(
         topBar = {
             TopAppBar(
                 title = { },
-                actions = {
-                    Box {
-                        TextButton(onClick = { showLanguageMenu = true }) {
-                            Icon(Icons.Default.Language, contentDescription = "Language", tint = Emerald600)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(selectedLanguage, color = Emerald600, fontWeight = FontWeight.Medium)
-                        }
-                        DropdownMenu(
-                            expanded = showLanguageMenu,
-                            onDismissRequest = { showLanguageMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("English") },
-                                onClick = { selectedLanguage = "English"; showLanguageMenu = false }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("বাংলা (Bengali)") },
-                                onClick = { selectedLanguage = "বাংলা (Bengali)"; showLanguageMenu = false }
-                            )
-                        }
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         }
@@ -217,7 +191,7 @@ fun AuthScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = if (isBn) "ইমেইল ভেরিফাই করুন" else "Verify your email",
+                    text = "Verify your email",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -226,11 +200,7 @@ fun AuthScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = if (isBn) {
-                        "আমরা $userEmail ঠিকানায় একটি যাচাইকরণ লিঙ্ক পাঠিয়েছি। চালিয়ে যাওয়ার আগে অনুগ্রহ করে আপনার ইমেইল চেক করুন।"
-                    } else {
-                        "We've sent a verification link to $userEmail. Please check your inbox and verify your email to continue."
-                    },
+                    text = "We've sent a verification link to $userEmail. Please check your inbox and verify your email to continue.",
                     fontSize = 15.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -259,7 +229,7 @@ fun AuthScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (isBn) "আমি ভেরিফাই করেছি" else "I've verified",
+                            text = "I've verified",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -284,9 +254,9 @@ fun AuthScreen(
                 ) {
                     Text(
                         text = if (resendCooldownSeconds > 0) {
-                            if (isBn) "পুনরায় পাঠান ($resendCooldownSeconds সে.)" else "Resend email (${resendCooldownSeconds}s)"
+                            "Resend email (${resendCooldownSeconds}s)"
                         } else {
-                            if (isBn) "পুনরায় ইমেইল পাঠান" else "Resend email"
+                            "Resend email"
                         },
                         color = if (resendCooldownSeconds == 0 && !isLoading) Primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 16.sp,
@@ -297,7 +267,7 @@ fun AuthScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = if (isBn) "ভিন্ন অ্যাকাউন্ট ব্যবহার করুন" else "Use a different account",
+                    text = "Use a different account",
                     color = Emerald600,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
