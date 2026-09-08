@@ -239,9 +239,16 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 val parsedName = json.optString("name", foodText)
                 val parsedCategory = json.optString("category", "Manual Entry")
                 val parsedCalories = json.optInt("calories", 0)
+                val parsedCarbs = json.optDouble("carbs", 0.0).toFloat()
+                val parsedProtein = json.optDouble("protein", 0.0).toFloat()
+                val parsedFat = json.optDouble("fat", 0.0).toFloat()
                 val parsedDescription = json.optString("description", "")
                 if (parsedCalories > 0) {
-                    logScannedFood(parsedName, parsedCategory, parsedCalories, parsedDescription, mealType = mealType)
+                    logScannedFood(
+                        parsedName, parsedCategory, parsedCalories, parsedDescription,
+                        mealType = mealType,
+                        carbsG = parsedCarbs, proteinG = parsedProtein, fatG = parsedFat
+                    )
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -855,12 +862,15 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun logScannedFood(
-        name: String, 
-        category: String, 
-        calories: Int, 
+        name: String,
+        category: String,
+        calories: Int,
         description: String,
         time: String = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date()),
-        mealType: String = "Snack"
+        mealType: String = "Snack",
+        carbsG: Float = 0f,
+        proteinG: Float = 0f,
+        fatG: Float = 0f
     ) {
         viewModelScope.launch {
             val foodLog = com.example.data.local.FoodLog(
@@ -870,13 +880,21 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 calories = calories,
                 description = description,
                 time = time,
-                mealType = mealType
+                mealType = mealType,
+                carbsG = carbsG,
+                proteinG = proteinG,
+                fatG = fatG
             )
             repository.saveFoodLog(foodLog)
-            
+
             // Also add calories to today's metrics
             val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
-            val updated = current.copy(caloriesConsumed = current.caloriesConsumed + calories)
+            val updated = current.copy(
+                caloriesConsumed = current.caloriesConsumed + calories,
+                carbsG = current.carbsG + carbsG,
+                proteinG = current.proteinG + proteinG,
+                fatG = current.fatG + fatG
+            )
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("food", "Logged $name")
