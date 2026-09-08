@@ -50,6 +50,7 @@ import com.example.presentation.nutrition.NutritionScreen
 import com.example.presentation.onboarding.OnboardingScreen
 import com.example.presentation.recipe.RecipeScreen
 import com.example.presentation.scanner.ScannerScreen
+import com.example.presentation.settings.HealthGoalsScreen
 import com.example.presentation.settings.SettingsScreen
 import com.example.presentation.sleep.SleepScreen
 import com.example.presentation.today.TodayScreen
@@ -341,7 +342,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                   composable("weightlog") { WeightLogScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("recipe") { RecipeScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("foodlog") { FoodLogScreen(viewModel = viewModel, onNavigateToScanner = { navController.navigate("scanner") }, onNavigateBack = { navController.popBackStack() }) }
-                  composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }) }
+                  composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }, onNavigateToHealthGoals = { navController.navigate("health_goals") }) }
+                  composable("health_goals") { HealthGoalsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("scanner") { ScannerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("medical_records") { com.example.presentation.health.MedicalRecordsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("exercise_library") { ExerciseLibraryScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }

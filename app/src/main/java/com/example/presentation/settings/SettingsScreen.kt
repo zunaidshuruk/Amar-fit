@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,7 +47,12 @@ import android.widget.Toast
 
 
 @Composable
-fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}, onLogout: () -> Unit = {}) {
+fun SettingsScreen(
+    viewModel: ShasthoViewModel,
+    onNavigateBack: () -> Unit = {},
+    onLogout: () -> Unit = {},
+    onNavigateToHealthGoals: () -> Unit = {}
+) {
     val profile by viewModel.userProfile.collectAsState()
     val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
 
@@ -464,6 +470,25 @@ fun SettingsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {},
                     ) {
                         Text("Connect")
                     }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateToHealthGoals() }
+                        .padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Health Goals", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
+                        Text("Auto-calculated from your profile", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "Health Goals",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
         Spacer(modifier = Modifier.height(32.dp))
