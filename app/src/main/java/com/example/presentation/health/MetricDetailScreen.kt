@@ -11,6 +11,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +32,9 @@ import androidx.compose.ui.unit.sp
 import com.example.data.local.DailyMetric
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,18 +47,52 @@ fun MetricDetailScreen(
     val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
 
     var selectedRange by remember { mutableStateOf("W") }
-    val days = when (selectedRange) {
-        "D" -> 1
-        "W" -> 7
-        "M" -> 30
-        "3M" -> 90
-        "Y" -> 365
-        else -> 7
-    }
+    var periodOffset by remember(selectedRange) { mutableStateOf(0) }
 
-    val historyFlow = remember(days) { viewModel.getMetricsHistoryFlow(days) }
+    val historyFlow = remember(selectedRange, periodOffset) {
+        viewModel.getMetricsHistoryFlowForPeriod(selectedRange, periodOffset)
+    }
     val history by historyFlow.collectAsState(initial = emptyList())
     val chronologicalData = remember(history) { history.reversed() }
+
+    val periodLabel = remember(selectedRange, periodOffset) {
+        val windowDays = when (selectedRange) {
+            "D" -> 1
+            "W" -> 7
+            "M" -> 30
+            "3M" -> 90
+            "Y" -> 365
+            else -> 7
+        }
+        val today = LocalDate.now()
+        val endDate = today.minusDays((periodOffset.toLong()) * windowDays)
+        val startDate = endDate.minusDays((windowDays - 1).toLong())
+
+        when (selectedRange) {
+            "D" -> {
+                if (periodOffset == 0) "Today"
+                else if (startDate == today.minusDays(1)) "Yesterday"
+                else startDate.format(DateTimeFormatter.ofPattern("MMM d", Locale.US))
+            }
+            "W", "M" -> {
+                if (startDate.year != endDate.year) {
+                    "${startDate.format(DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.US))} - ${endDate.format(DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.US))}"
+                } else if (startDate.month == endDate.month) {
+                    "${startDate.format(DateTimeFormatter.ofPattern("MMM d", Locale.US))} - ${endDate.dayOfMonth}"
+                } else {
+                    "${startDate.format(DateTimeFormatter.ofPattern("MMM d", Locale.US))} - ${endDate.format(DateTimeFormatter.ofPattern("MMM d", Locale.US))}"
+                }
+            }
+            "3M", "Y" -> {
+                if (startDate.year != endDate.year) {
+                    "${startDate.format(DateTimeFormatter.ofPattern("MMM yyyy", Locale.US))} - ${endDate.format(DateTimeFormatter.ofPattern("MMM yyyy", Locale.US))}"
+                } else {
+                    "${startDate.format(DateTimeFormatter.ofPattern("MMM", Locale.US))} - ${endDate.format(DateTimeFormatter.ofPattern("MMM", Locale.US))} ${endDate.year}"
+                }
+            }
+            else -> ""
+        }
+    }
 
     val metricTitle = when (metricKey) {
         "steps" -> "Steps"
@@ -217,7 +257,10 @@ fun MetricDetailScreen(
                                 if (isSelected) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.surfaceVariant
                             )
-                            .clickable { selectedRange = range }
+                            .clickable {
+                                selectedRange = range
+                                periodOffset = 0
+                            }
                             .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -232,7 +275,61 @@ fun MetricDetailScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Period Navigation Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    IconButton(
+                        onClick = { periodOffset++ }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ChevronLeft,
+                            contentDescription = "Previous period",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Text(
+                        text = periodLabel,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    IconButton(
+                        onClick = { if (periodOffset > 0) periodOffset-- },
+                        enabled = periodOffset > 0
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Next period",
+                            tint = if (periodOffset > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        )
+                    }
+                }
+
+                if (periodOffset != 0) {
+                    IconButton(
+                        onClick = { periodOffset = 0 }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Reset to current period",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Latest Value Callout Card
             Card(
@@ -333,6 +430,84 @@ fun MetricDetailScreen(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Day-by-Day Entries Section
+            Text(
+                text = "Entries",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            val entries = chronologicalData.filter { hasMetricValue(it, metricKey) }.reversed()
+            if (entries.isEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(16.dp),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No entries recorded for this period",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(16.dp),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                        entries.forEachIndexed { index, metric ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = formatEntryDate(metric.date),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = formatMetricValueForEntry(metric, metricKey),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            if (index < entries.size - 1) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(64.dp))
         }
     }
@@ -623,5 +798,57 @@ private fun LineChartMetric(
                 drawPath(path, color = Emerald500, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
             }
         }
+    }
+}
+
+private fun formatEntryDate(dateStr: String): String {
+    return try {
+        val date = LocalDate.parse(dateStr)
+        val today = LocalDate.now()
+        when (date) {
+            today -> "Today"
+            today.minusDays(1) -> "Yesterday"
+            else -> date.format(DateTimeFormatter.ofPattern("EEE, MMM d", Locale.US))
+        }
+    } catch (e: Exception) {
+        dateStr
+    }
+}
+
+private fun hasMetricValue(metric: DailyMetric, metricKey: String): Boolean {
+    return when (metricKey) {
+        "steps" -> metric.steps > 0
+        "activeCaloriesBurned" -> metric.activeCaloriesBurned > 0
+        "caloriesConsumed" -> metric.caloriesConsumed > 0
+        "carbsG" -> metric.carbsG > 0f
+        "proteinG" -> metric.proteinG > 0f
+        "fatG" -> metric.fatG > 0f
+        "waterLiters" -> metric.waterLiters > 0f
+        "exerciseDays" -> metric.exerciseMinutes > 0
+        "heartRate" -> metric.heartRate > 0
+        "oxygenSaturation" -> metric.oxygenSaturation > 0
+        "heartRateVariability" -> metric.heartRateVariability > 0
+        "skinTemperatureCelsius" -> metric.skinTemperatureCelsius > 0
+        "respiratoryRate" -> metric.respiratoryRate > 0
+        else -> false
+    }
+}
+
+private fun formatMetricValueForEntry(metric: DailyMetric, metricKey: String): String {
+    return when (metricKey) {
+        "steps" -> "${metric.steps} steps"
+        "activeCaloriesBurned" -> "${metric.activeCaloriesBurned} kcal"
+        "caloriesConsumed" -> "${metric.caloriesConsumed} kcal"
+        "carbsG" -> "${String.format(Locale.US, "%.1f", metric.carbsG)} g"
+        "proteinG" -> "${String.format(Locale.US, "%.1f", metric.proteinG)} g"
+        "fatG" -> "${String.format(Locale.US, "%.1f", metric.fatG)} g"
+        "waterLiters" -> "${String.format(Locale.US, "%.1f", metric.waterLiters)} L"
+        "exerciseDays" -> "${metric.exerciseMinutes} mins"
+        "heartRate" -> "${metric.heartRate} bpm"
+        "oxygenSaturation" -> "${String.format(Locale.US, "%.1f", metric.oxygenSaturation)}%"
+        "heartRateVariability" -> "${String.format(Locale.US, "%.1f", metric.heartRateVariability)} ms"
+        "skinTemperatureCelsius" -> "${String.format(Locale.US, "%.1f", metric.skinTemperatureCelsius)} °C"
+        "respiratoryRate" -> "${String.format(Locale.US, "%.1f", metric.respiratoryRate)} rpm"
+        else -> "--"
     }
 }

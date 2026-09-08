@@ -23,6 +23,9 @@ interface MetricsDao {
     @Query("SELECT * FROM daily_metrics WHERE date >= :startDate ORDER BY date DESC")
     fun getMetricsHistory(startDate: String): Flow<List<DailyMetric>>
 
+    @Query("SELECT * FROM daily_metrics WHERE date >= :startDate AND date <= :endDate ORDER BY date DESC")
+    fun getMetricsHistoryRange(startDate: String, endDate: String): Flow<List<DailyMetric>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMetrics(metrics: DailyMetric)
     

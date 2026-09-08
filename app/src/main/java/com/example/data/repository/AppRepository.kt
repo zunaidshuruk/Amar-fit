@@ -209,6 +209,8 @@ class AppRepository(
 
     fun getMetricsHistory(startDate: String) = metricsDao.getMetricsHistory(startDate)
 
+    fun getMetricsHistoryRange(startDate: String, endDate: String) = metricsDao.getMetricsHistoryRange(startDate, endDate)
+
     suspend fun saveUserProfile(profile: UserProfile) {
         userDao.insertProfile(profile)
         try {
