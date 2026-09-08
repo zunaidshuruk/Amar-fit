@@ -222,7 +222,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     .size(56.dp)
                     .shadow(2.dp, CircleShape)
                     .clip(CircleShape)
-                    .background(if (isDark) Slate800 else Surface)
+                    .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface)
                     .testTag("today_edit_tiles_button")
             ) {
                 Icon(
@@ -591,9 +591,9 @@ private fun TodayPillCard(
     onClick: (() -> Unit)? = null
 ) {
     val containerBg = when {
-        isMuted -> if (isDark) Slate800.copy(alpha = 0.5f) else Slate100.copy(alpha = 0.8f)
+        isMuted -> if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) else Slate100.copy(alpha = 0.8f)
         accent != null -> accent.bg
-        else -> if (isDark) Slate800 else Surface
+        else -> if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface
     }
     val contentTint = when {
         isMuted -> if (isDark) Slate500 else Slate400
@@ -622,9 +622,9 @@ private fun TodayPillCard(
                     .size(32.dp)
                     .clip(CircleShape)
                     .background(
-                        if (isMuted) (if (isDark) Slate600 else Slate200)
+                        if (isMuted) (if (isDark) MaterialTheme.colorScheme.surface else Slate200)
                         else if (accent != null) accent.onBg.copy(alpha = 0.15f)
-                        else (if (isDark) Slate600 else Slate100)
+                        else (if (isDark) MaterialTheme.colorScheme.surface else Slate100)
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -668,7 +668,7 @@ private fun LargeRingTileCard(
             .fillMaxWidth()
             .shadow(2.dp, RoundedCornerShape(20.dp))
             .clip(RoundedCornerShape(20.dp))
-            .background(if (isDark) Slate800 else Surface)
+            .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface)
             .clickable { tile.onClick() }
             .padding(16.dp)
     ) {
@@ -703,7 +703,7 @@ private fun LargeRingTileCard(
 
                     // Background Track
                     drawArc(
-                        color = if (isDark) tile.accent.bg else tile.accent.onBg.copy(alpha = 0.15f),
+                        color = tile.accent.onBg.copy(alpha = 0.15f),
                         startAngle = 0f,
                         sweepAngle = 360f,
                         useCenter = false,

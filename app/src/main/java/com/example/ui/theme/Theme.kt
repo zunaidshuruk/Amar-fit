@@ -23,15 +23,15 @@ private val DarkColorScheme =  darkColorScheme(
     primary = Primary, // Deep forest green still primary identity
     secondary = Secondary, // Leaf green identity
     tertiary = Orange500,
-    background = Color(0xFF000000), // True near-black bg
-    surface = Color(0xFF141414), // Near-black surface
-    surfaceVariant = Color(0xFF1C1C1E), // Neutral dark gray for untinted cards/tiles
+    background = Color(0xFF121212), // Material recommended dark theme base
+    surface = Color(0xFF1E1E1E), // ~5% white overlay — base cards
+    surfaceVariant = Color(0xFF262626), // ~9% white overlay — stat tiles / elevated cards
     onPrimary = Color.White,
     onSecondary = Color.Black,
     onTertiary = Color.Black,
-    onBackground = Color(0xFFE0E0E0),
-    onSurface = Color(0xFFE0E0E0),
-    onSurfaceVariant = Color(0xFFB0B0B0),
+    onBackground = Color(0xFFE0E0E0), // high-emphasis, ~87% white
+    onSurface = Color(0xFFE0E0E0), // high-emphasis, ~87% white
+    onSurfaceVariant = Color(0xFFA6A6A6), // medium-emphasis, ~60% white spec
     outline = Slate600
 )
 

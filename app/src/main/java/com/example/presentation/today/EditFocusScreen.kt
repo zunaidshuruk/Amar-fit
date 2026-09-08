@@ -73,11 +73,11 @@ fun EditFocusScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = if (isDark) Slate900 else Background
+                    containerColor = if (isDark) MaterialTheme.colorScheme.background else Background
                 )
             )
         },
-        containerColor = if (isDark) Slate900 else Background
+        containerColor = if (isDark) MaterialTheme.colorScheme.background else Background
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -107,7 +107,7 @@ fun EditFocusScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(if (isDark) Slate800 else Slate100)
+                            .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Slate100)
                             .padding(24.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -310,7 +310,7 @@ private fun ActiveTileRow(
             .fillMaxWidth()
             .shadow(1.dp, RoundedCornerShape(16.dp))
             .clip(RoundedCornerShape(16.dp))
-            .background(if (isDark) Slate800 else Surface)
+            .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface)
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -341,7 +341,7 @@ private fun ActiveTileRow(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(if (isDark) Slate700 else Slate200)
+                                .background(if (isDark) MaterialTheme.colorScheme.surface else Slate200)
                                 .padding(horizontal = 4.dp, vertical = 1.dp)
                         ) {
                             Text(
@@ -368,7 +368,7 @@ private fun ActiveTileRow(
             modifier = Modifier
                 .size(32.dp)
                 .clip(CircleShape)
-                .background(if (isDark) Slate700 else Slate100)
+                .background(if (isDark) MaterialTheme.colorScheme.surface else Slate100)
                 .testTag("remove_tile_${tileId}")
         ) {
             Icon(
@@ -395,7 +395,7 @@ private fun TileOptionCard(
             .fillMaxWidth()
             .shadow(if (isAdded) 0.dp else 1.dp, RoundedCornerShape(16.dp))
             .clip(RoundedCornerShape(16.dp))
-            .background(if (isDark) Slate800 else Surface)
+            .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface)
             .border(
                 width = if (isAdded) 1.5.dp else 0.dp,
                 color = if (isAdded) accent.onBg.copy(alpha = 0.5f) else Color.Transparent,
@@ -444,7 +444,7 @@ private fun TileOptionCard(
                         modifier = Modifier
                             .size(24.dp)
                             .clip(CircleShape)
-                            .background(if (isDark) Slate700 else Slate100)
+                            .background(if (isDark) MaterialTheme.colorScheme.surface else Slate100)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
@@ -479,9 +479,9 @@ private fun SmallTileOptionCard(
     onAdd: () -> Unit
 ) {
     val containerBg = when {
-        isAdded -> if (isDark) Slate800.copy(alpha = 0.6f) else Slate100.copy(alpha = 0.7f)
+        isAdded -> if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f) else Slate100.copy(alpha = 0.7f)
         accent != null -> accent.bg
-        else -> if (isDark) Slate800 else Surface
+        else -> if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface
     }
     val contentTint = when {
         accent != null -> accent.onBg
@@ -496,7 +496,7 @@ private fun SmallTileOptionCard(
             .background(containerBg)
             .border(
                 width = if (isAdded) 1.dp else 0.dp,
-                color = if (isAdded) (if (isDark) Slate700 else Slate300) else Color.Transparent,
+                color = if (isAdded) (if (isDark) MaterialTheme.colorScheme.outline else Slate300) else Color.Transparent,
                 shape = RoundedCornerShape(16.dp)
             )
             .clickable(enabled = !isAdded) { onAdd() }
@@ -517,7 +517,7 @@ private fun SmallTileOptionCard(
                         .clip(CircleShape)
                         .background(
                             if (accent != null) accent.onBg.copy(alpha = 0.15f)
-                            else if (isDark) Slate700 else Slate200
+                            else if (isDark) MaterialTheme.colorScheme.surface else Slate200
                         ),
                     contentAlignment = Alignment.Center
                 ) {
@@ -534,7 +534,7 @@ private fun SmallTileOptionCard(
                         modifier = Modifier
                             .size(22.dp)
                             .clip(CircleShape)
-                            .background(if (isDark) Slate700 else Slate200),
+                            .background(if (isDark) MaterialTheme.colorScheme.surface else Slate200),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -550,7 +550,7 @@ private fun SmallTileOptionCard(
                         modifier = Modifier
                             .size(22.dp)
                             .clip(CircleShape)
-                            .background(if (isDark) Slate700 else Slate100)
+                            .background(if (isDark) MaterialTheme.colorScheme.surface else Slate100)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
