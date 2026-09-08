@@ -1,5 +1,6 @@
 package com.example.presentation.settings
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -32,6 +34,7 @@ fun HealthGoalsScreen(
 ) {
     val profile by viewModel.userProfile.collectAsState()
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -96,13 +99,20 @@ fun HealthGoalsScreen(
                                 val value = cleaned.toIntOrNull()
                                 if (value != null && value > 0) {
                                     coroutineScope.launch {
-                                        viewModel.saveProfile(
+                                        val success = viewModel.saveProfile(
                                             currentProfile.copy(
                                                 stepGoal = value,
                                                 stepGoalIsAuto = false
                                             )
                                         )
+                                        Toast.makeText(
+                                            context,
+                                            if (success) "Steps goal updated" else "Couldn't save — please try again",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
+                                } else {
+                                    Toast.makeText(context, "Enter a valid number of steps", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         )
@@ -129,13 +139,20 @@ fun HealthGoalsScreen(
                                 val value = input.toFloatOrNull()
                                 if (value != null && value > 0f) {
                                     coroutineScope.launch {
-                                        viewModel.saveProfile(
+                                        val success = viewModel.saveProfile(
                                             currentProfile.copy(
                                                 sleepGoalHours = value,
                                                 sleepGoalIsAuto = false
                                             )
                                         )
+                                        Toast.makeText(
+                                            context,
+                                            if (success) "Sleep goal updated" else "Couldn't save — please try again",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
+                                } else {
+                                    Toast.makeText(context, "Enter a valid number of hours", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         )
@@ -162,13 +179,20 @@ fun HealthGoalsScreen(
                                 val value = input.toFloatOrNull()
                                 if (value != null && value > 0f) {
                                     coroutineScope.launch {
-                                        viewModel.saveProfile(
+                                        val success = viewModel.saveProfile(
                                             currentProfile.copy(
                                                 dailyWaterLimitLiters = value,
                                                 waterGoalIsAuto = false
                                             )
                                         )
+                                        Toast.makeText(
+                                            context,
+                                            if (success) "Water goal updated" else "Couldn't save — please try again",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
+                                } else {
+                                    Toast.makeText(context, "Enter a valid number of liters", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         )
@@ -196,13 +220,20 @@ fun HealthGoalsScreen(
                                 val value = cleaned.toIntOrNull()
                                 if (value != null && value > 0) {
                                     coroutineScope.launch {
-                                        viewModel.saveProfile(
+                                        val success = viewModel.saveProfile(
                                             currentProfile.copy(
                                                 dailyCalorieLimit = value,
                                                 calorieGoalIsAuto = false
                                             )
                                         )
+                                        Toast.makeText(
+                                            context,
+                                            if (success) "Calorie goal updated" else "Couldn't save — please try again",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
+                                } else {
+                                    Toast.makeText(context, "Enter a valid number of calories", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         )
