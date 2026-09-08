@@ -483,6 +483,90 @@ class AppRepository(
         }
     }
 
+    suspend fun lookupBarcodeProduct(barcode: String): String = withContext(Dispatchers.IO) {
+        val cleanBarcode = barcode.trim()
+        if (cleanBarcode.isEmpty()) {
+            return@withContext """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "Invalid barcode."}"""
+        }
+        val url = "https://world.openfoodfacts.org/api/v0/product/$cleanBarcode.json"
+        val request = okhttp3.Request.Builder()
+            .url(url)
+            .header("User-Agent", "AmarFit - Android - Version 1.0")
+            .get()
+            .build()
+        try {
+            val response = RetrofitClient.okHttpClient.newCall(request).execute()
+            val responseBody = response.body?.string() ?: ""
+            if (!response.isSuccessful) {
+                return@withContext """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "Barcode $cleanBarcode not found in Open Food Facts database (HTTP ${response.code})."}"""
+            }
+            val rootJson = org.json.JSONObject(responseBody)
+            val status = rootJson.optInt("status", 0)
+            if (status != 1 || !rootJson.has("product")) {
+                return@withContext """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "Barcode $cleanBarcode was not found in the Open Food Facts database."}"""
+            }
+            val product = rootJson.getJSONObject("product")
+            val productName = product.optString("product_name", "").ifBlank {
+                product.optString("product_name_en", "").ifBlank { "Packaged Product" }
+            }
+            val nutriments = product.optJSONObject("nutriments")
+            
+            var calories = 0
+            var carbs = 0f
+            var protein = 0f
+            var fat = 0f
+            var isPerServing = false
+            val servingSize = product.optString("serving_size", "").trim()
+
+            if (nutriments != null) {
+                val energyServing = nutriments.optDouble("energy-kcal_serving", Double.NaN)
+                val carbsServing = nutriments.optDouble("carbohydrates_serving", Double.NaN)
+                val proteinServing = nutriments.optDouble("proteins_serving", Double.NaN)
+                val fatServing = nutriments.optDouble("fat_serving", Double.NaN)
+
+                if (!energyServing.isNaN() && energyServing > 0) {
+                    calories = energyServing.toInt()
+                    carbs = if (!carbsServing.isNaN()) carbsServing.toFloat() else 0f
+                    protein = if (!proteinServing.isNaN()) proteinServing.toFloat() else 0f
+                    fat = if (!fatServing.isNaN()) fatServing.toFloat() else 0f
+                    isPerServing = true
+                } else {
+                    val energy100g = nutriments.optDouble("energy-kcal_100g", Double.NaN).let {
+                        if (it.isNaN()) nutriments.optDouble("energy-kcal", 0.0) else it
+                    }
+                    val carbs100g = nutriments.optDouble("carbohydrates_100g", 0.0)
+                    val protein100g = nutriments.optDouble("proteins_100g", 0.0)
+                    val fat100g = nutriments.optDouble("fat_100g", 0.0)
+
+                    calories = energy100g.toInt()
+                    carbs = carbs100g.toFloat()
+                    protein = protein100g.toFloat()
+                    fat = fat100g.toFloat()
+                    isPerServing = false
+                }
+            }
+
+            val description = if (isPerServing) {
+                if (servingSize.isNotEmpty()) "Per serving ($servingSize)" else "Per serving"
+            } else {
+                "Per 100g — check the package for your actual portion"
+            }
+
+            val resultObj = org.json.JSONObject().apply {
+                put("name", productName)
+                put("category", "Packaged Food")
+                put("calories", calories)
+                put("carbs", carbs)
+                put("protein", protein)
+                put("fat", fat)
+                put("description", description)
+            }
+            resultObj.toString()
+        } catch (e: Exception) {
+            """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "Error looking up barcode: ${e.localizedMessage ?: e.message}"}"""
+        }
+    }
+
     fun generateCoachAdviceStream(topic: String, habit: String, benefits: String): kotlinx.coroutines.flow.Flow<String> {
         val systemInstruction = """
             You are 'Amar-Fit AI', an expert Wellness and Sleep Optimization Coach. 

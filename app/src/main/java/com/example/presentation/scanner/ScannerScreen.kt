@@ -49,6 +49,8 @@ import com.example.ui.theme.TextPrimary
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.common.InputImage
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import kotlin.coroutines.resume
@@ -57,6 +59,11 @@ import java.util.concurrent.Executors
 
 import org.json.JSONObject
 
+enum class ScanMode {
+    SCAN_MEAL,
+    SCAN_BARCODE
+}
+
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
@@ -64,6 +71,7 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
     val scanResult by viewModel.scanResult.collectAsState()
     val isScanning by viewModel.isScanning.collectAsState()
 
+    var scanMode by remember { mutableStateOf(ScanMode.SCAN_MEAL) }
     var parsedName by remember { mutableStateOf("") }
     var parsedCategory by remember { mutableStateOf("") }
     var parsedCalories by remember { mutableStateOf(0) }
@@ -89,7 +97,7 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                 parsedDescription = json.optString("description", "")
             } catch (e: Exception) {
                 parsedName = "Scan Failed"
-                parsedDescription = "Could not parse AI response: ${e.message}"
+                parsedDescription = "Could not parse response: ${e.message}"
                 parsedCategory = "Error"
                 parsedCalories = 0
                 parsedCarbs = 0f
@@ -109,11 +117,67 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black).windowInsetsPadding(WindowInsets.safeDrawing)) {
             CameraPreviewView(
                 onImageCaptured = { bitmap ->
-                    val base64 = encodeBitmapToBase64(bitmap)
-                    viewModel.analyzeImage(base64)
+                    if (scanMode == ScanMode.SCAN_MEAL) {
+                        val base64 = encodeBitmapToBase64(bitmap)
+                        viewModel.analyzeImage(base64)
+                    } else {
+                        val image = InputImage.fromBitmap(bitmap, 0)
+                        val scanner = BarcodeScanning.getClient()
+                        scanner.process(image)
+                            .addOnSuccessListener { barcodes ->
+                                val firstBarcode = barcodes.firstOrNull { !it.rawValue.isNullOrBlank() }?.rawValue
+                                if (!firstBarcode.isNullOrBlank()) {
+                                    viewModel.lookupBarcode(firstBarcode)
+                                } else {
+                                    viewModel.setScanResultDirect("""{"name": "No barcode detected", "category": "Scan Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "No barcode detected — try again."}""")
+                                }
+                            }
+                            .addOnFailureListener { e ->
+                                viewModel.setScanResultDirect("""{"name": "Scan Failed", "category": "Scan Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "Error reading barcode: ${e.message}"}""")
+                            }
+                    }
                 },
                 onClose = onNavigateBack
             )
+
+            // Top mode toggle: "Scan Meal" vs "Scan Barcode"
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 16.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color.Black.copy(alpha = 0.65f))
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    onClick = { scanMode = ScanMode.SCAN_MEAL },
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (scanMode == ScanMode.SCAN_MEAL) Emerald500 else Color.Transparent,
+                    contentColor = Color.White
+                ) {
+                    Text(
+                        text = "Scan Meal",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        fontSize = 14.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                    )
+                }
+                Surface(
+                    onClick = { scanMode = ScanMode.SCAN_BARCODE },
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (scanMode == ScanMode.SCAN_BARCODE) Emerald500 else Color.Transparent,
+                    contentColor = Color.White
+                ) {
+                    Text(
+                        text = "Scan Barcode",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        fontSize = 14.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                    )
+                }
+            }
 
             // Overlay for scanning progress
             if (isScanning) {
@@ -124,7 +188,11 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator(color = Emerald500)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Analyzing Bangladeshi Dish...", color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                        Text(
+                            if (scanMode == ScanMode.SCAN_BARCODE) "Looking up Barcode..." else "Analyzing Bangladeshi Dish...",
+                            color = Color.White,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -189,15 +257,20 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                                         proteinG = parsedProtein,
                                         fatG = parsedFat
                                     )
+                                    viewModel.clearScanResult() 
+                                    selectedMealType = "Snack"
+                                    onNavigateBack()
+                                } else {
+                                    viewModel.clearScanResult() 
+                                    selectedMealType = "Snack"
                                 }
-                                viewModel.clearScanResult() 
-                                selectedMealType = "Snack"
-                                onNavigateBack()
                             },
                             modifier = Modifier.fillMaxWidth().height(50.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Emerald600)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (parsedCalories > 0) Emerald600 else MaterialTheme.colorScheme.outline
+                            )
                         ) {
-                            Text("Awesome! Log this meal")
+                            Text(if (parsedCalories > 0) "Awesome! Log this meal" else "Dismiss")
                         }
                     }
                 }

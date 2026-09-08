@@ -268,6 +268,20 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             _isScanning.value = false
         }
     }
+
+    fun lookupBarcode(barcode: String) {
+        viewModelScope.launch {
+            _isScanning.value = true
+            _scanResult.value = null
+            val result = repository.lookupBarcodeProduct(barcode)
+            _scanResult.value = result
+            _isScanning.value = false
+        }
+    }
+
+    fun setScanResultDirect(json: String) {
+        _scanResult.value = json
+    }
     
     fun clearScanResult() {
         _scanResult.value = null
