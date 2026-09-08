@@ -61,6 +61,7 @@ fun MetricDetailScreen(
         "carbsG" -> "Carbs"
         "proteinG" -> "Protein"
         "fatG" -> "Fat"
+        "waterLiters" -> "Water"
         "exerciseDays" -> "Exercise Days"
         "heartRate" -> "Heart Rate"
         "oxygenSaturation" -> "Blood Oxygen (SpO2)"
@@ -79,6 +80,7 @@ fun MetricDetailScreen(
                 "carbsG" -> it.carbsG > 0f
                 "proteinG" -> it.proteinG > 0f
                 "fatG" -> it.fatG > 0f
+                "waterLiters" -> it.waterLiters > 0f
                 "exerciseDays" -> it.exerciseMinutes > 0
                 "heartRate" -> it.heartRate > 0
                 "oxygenSaturation" -> it.oxygenSaturation > 0
@@ -98,6 +100,7 @@ fun MetricDetailScreen(
             "carbsG" -> it.carbsG > 0f
             "proteinG" -> it.proteinG > 0f
             "fatG" -> it.fatG > 0f
+            "waterLiters" -> it.waterLiters > 0f
             "exerciseDays" -> it.exerciseMinutes > 0
             "heartRate" -> it.heartRate > 0
             "oxygenSaturation" -> it.oxygenSaturation > 0
@@ -116,6 +119,7 @@ fun MetricDetailScreen(
             "carbsG" -> "${String.format(java.util.Locale.US, "%.1f", latestVal.carbsG)} g"
             "proteinG" -> "${String.format(java.util.Locale.US, "%.1f", latestVal.proteinG)} g"
             "fatG" -> "${String.format(java.util.Locale.US, "%.1f", latestVal.fatG)} g"
+            "waterLiters" -> "${String.format(java.util.Locale.US, "%.1f", latestVal.waterLiters)} L"
             "exerciseDays" -> "${chronologicalData.count { it.exerciseMinutes > 0 }} active days"
             "heartRate" -> "${latestVal.heartRate} bpm"
             "oxygenSaturation" -> "${String.format(java.util.Locale.US, "%.1f", latestVal.oxygenSaturation)}%"
@@ -137,6 +141,7 @@ fun MetricDetailScreen(
                 "carbsG" -> if (it.carbsG > 0f) it.carbsG else null
                 "proteinG" -> if (it.proteinG > 0f) it.proteinG else null
                 "fatG" -> if (it.fatG > 0f) it.fatG else null
+                "waterLiters" -> if (it.waterLiters > 0f) it.waterLiters else null
                 "heartRate" -> if (it.heartRate > 0) it.heartRate.toFloat() else null
                 "oxygenSaturation" -> if (it.oxygenSaturation > 0f) it.oxygenSaturation else null
                 "heartRateVariability" -> if (it.heartRateVariability > 0f) it.heartRateVariability else null
@@ -156,6 +161,7 @@ fun MetricDetailScreen(
             "carbsG" -> "${String.format(java.util.Locale.US, "%.1f", averageVal)} g"
             "proteinG" -> "${String.format(java.util.Locale.US, "%.1f", averageVal)} g"
             "fatG" -> "${String.format(java.util.Locale.US, "%.1f", averageVal)} g"
+            "waterLiters" -> "${String.format(java.util.Locale.US, "%.1f", averageVal)} L"
             "heartRate" -> "${String.format(java.util.Locale.US, "%.1f", averageVal)} bpm"
             "oxygenSaturation" -> "${String.format(java.util.Locale.US, "%.1f", averageVal)}%"
             "heartRateVariability" -> "${String.format(java.util.Locale.US, "%.1f", averageVal)} ms"
@@ -299,7 +305,7 @@ fun MetricDetailScreen(
                     }
                 } else {
                     when (metricKey) {
-                        "steps", "activeCaloriesBurned", "caloriesConsumed", "carbsG", "proteinG", "fatG" -> {
+                        "steps", "activeCaloriesBurned", "caloriesConsumed", "carbsG", "proteinG", "fatG", "waterLiters" -> {
                             StepsCaloriesBarChart(
                                 data = chronologicalData,
                                 metricKey = metricKey,
@@ -360,6 +366,7 @@ private fun StepsCaloriesBarChart(
                         "carbsG" -> it.carbsG
                         "proteinG" -> it.proteinG
                         "fatG" -> it.fatG
+                        "waterLiters" -> it.waterLiters
                         else -> 0f
                     }
                 }.maxOrNull() ?: 100f).coerceAtLeast(1f)
@@ -371,6 +378,7 @@ private fun StepsCaloriesBarChart(
                     "carbsG" -> if (isDark) Color(0xFFFCD34D) else Color(0xFFD97706)
                     "proteinG" -> if (isDark) Color(0xFF6EE7B7) else Emerald700
                     "fatG" -> if (isDark) Color(0xFFC4B5FD) else Color(0xFF7C3AED)
+                    "waterLiters" -> AccentTokens.waterAccent(isDark).onBg
                     else -> Emerald500
                 }
 
@@ -388,6 +396,7 @@ private fun StepsCaloriesBarChart(
                         "carbsG" -> metric.carbsG
                         "proteinG" -> metric.proteinG
                         "fatG" -> metric.fatG
+                        "waterLiters" -> metric.waterLiters
                         else -> 0f
                     }
                     if (value > 0f) {

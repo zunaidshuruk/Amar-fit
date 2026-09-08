@@ -690,6 +690,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
         )
 
         val additionalMetrics = listOf(
+            Triple("Water", metrics?.waterLiters?.let { if (it > 0f) "${String.format(java.util.Locale.US, "%.1f", it)} L" else null } ?: "--", "waterLiters"),
             Triple("Calories Consumed", metrics?.caloriesConsumed?.let { if (it > 0) "${NumberFormat.getIntegerInstance().format(it)} kcal" else null } ?: "--", "caloriesConsumed"),
             Triple("Heart Rate", if (heartRate > 0) "$heartRate bpm" else "--", "heartRate"),
             Triple("Blood Oxygen (SpO2)", metrics?.oxygenSaturation?.let { if (it > 0f) "${String.format(java.util.Locale.US, "%.1f", it)}%" else null } ?: "--", "oxygenSaturation"),
