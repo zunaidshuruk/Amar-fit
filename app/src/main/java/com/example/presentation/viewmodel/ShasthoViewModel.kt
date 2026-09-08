@@ -318,9 +318,19 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun recalculateAutoGoals(profile: UserProfile): UserProfile {
+        return profile.copy(
+            stepGoal = if (profile.stepGoalIsAuto) com.example.data.health.HealthGoalCalculator.calculateStepGoal(profile) else profile.stepGoal,
+            sleepGoalHours = if (profile.sleepGoalIsAuto) com.example.data.health.HealthGoalCalculator.calculateSleepGoalHours(profile) else profile.sleepGoalHours,
+            dailyWaterLimitLiters = if (profile.waterGoalIsAuto) com.example.data.health.HealthGoalCalculator.calculateWaterGoalLiters(profile) else profile.dailyWaterLimitLiters,
+            dailyCalorieLimit = if (profile.calorieGoalIsAuto) com.example.data.health.HealthGoalCalculator.calculateCalorieGoal(profile) else profile.dailyCalorieLimit
+        )
+    }
+
     suspend fun saveProfile(profile: UserProfile): Boolean {
         return try {
-            repository.saveUserProfile(profile)
+            val updatedProfile = recalculateAutoGoals(profile)
+            repository.saveUserProfile(updatedProfile)
             // Initialize today's metrics if not exist
             if (todayMetrics.value == null) {
                 repository.saveMetrics(DailyMetric(date = todayDateString))
