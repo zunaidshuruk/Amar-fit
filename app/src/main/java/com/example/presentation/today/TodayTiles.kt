@@ -124,20 +124,22 @@ fun resolveLargeTile(
     metrics: DailyMetric?,
     last7Metrics: List<DailyMetric>,
     isDark: Boolean,
+    stepGoal: Int = 10000,
     onOpenStepsDialog: () -> Unit,
     onNavigateToFitness: () -> Unit
 ): ResolvedLargeTile? {
     return when (id) {
         "large_steps" -> {
             val steps = metrics?.steps ?: 0
-            val progress = (steps.toFloat() / 10000f).coerceIn(0f, 1f)
+            val goal = if (stepGoal > 0) stepGoal else 10000
+            val progress = (steps.toFloat() / goal.toFloat()).coerceIn(0f, 1f)
             val accent = AccentTokens.stepsAccent(isDark)
             ResolvedLargeTile(
                 id = "large_steps",
                 title = "Daily Steps",
                 progress = progress,
                 insideValue = String.format(Locale.US, "%,d", steps),
-                insideSubtext = "of 10,000",
+                insideSubtext = "of ${String.format(Locale.US, "%,d", goal)}",
                 accent = accent,
                 onClick = onOpenStepsDialog
             )

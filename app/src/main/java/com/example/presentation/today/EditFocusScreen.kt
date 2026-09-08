@@ -166,6 +166,7 @@ fun EditFocusScreen(
                             metrics = metrics,
                             last7Metrics = last7Metrics,
                             isDark = isDark,
+                            stepGoal = profile?.stepGoal ?: 10000,
                             onOpenStepsDialog = {},
                             onNavigateToFitness = {}
                         )
@@ -281,6 +282,7 @@ private fun ActiveTileRow(
             metrics = metrics,
             last7Metrics = last7Metrics,
             isDark = isDark,
+            stepGoal = profile?.stepGoal ?: 10000,
             onOpenStepsDialog = {},
             onNavigateToFitness = {}
         )

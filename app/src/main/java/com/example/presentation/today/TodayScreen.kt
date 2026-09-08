@@ -68,7 +68,8 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val waterLimit = profile?.dailyWaterLimitLiters ?: 3.0f
     val waterConsumed = metrics?.waterLiters ?: 0f
     val steps = metrics?.steps ?: 0
-    val stepsProgress = (steps.toFloat() / 10000f).coerceIn(0f, 1f)
+    val stepGoal = profile?.stepGoal?.takeIf { it > 0 } ?: 10000
+    val stepsProgress = (steps.toFloat() / stepGoal.toFloat()).coerceIn(0f, 1f)
     val exerciseDays = remember(last7Metrics) { last7Metrics.count { it.exerciseMinutes > 0 } }
     val badges = profile?.badges?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
     val points = profile?.points ?: 0
@@ -97,6 +98,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                         metrics = metrics,
                         last7Metrics = last7Metrics,
                         isDark = isDark,
+                        stepGoal = stepGoal,
                         onOpenStepsDialog = { showStepsOptionDialog = true },
                         onNavigateToFitness = { navigateToTab(navController, "fitness") }
                     )
