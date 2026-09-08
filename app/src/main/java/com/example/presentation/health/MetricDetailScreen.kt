@@ -24,6 +24,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -35,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import android.graphics.Paint
 import com.example.data.health.HealthGoalCalculator
 import com.example.data.local.DailyMetric
+import com.example.data.local.UserProfile
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
 import java.time.Duration
@@ -432,6 +434,7 @@ fun MetricDetailScreen(
                             StepsCaloriesBarChart(
                                 data = chronologicalData,
                                 metricKey = metricKey,
+                                profile = profile,
                                 isDark = isDark
                             )
                         }
@@ -578,8 +581,18 @@ fun MetricDetailScreen(
 private fun StepsCaloriesBarChart(
     data: List<DailyMetric>,
     metricKey: String,
+    profile: UserProfile?,
     isDark: Boolean
 ) {
+    val goalLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+    val rawGoal = when (metricKey) {
+        "steps" -> profile?.stepGoal?.toFloat()
+        "caloriesConsumed" -> profile?.dailyCalorieLimit?.toFloat()
+        "waterLiters" -> profile?.dailyWaterLimitLiters
+        else -> null
+    }
+    val goalValue = if (rawGoal != null && rawGoal > 0f) rawGoal else null
+
     BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(250.dp)) {
         val totalWidth = maxWidth
         val contentWidth = if (data.size > 15) {
@@ -594,7 +607,7 @@ private fun StepsCaloriesBarChart(
                 .horizontalScroll(rememberScrollState())
         ) {
             Canvas(modifier = Modifier.width(contentWidth).fillMaxHeight().padding(vertical = 16.dp)) {
-                val maxVal = (data.map {
+                val dataMax = (data.map {
                     when (metricKey) {
                         "steps" -> it.steps.toFloat()
                         "activeCaloriesBurned" -> it.activeCaloriesBurned.toFloat()
@@ -606,6 +619,8 @@ private fun StepsCaloriesBarChart(
                         else -> 0f
                     }
                 }.maxOrNull() ?: 100f).coerceAtLeast(1f)
+
+                val maxVal = if (goalValue != null) maxOf(dataMax, goalValue) else dataMax
 
                 val barColor = when (metricKey) {
                     "steps" -> Emerald500
@@ -655,6 +670,37 @@ private fun StepsCaloriesBarChart(
                             size = Size(barWidth, 8.dp.toPx()),
                             cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
                         )
+                    }
+                }
+
+                if (goalValue != null && goalValue > 0f) {
+                    val rawY = height - (goalValue / maxVal) * (height - 8.dp.toPx())
+                    val lineY = rawY.coerceAtLeast(14.dp.toPx())
+
+                    drawLine(
+                        color = goalLineColor,
+                        start = Offset(0f, lineY),
+                        end = Offset(width, lineY),
+                        strokeWidth = 1.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f), 0f)
+                    )
+
+                    val goalLabel = when (metricKey) {
+                        "steps" -> "Goal: ${String.format(Locale.US, "%,d", goalValue.toInt())}"
+                        "caloriesConsumed" -> "Goal: ${goalValue.toInt()}"
+                        "waterLiters" -> "Goal: ${String.format(Locale.US, "%.1f", goalValue)}L"
+                        else -> "Goal: $goalValue"
+                    }
+
+                    val textPaint = Paint().apply {
+                        this.color = goalLineColor.toArgb()
+                        this.textSize = 10.sp.toPx()
+                        this.isAntiAlias = true
+                        this.textAlign = Paint.Align.LEFT
+                    }
+
+                    drawIntoCanvas { canvas ->
+                        canvas.nativeCanvas.drawText(goalLabel, 4.dp.toPx(), lineY - 4.dp.toPx(), textPaint)
                     }
                 }
             }
