@@ -2,7 +2,7 @@
 
 **How this file works:** This is the single source of truth for what's done and what's pending. Every item is only checked off after being verified against the actual GitHub repo (file contents, not AI Studio's self-reported summaries). When bug fixes or side work interrupt the main sprint sequence, this file is what keeps the overall plan from getting lost — update it, don't rely on memory. Commit this file to the repo root and re-check it at the start of every session.
 
-Last verified: current session, against commit `63251b1`.
+Last verified: current session, against commit `6b81aa9`.
 
 **Note on this file's own reliability:** I (Claude) have no push access to this repo — every tracker edit I make only exists in my local scratch clone until you manually place the file, and each time I `git reset --hard origin/main` to see your latest push, any of my own tracker edits that hadn't been placed yet are silently discarded. This has now happened three times in a row. If you want tracker edits to reliably stick, place the file I send you into the repo root before your next AI Studio push — it costs nothing and stops this from recurring.
 
@@ -46,8 +46,7 @@ Last verified: current session, against commit `63251b1`.
 ## ✅ PART C — NEW DESIGN & FEATURE BACKLOG (complete)
 
 1. [x] Height/Weight picker redesign
-2. [x] Health tab overhaul — Focus areas, Health checks, Personal info, and Key metrics graphs (Weight/Calories Burned/Steps/Exercise Days) all built.
-   - *(Remaining, small: no graph card yet for food Calories **consumed** — though `DailyMetric.caloriesConsumed` already exists and is already tracked, so this is just a missing chart, not a schema gap — and Carbs/Fat/Protein graphs are blocked on a `FoodLog`/`DailyMetric` schema change. → now being scoped as "macro tracking", see below.)*
+2. [x] Health tab overhaul — Focus areas, Health checks, Personal info, and Key metrics graphs (Weight/Calories Burned/Steps/Exercise Days/Calories Consumed/Carbs/Protein/Fat) all built. The Calories Consumed + macro graph cards landed as part of "macro tracking" below.
 3. [x] Today tab redesign — fixed Daily Steps ring + pill-tile layout, full-screen Edit Focus picker, shared `ShasthoViewModel.calculateResilienceScore()`.
 4. [x] Health Connect READ expansion (Active calories, HRV, SpO2, Skin Temp, Breathing Rate)
 5. [x] Per-metric detail drill-down screens (`MetricDetailScreen.kt`)
@@ -66,10 +65,8 @@ Last verified: current session, against commit `63251b1`.
 
 ---
 
-## 🔲 IN PROGRESS
-
-- [ ] **Macro tracking (Carbs/Fat/Protein + Calories Consumed graph card)** — being scoped now. Requires: `FoodLog` + `DailyMetric` schema additions (carbsG/proteinG/fatG), a new Room migration (v28→29), extending the Gemini food-analysis JSON schema (both text and image analysis already ask the AI to estimate macros — they just get dumped into the free-text `description` field today instead of structured fields), updating both entry points (`ShasthoViewModel.analyzeFoodText` and `ScannerScreen.kt`'s direct `logScannedFood` call) to parse and pass the new fields through, and new Key Metrics graph cards in `HealthScreen.kt` (Calories Consumed can reuse the existing bar-chart pattern immediately — no schema change needed for that one specifically).
+- [x] **Macro tracking (Carbs/Fat/Protein + Calories Consumed graph card)** — verified fixed, with one detour. AI Studio's push (`059835f`) correctly added the schema (`carbsG`/`proteinG`/`fatG` on `FoodLog`/`DailyMetric`, migration v28→29), the Gemini JSON schema extension, the parsing/logging plumbing, and the new Key Metrics graph cards + drill-down support in `HealthScreen.kt`/`MetricDetailScreen.kt`. **Then a file-ordering accident broke it**: the three files I'd sent for the history-trend fix (`Daos.kt`/`AppRepository.kt`/`ShasthoViewModel.kt`) were snapshotted *before* macro tracking existed, and uploading them after `059835f` silently reverted the Gemini prompt schema and `logScannedFood`'s macro params — AI Studio then "cleaned up" the resulting compile break by deleting the now-orphaned macro parsing in `ScannerScreen.kt` (`f02e3ee`) instead of restoring the missing plumbing. Caught it this session by grepping for `carbsG`/`proteinG`/`fatG` across every touched file after your push — found the schema/UI intact but the capture path dead. Fixed directly (not AI Studio): restored the Gemini JSON schema + fallback error JSON in `AppRepository.kt`, restored parsing + `logScannedFood` params/increments in `ShasthoViewModel.kt`, restored parsing + pass-through in `ScannerScreen.kt` — merged cleanly on top of the history-trend fix, not a revert of it. Delivered as 3 files, commit `6b81aa9` locally. **Lesson for next time: when I hand you files for a direct fix, I'll flag it explicitly if those files also touch something currently in flight on an AI Studio branch, since uploading stale snapshots after newer work can silently clobber it like this did.**
 
 ## Next step
 
-Macro tracking is the only real open feature thread. Once scoped and pushed, Part C's backlog will be fully closed out with nothing deferred.
+Part C's backlog is now fully closed out with nothing deferred. Worth a fresh backlog pass, or a full regression pass now that several things (dark mode, charts, macro tracking, history trend) have landed in quick succession — reviewing the whole app end to end wouldn't hurt given this session's file-ordering mishap.
