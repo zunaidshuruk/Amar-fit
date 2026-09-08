@@ -706,24 +706,118 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
         var stepsInput by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showStepsDialog = false },
-            title = { Text("Log Steps Manually") },
-            text = {
-                OutlinedTextField(
-                    value = stepsInput,
-                    onValueChange = { stepsInput = it },
-                    label = { Text("Steps walked") },
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+            title = {
+                Text(
+                    text = "Log Steps Manually",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
                 )
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    val s = stepsInput.toIntOrNull()
-                    if (s != null) {
-                        viewModel.addSteps(s)
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Quick add",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val quickOptions = listOf(
+                            Triple("Short Walk", "+500", 500),
+                            Triple("Walk", "+1,000", 1000),
+                            Triple("Long Walk", "+2,000", 2000)
+                        )
+                        quickOptions.forEach { (name, label, amount) ->
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        viewModel.addSteps(amount)
+                                        showStepsDialog = false
+                                    },
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isDark) Emerald900.copy(alpha = 0.4f) else Emerald50,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) Emerald700 else Emerald200)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = name,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        maxLines = 1
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = label,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isDark) Emerald300 else Emerald700
+                                    )
+                                }
+                            }
+                        }
                     }
-                    showStepsDialog = false
-                }) { Text("Save") }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+
+                    Text(
+                        text = "Other amount",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = stepsInput,
+                            onValueChange = { stepsInput = it },
+                            label = { Text("Steps") },
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                            ),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        Button(
+                            onClick = {
+                                val s = stepsInput.toIntOrNull()
+                                if (s != null && s > 0) {
+                                    viewModel.addSteps(s)
+                                    showStepsDialog = false
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Emerald600),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.height(56.dp)
+                        ) {
+                            Text("Add")
+                        }
+                    }
+                }
             },
+            confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showStepsDialog = false }) { Text("Cancel") }
             }
