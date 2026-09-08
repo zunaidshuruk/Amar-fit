@@ -136,8 +136,8 @@ fun resolveLargeTile(
                 id = "large_steps",
                 title = "Daily Steps",
                 progress = progress,
-                insideValue = "${(progress * 100).toInt()}%",
-                insideSubtext = "${String.format(Locale.US, "%,d", steps)} / 10,000",
+                insideValue = String.format(Locale.US, "%,d", steps),
+                insideSubtext = "of 10,000",
                 accent = accent,
                 onClick = onOpenStepsDialog
             )
@@ -151,8 +151,8 @@ fun resolveLargeTile(
                 id = "large_weekly_cardio",
                 title = "Weekly Cardio",
                 progress = progress,
-                insideValue = "${(progress * 100).toInt()}%",
-                insideSubtext = "$weeklyExerciseMinutes / $cardioGoal min",
+                insideValue = "$weeklyExerciseMinutes",
+                insideSubtext = "of $cardioGoal min",
                 accent = accent,
                 onClick = onNavigateToFitness
             )

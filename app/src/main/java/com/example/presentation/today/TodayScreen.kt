@@ -678,42 +678,44 @@ private fun LargeRingTileCard(
             .clip(RoundedCornerShape(20.dp))
             .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface)
             .clickable { tile.onClick() }
-            .padding(16.dp)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Box(
+            modifier = Modifier
+                .size(136.dp)
+                .padding(vertical = 4.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = tile.title,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
-                modifier = Modifier.align(Alignment.Start)
-            )
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val strokeWidth = 11.dp.toPx()
+                val diameter = size.minDimension - strokeWidth
+                val topLeftOffset = androidx.compose.ui.geometry.Offset(
+                    (size.width - diameter) / 2f,
+                    (size.height - diameter) / 2f
+                )
+                val arcSize = androidx.compose.ui.geometry.Size(diameter, diameter)
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Box(
-                modifier = Modifier
-                    .size(130.dp)
-                    .padding(vertical = 4.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val strokeWidth = 11.dp.toPx()
-                    val diameter = size.minDimension - strokeWidth
-                    val topLeftOffset = androidx.compose.ui.geometry.Offset(
-                        (size.width - diameter) / 2f,
-                        (size.height - diameter) / 2f
+                // Background Track (Open gauge 270 degrees starting at bottom-left 135 deg)
+                drawArc(
+                    color = tile.accent.onBg.copy(alpha = 0.15f),
+                    startAngle = 135f,
+                    sweepAngle = 270f,
+                    useCenter = false,
+                    topLeft = topLeftOffset,
+                    size = arcSize,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(
+                        width = strokeWidth,
+                        cap = StrokeCap.Round
                     )
-                    val arcSize = androidx.compose.ui.geometry.Size(diameter, diameter)
+                )
 
-                    // Background Track
+                // Progress Arc
+                if (tile.progress > 0f) {
                     drawArc(
-                        color = tile.accent.onBg.copy(alpha = 0.15f),
-                        startAngle = 0f,
-                        sweepAngle = 360f,
+                        color = tile.accent.onBg,
+                        startAngle = 135f,
+                        sweepAngle = 270f * tile.progress,
                         useCenter = false,
                         topLeft = topLeftOffset,
                         size = arcSize,
@@ -722,41 +724,38 @@ private fun LargeRingTileCard(
                             cap = StrokeCap.Round
                         )
                     )
-
-                    // Progress Arc
-                    if (tile.progress > 0f) {
-                        drawArc(
-                            color = tile.accent.onBg,
-                            startAngle = -90f,
-                            sweepAngle = 360f * tile.progress,
-                            useCenter = false,
-                            topLeft = topLeftOffset,
-                            size = arcSize,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                width = strokeWidth,
-                                cap = StrokeCap.Round
-                            )
-                        )
-                    }
                 }
+            }
 
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = tile.insideValue,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
-                    )
-                    Text(
-                        text = tile.insideSubtext,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = if (isDark) Slate400 else Slate500
-                    )
-                }
+            // Title inside the ring near top
+            Text(
+                text = tile.title,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = tile.accent.onBg,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 18.dp)
+            )
+
+            // Center raw count and "of [goal]" text
+            Column(
+                modifier = Modifier.padding(top = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = tile.insideValue,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
+                )
+                Text(
+                    text = tile.insideSubtext,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = tile.accent.onBg
+                )
             }
         }
     }
