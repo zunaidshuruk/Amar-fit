@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
@@ -26,6 +27,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -910,23 +912,50 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
     }
 
     if (showBpDialog) {
-        var bpInput by remember { mutableStateOf("") }
+        var systolicInput by remember { mutableStateOf("") }
+        var diastolicInput by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showBpDialog = false },
-            title = { Text("Log Blood Pressure") },
-            text = {
-                OutlinedTextField(
-                    value = bpInput,
-                    onValueChange = { bpInput = it },
-                    label = { Text("Systolic/Diastolic (e.g. 120/80)") }
+            title = {
+                Text(
+                    text = "Log Blood Pressure",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
                 )
+            },
+            text = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = systolicInput,
+                        onValueChange = { systolicInput = it },
+                        label = { Text("Systolic") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    OutlinedTextField(
+                        value = diastolicInput,
+                        onValueChange = { diastolicInput = it },
+                        label = { Text("Diastolic") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    if (bpInput.isNotBlank()) {
-                        viewModel.setBloodPressure(bpInput)
+                    val sys = systolicInput.toIntOrNull()
+                    val dia = diastolicInput.toIntOrNull()
+                    if (sys != null && sys > 0 && dia != null && dia > 0) {
+                        viewModel.setBloodPressure("$sys/$dia")
+                        showBpDialog = false
                     }
-                    showBpDialog = false
                 }) {
                     Text("Save")
                 }
