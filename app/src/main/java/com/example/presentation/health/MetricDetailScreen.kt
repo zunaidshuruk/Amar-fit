@@ -47,6 +47,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
+import kotlinx.coroutines.flow.flowOf
 
 private data class EntryRow(val label: String, val value: String)
 
@@ -69,6 +70,16 @@ fun MetricDetailScreen(
     }
     val history by historyFlow.collectAsState(initial = emptyList())
     val chronologicalData = remember(history) { history.reversed() }
+
+    val previousHistoryFlow = remember(selectedRange, periodOffset, metricKey) {
+        if (metricKey == "heartRate") {
+            viewModel.getMetricsHistoryFlowForPeriod(selectedRange, periodOffset + 1)
+        } else {
+            null
+        }
+    }
+    val previousHistory by (previousHistoryFlow ?: remember { flowOf(emptyList()) }).collectAsState(initial = emptyList())
+    val previousChronologicalData = remember(previousHistory) { previousHistory.reversed() }
 
     val selectedDayDate = remember(periodOffset) {
         LocalDate.now().minusDays(periodOffset.toLong())
@@ -223,6 +234,21 @@ fun MetricDetailScreen(
             }
         }
         if (nonZeroValues.isNotEmpty()) nonZeroValues.average() else null
+    }
+
+    val previousAverageVal = remember(previousChronologicalData, metricKey) {
+        if (metricKey == "heartRate") {
+            val values = previousChronologicalData.map { it.heartRate }.filter { it > 0 }
+            if (values.isNotEmpty()) values.average() else null
+        } else {
+            null
+        }
+    }
+
+    val heartRateDelta = if (metricKey == "heartRate" && averageVal != null && previousAverageVal != null) {
+        averageVal - previousAverageVal
+    } else {
+        null
     }
 
     val displayAverage = if (averageVal != null) {
@@ -395,6 +421,14 @@ fun MetricDetailScreen(
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        if (metricKey == "heartRate" && heartRateDelta != null) {
+                            val sign = if (heartRateDelta >= 0) "+" else ""
+                            Text(
+                                text = "$sign${String.format(Locale.US, "%.1f", heartRateDelta)} bpm vs last period",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
