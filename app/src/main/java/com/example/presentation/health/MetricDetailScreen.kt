@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Refresh
@@ -49,7 +50,7 @@ import java.util.Locale
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.flowOf
 
-private data class EntryRow(val label: String, val value: String)
+private data class EntryRow(val label: String, val value: String, val metGoal: Boolean = false)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -611,13 +612,28 @@ fun MetricDetailScreen(
                     }
                     .reversed()
             } else {
+                val goalForRow: Float? = when (metricKey) {
+                    "steps" -> profile?.stepGoal?.toFloat()
+                    "caloriesConsumed" -> profile?.dailyCalorieLimit?.toFloat()
+                    "waterLiters" -> profile?.dailyWaterLimitLiters
+                    else -> null
+                }?.takeIf { it > 0f }
+
                 chronologicalData
                     .filter { hasMetricValue(it, metricKey) }
                     .reversed()
                     .map { metric ->
+                        val actualValue = when (metricKey) {
+                            "steps" -> metric.steps.toFloat()
+                            "caloriesConsumed" -> metric.caloriesConsumed.toFloat()
+                            "waterLiters" -> metric.waterLiters
+                            else -> null
+                        }
+                        val metGoal = goalForRow != null && actualValue != null && actualValue >= goalForRow
                         EntryRow(
                             label = formatEntryDate(metric.date),
-                            value = formatMetricValueForEntry(metric, metricKey)
+                            value = formatMetricValueForEntry(metric, metricKey),
+                            metGoal = metGoal
                         )
                     }
             }
@@ -670,12 +686,23 @@ fun MetricDetailScreen(
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
-                                Text(
-                                    text = row.value,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (row.metGoal) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = "Goal met",
+                                            tint = Emerald500,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                    }
+                                    Text(
+                                        text = row.value,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                             if (index < displayEntries.size - 1) {
                                 HorizontalDivider(
