@@ -27,9 +27,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.data.health.HealthConnectManager
 import com.example.presentation.navigation.navigateToTab
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -51,6 +53,15 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val glucoseAccent = AccentTokens.glucoseAccent(isDark = isDark)
     val bloodPressureAccent = AccentTokens.bloodPressureAccent(isDark = isDark)
     val sleepAccent = AccentTokens.sleepAccent(isDark = isDark)
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(10_000L)
+            if (HealthConnectManager.hasAnyPermissions(navController.context)) {
+                viewModel.syncWithHealthConnect(navController.context)
+            }
+        }
+    }
 
     val metrics by viewModel.todayMetrics.collectAsState()
     val last7Metrics by viewModel.getMetricsHistoryFlow(7).collectAsState(initial = emptyList())
