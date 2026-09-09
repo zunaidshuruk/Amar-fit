@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -34,6 +35,7 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
     val history by viewModel.metricsHistory.collectAsState()
     val profile by viewModel.userProfile.collectAsState()
     val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val context = LocalContext.current
     
     var weightInput by remember { mutableStateOf(profile?.weightKg?.takeIf { it > 0 }?.toString() ?: "70.0") }
     var heightInput by remember { mutableStateOf(profile?.heightCm?.takeIf { it > 0 }?.toString() ?: "170.0") }
@@ -141,6 +143,9 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
                         val h = heightInput.toFloatOrNull()
                         if (w != null && h != null) {
                             viewModel.setWeightAndHeight(w, h)
+                            android.widget.Toast.makeText(context, "Weight & height saved", android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            android.widget.Toast.makeText(context, "Enter a valid weight and height", android.widget.Toast.LENGTH_SHORT).show()
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),

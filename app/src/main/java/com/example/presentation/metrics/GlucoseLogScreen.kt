@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -35,6 +36,7 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
     val profile by viewModel.userProfile.collectAsState()
     val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
     val glucoseAccent = AccentTokens.glucoseAccent(isDark)
+    val context = LocalContext.current
     
     var morningInput by remember { mutableStateOf(today?.bloodGlucoseMorning?.takeIf { it > 0 }?.toString() ?: "") }
     var nightInput by remember { mutableStateOf(today?.bloodGlucoseNight?.takeIf { it > 0 }?.toString() ?: "") }
@@ -92,8 +94,15 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = {
-                        morningInput.toFloatOrNull()?.let { viewModel.setBloodGlucoseMorning(it) }
-                        nightInput.toFloatOrNull()?.let { viewModel.setBloodGlucoseNight(it) }
+                        val m = morningInput.toFloatOrNull()
+                        val n = nightInput.toFloatOrNull()
+                        if (m == null && n == null) {
+                            android.widget.Toast.makeText(context, "Enter a valid glucose reading", android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            m?.let { viewModel.setBloodGlucoseMorning(it) }
+                            n?.let { viewModel.setBloodGlucoseNight(it) }
+                            android.widget.Toast.makeText(context, "Glucose reading saved", android.widget.Toast.LENGTH_SHORT).show()
+                        }
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Indigo600)
