@@ -59,6 +59,7 @@ fun MetricDetailScreen(
 
     var selectedRange by remember { mutableStateOf("W") }
     var periodOffset by remember(selectedRange) { mutableStateOf(0) }
+    var selectedHrTab by remember(metricKey, selectedRange) { mutableStateOf("Zones") }
 
     val historyFlow = remember(selectedRange, periodOffset) {
         viewModel.getMetricsHistoryFlowForPeriod(selectedRange, periodOffset)
@@ -397,72 +398,117 @@ fun MetricDetailScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Chart Title
-            Text(
-                text = "History Trend",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Chart Render Area
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                if (!hasData) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No data available for this period",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                } else {
-                    when (metricKey) {
-                        "steps", "activeCaloriesBurned", "caloriesConsumed", "carbsG", "proteinG", "fatG", "waterLiters" -> {
-                            StepsCaloriesBarChart(
-                                data = chronologicalData,
-                                metricKey = metricKey,
-                                profile = profile,
-                                isDark = isDark
-                            )
-                        }
-                        "exerciseDays" -> {
-                            ExerciseStreakStrip(
-                                data = chronologicalData,
-                                isDark = isDark
-                            )
-                        }
-                        "heartRate", "oxygenSaturation" -> {
-                            ZoneBarChart(
-                                data = chronologicalData,
-                                metricKey = metricKey
-                            )
-                        }
-                        "heartRateVariability", "skinTemperatureCelsius", "respiratoryRate" -> {
-                            LineChartMetric(
-                                data = chronologicalData,
-                                metricKey = metricKey
+            // Trend / Zones toggle for Heart Rate Day view
+            if (metricKey == "heartRate" && selectedRange == "D") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    listOf("Trend", "Zones").forEach { tab ->
+                        val isSelected = selectedHrTab == tab
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.surface
+                                    else androidx.compose.ui.graphics.Color.Transparent
+                                )
+                                .clickable { selectedHrTab = tab }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = tab,
+                                fontSize = 14.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                 }
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            val showHistoryTrend = if (metricKey == "heartRate" && selectedRange == "D") {
+                selectedHrTab == "Trend"
+            } else {
+                true
+            }
 
-            if (metricKey == "heartRate" && selectedRange == "D") {
+            if (showHistoryTrend) {
+                // Chart Title
+                Text(
+                    text = "History Trend",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Chart Render Area
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (!hasData) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No data available for this period",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        when (metricKey) {
+                            "steps", "activeCaloriesBurned", "caloriesConsumed", "carbsG", "proteinG", "fatG", "waterLiters" -> {
+                                StepsCaloriesBarChart(
+                                    data = chronologicalData,
+                                    metricKey = metricKey,
+                                    profile = profile,
+                                    isDark = isDark
+                                )
+                            }
+                            "exerciseDays" -> {
+                                ExerciseStreakStrip(
+                                    data = chronologicalData,
+                                    isDark = isDark
+                                )
+                            }
+                            "heartRate", "oxygenSaturation" -> {
+                                ZoneBarChart(
+                                    data = chronologicalData,
+                                    metricKey = metricKey
+                                )
+                            }
+                            "heartRateVariability", "skinTemperatureCelsius", "respiratoryRate" -> {
+                                LineChartMetric(
+                                    data = chronologicalData,
+                                    metricKey = metricKey
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            if (metricKey == "heartRate" && selectedRange == "D" && selectedHrTab == "Zones") {
                 Text(
                     text = "Intraday Heart Rate",
                     fontSize = 18.sp,
