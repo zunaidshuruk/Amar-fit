@@ -529,7 +529,8 @@ fun MetricDetailScreen(
                             "heartRate", "oxygenSaturation" -> {
                                 ZoneBarChart(
                                     data = chronologicalData,
-                                    metricKey = metricKey
+                                    metricKey = metricKey,
+                                    age = profile?.age ?: 0
                                 )
                             }
                             "heartRateVariability", "skinTemperatureCelsius", "respiratoryRate" -> {
@@ -869,8 +870,16 @@ private fun ExerciseStreakStrip(
 @Composable
 private fun ZoneBarChart(
     data: List<DailyMetric>,
-    metricKey: String
+    metricKey: String,
+    age: Int = 0
 ) {
+    val goalLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+    val goalValue = if (metricKey == "heartRate") {
+        (HealthGoalCalculator.maxHeartRate(age) * 0.5f)
+    } else {
+        null
+    }
+
     BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(250.dp)) {
         val totalWidth = maxWidth
         val contentWidth = if (data.size > 15) {
@@ -888,7 +897,8 @@ private fun ZoneBarChart(
                 val values = data.map {
                     if (metricKey == "heartRate") it.heartRate.toFloat() else it.oxygenSaturation
                 }
-                val maxVal = (values.maxOfOrNull { it } ?: 100f).coerceAtLeast(1f)
+                val dataMax = (values.maxOfOrNull { it } ?: 100f).coerceAtLeast(1f)
+                val effectiveMax = if (goalValue != null && goalValue > 0f) maxOf(dataMax, goalValue) else dataMax
                 val count = data.size
                 val width = size.width
                 val height = size.height
@@ -913,7 +923,7 @@ private fun ZoneBarChart(
                         }
 
                         val x = if (count > 1) index * (barWidth + spacing) else (width - barWidth) / 2f
-                        val ratio = (value / maxVal).coerceIn(0f, 1f)
+                        val ratio = (value / effectiveMax).coerceIn(0f, 1f)
                         val barHeight = (ratio * (height - 8.dp.toPx())).coerceAtLeast(4.dp.toPx())
                         val y = height - barHeight
 
@@ -931,6 +941,32 @@ private fun ZoneBarChart(
                             size = Size(barWidth, 8.dp.toPx()),
                             cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
                         )
+                    }
+                }
+
+                if (goalValue != null && goalValue > 0f) {
+                    val rawY = height - (goalValue / effectiveMax) * (height - 8.dp.toPx())
+                    val lineY = rawY.coerceAtLeast(14.dp.toPx())
+
+                    drawLine(
+                        color = goalLineColor,
+                        start = Offset(0f, lineY),
+                        end = Offset(width, lineY),
+                        strokeWidth = 1.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f), 0f)
+                    )
+
+                    val goalLabel = "Target: ${goalValue.toInt()} bpm"
+
+                    val textPaint = Paint().apply {
+                        this.color = goalLineColor.toArgb()
+                        this.textSize = 10.sp.toPx()
+                        this.isAntiAlias = true
+                        this.textAlign = Paint.Align.LEFT
+                    }
+
+                    drawIntoCanvas { canvas ->
+                        canvas.nativeCanvas.drawText(goalLabel, 4.dp.toPx(), lineY - 4.dp.toPx(), textPaint)
                     }
                 }
             }
