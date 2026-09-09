@@ -24,6 +24,7 @@ import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 
+import androidx.health.connect.client.request.AggregateGroupByDurationRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.DistanceRecord
@@ -864,6 +865,30 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             }
             samples.sortBy { it.first }
             samples
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun getHourlyStepsForDate(date: java.time.LocalDate): List<Pair<java.time.Instant, Int>> {
+        return try {
+            if (HealthConnectClient.getSdkStatus(getApplication()) != HealthConnectClient.SDK_AVAILABLE) {
+                return emptyList()
+            }
+            val healthConnectClient = HealthConnectClient.getOrCreate(getApplication())
+            val zoneId = ZoneId.systemDefault()
+            val startOfDay = date.atStartOfDay(zoneId).toInstant()
+            val endOfDay = date.plusDays(1).atStartOfDay(zoneId).toInstant()
+            val response = healthConnectClient.aggregateGroupByDuration(
+                AggregateGroupByDurationRequest(
+                    metrics = setOf(StepsRecord.COUNT_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(startOfDay, endOfDay),
+                    timeRangeSlicer = java.time.Duration.ofHours(1)
+                )
+            )
+            response.map { bucket ->
+                bucket.startTime to (bucket.result[StepsRecord.COUNT_TOTAL]?.toInt() ?: 0)
+            }
         } catch (e: Exception) {
             emptyList()
         }

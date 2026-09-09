@@ -99,6 +99,19 @@ fun MetricDetailScreen(
         }
     }
 
+    val stepsHourlyBuckets by produceState<List<Pair<Instant, Int>>>(
+        initialValue = emptyList(),
+        key1 = metricKey,
+        key2 = selectedRange,
+        key3 = selectedDayDate
+    ) {
+        if (metricKey == "steps" && selectedRange == "D") {
+            value = viewModel.getHourlyStepsForDate(selectedDayDate)
+        } else {
+            value = emptyList()
+        }
+    }
+
     val periodLabel = remember(selectedRange, periodOffset) {
         val windowDays = when (selectedRange) {
             "D" -> 1
@@ -435,6 +448,20 @@ fun MetricDetailScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+
+            if (metricKey == "steps" && selectedRange == "D") {
+                Text(
+                    text = "Hourly Steps",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                IntradayStepsChart(buckets = stepsHourlyBuckets, isDark = isDark)
+
+                Spacer(modifier = Modifier.height(24.dp))
+            }
 
             // Trend / Zones toggle for Heart Rate Day view
             if (metricKey == "heartRate" && selectedRange == "D") {
@@ -1297,6 +1324,128 @@ private fun IntradayHeartRateChart(
                         val y = height - 4.dp.toPx()
                         drawIntoCanvas { canvas ->
                             canvas.nativeCanvas.drawText(label, x, y, timePaint)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun IntradayStepsChart(
+    buckets: List<Pair<Instant, Int>>,
+    isDark: Boolean
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        if (buckets.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No data available for this period",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            Column(modifier = Modifier.padding(16.dp)) {
+                val zoneId = ZoneId.systemDefault()
+                // Construct a 24-slot map or list for hours 0..23
+                val hourlyStepCounts = remember(buckets) {
+                    val counts = IntArray(24) { 0 }
+                    buckets.forEach { (instant, count) ->
+                        val hour = instant.atZone(zoneId).hour
+                        if (hour in 0..23) {
+                            counts[hour] += count
+                        }
+                    }
+                    counts
+                }
+
+                val maxSteps = remember(hourlyStepCounts) {
+                    (hourlyStepCounts.maxOrNull() ?: 0).coerceAtLeast(100)
+                }
+
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                ) {
+                    val width = size.width
+                    val height = size.height
+
+                    val leftPadding = 8.dp.toPx()
+                    val rightPadding = 8.dp.toPx()
+                    val topPadding = 16.dp.toPx()
+                    val bottomPadding = 24.dp.toPx()
+
+                    val chartWidth = width - leftPadding - rightPadding
+                    val chartHeight = height - topPadding - bottomPadding
+
+                    val numBars = 24
+                    val totalSpacingRatio = 0.3f
+                    val slotWidth = chartWidth / numBars
+                    val barWidth = slotWidth * (1f - totalSpacingRatio)
+                    val spacing = slotWidth * totalSpacingRatio
+
+                    val barColor = if (isDark) Emerald500 else Emerald600
+
+                    for (hour in 0 until 24) {
+                        val steps = hourlyStepCounts[hour]
+                        val x = leftPadding + hour * slotWidth + (spacing / 2f)
+                        val ratio = (steps.toFloat() / maxSteps.toFloat()).coerceIn(0f, 1f)
+                        val barHeight = if (steps > 0) {
+                            (ratio * chartHeight).coerceAtLeast(3.dp.toPx())
+                        } else {
+                            0f
+                        }
+                        val y = topPadding + chartHeight - barHeight
+
+                        if (barHeight > 0f) {
+                            drawRoundRect(
+                                color = barColor,
+                                topLeft = Offset(x, y),
+                                size = Size(barWidth, barHeight),
+                                cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
+                            )
+                        }
+                    }
+
+                    // Time labels along bottom (every 4 hours: 12 AM, 4 AM, 8 AM, 12 PM, 4 PM, 8 PM)
+                    val hourLabels = listOf(
+                        0 to "12 AM",
+                        4 to "4 AM",
+                        8 to "8 AM",
+                        12 to "12 PM",
+                        16 to "4 PM",
+                        20 to "8 PM"
+                    )
+
+                    val textPaint = Paint().apply {
+                        this.color = (if (isDark) Slate400 else Slate600).toArgb()
+                        this.textSize = 10.sp.toPx()
+                        this.isAntiAlias = true
+                        this.textAlign = Paint.Align.CENTER
+                    }
+
+                    hourLabels.forEach { (hour, label) ->
+                        val x = leftPadding + (hour + 0.5f) * slotWidth
+                        val labelX = x.coerceIn(leftPadding + 14.dp.toPx(), width - rightPadding - 14.dp.toPx())
+                        val y = height - 4.dp.toPx()
+                        drawIntoCanvas { canvas ->
+                            canvas.nativeCanvas.drawText(label, labelX, y, textPaint)
                         }
                     }
                 }
