@@ -577,6 +577,14 @@ fun MetricDetailScreen(
                     isDark = isDark
                 )
 
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Zones are estimated from your age and are not a medical measurement. Consult a healthcare professional for clinical heart rate guidance.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
