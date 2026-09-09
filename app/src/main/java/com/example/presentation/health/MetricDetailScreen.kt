@@ -39,6 +39,7 @@ import com.example.data.local.DailyMetric
 import com.example.data.local.UserProfile
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
+import java.time.DayOfWeek
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -46,6 +47,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
+
+private data class EntryRow(val label: String, val value: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -552,8 +555,31 @@ fun MetricDetailScreen(
             )
             Spacer(modifier = Modifier.height(12.dp))
 
-            val entries = chronologicalData.filter { hasMetricValue(it, metricKey) }.reversed()
-            if (entries.isEmpty()) {
+            val displayEntries: List<EntryRow> = if (metricKey == "heartRate" && (selectedRange == "M" || selectedRange == "3M")) {
+                chronologicalData
+                    .filter { hasMetricValue(it, "heartRate") }
+                    .groupBy { LocalDate.parse(it.date).with(DayOfWeek.MONDAY) }
+                    .toSortedMap()
+                    .map { (weekStartDate, group) ->
+                        val avgBpm = group.map { it.heartRate }.average().roundToInt()
+                        val label = "Week of " + weekStartDate.format(DateTimeFormatter.ofPattern("MMM d", Locale.US))
+                        val value = "$avgBpm bpm"
+                        EntryRow(label = label, value = value)
+                    }
+                    .reversed()
+            } else {
+                chronologicalData
+                    .filter { hasMetricValue(it, metricKey) }
+                    .reversed()
+                    .map { metric ->
+                        EntryRow(
+                            label = formatEntryDate(metric.date),
+                            value = formatMetricValueForEntry(metric, metricKey)
+                        )
+                    }
+            }
+
+            if (displayEntries.isEmpty()) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -587,7 +613,7 @@ fun MetricDetailScreen(
                     )
                 ) {
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                        entries.forEachIndexed { index, metric ->
+                        displayEntries.forEachIndexed { index, row ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -596,19 +622,19 @@ fun MetricDetailScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = formatEntryDate(metric.date),
+                                    text = row.label,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = formatMetricValueForEntry(metric, metricKey),
+                                    text = row.value,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
-                            if (index < entries.size - 1) {
+                            if (index < displayEntries.size - 1) {
                                 HorizontalDivider(
                                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                                 )
