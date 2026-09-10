@@ -50,6 +50,8 @@ data class DailyMetric(
     val weightKg: Float = 0f,
     val sleepHours: Float = 0f,
     val heartRate: Int = 0,
+    val heartRateMin: Int = 0,
+    val heartRateMax: Int = 0,
     val distanceMeters: Float = 0f,
     val exerciseMinutes: Int = 0,
     val externalNutritionCalories: Int = 0,

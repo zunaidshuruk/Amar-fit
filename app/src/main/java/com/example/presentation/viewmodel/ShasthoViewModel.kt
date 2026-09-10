@@ -648,8 +648,10 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
 
-                // 5. Latest Heart Rate
+                // 5. Latest Heart Rate + daily min/max
                 var heartRate = 0
+                var heartRateMin = 0
+                var heartRateMax = 0
                 val hrResponse = healthConnectClient.readRecords(
                     ReadRecordsRequest(HeartRateRecord::class, timeRangeFilter)
                 )
@@ -657,6 +659,11 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     val latestRecord = hrResponse.records.maxByOrNull { it.startTime }
                     if (latestRecord != null && latestRecord.samples.isNotEmpty()) {
                         heartRate = latestRecord.samples.last().beatsPerMinute.toInt()
+                    }
+                    val allBpm = hrResponse.records.flatMap { it.samples }.map { it.beatsPerMinute.toInt() }.filter { it > 0 }
+                    if (allBpm.isNotEmpty()) {
+                        heartRateMin = allBpm.min()
+                        heartRateMax = allBpm.max()
                     }
                 }
 
@@ -826,6 +833,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     bloodPressure = if (bloodPressure.isNotEmpty()) bloodPressure else current.bloodPressure,
                     bloodGlucoseMorning = if (bloodGlucose > 0f) bloodGlucose else current.bloodGlucoseMorning,
                     heartRate = if (heartRate > 0) heartRate else current.heartRate,
+                    heartRateMin = if (heartRateMin > 0) heartRateMin else current.heartRateMin,
+                    heartRateMax = if (heartRateMax > 0) heartRateMax else current.heartRateMax,
                     distanceMeters = if (totalDistance > 0f) totalDistance else current.distanceMeters,
                     exerciseMinutes = if (exerciseMinutes > 0) exerciseMinutes else current.exerciseMinutes,
                     externalNutritionCalories = if (externalNutritionCalories > 0) externalNutritionCalories else current.externalNutritionCalories,
