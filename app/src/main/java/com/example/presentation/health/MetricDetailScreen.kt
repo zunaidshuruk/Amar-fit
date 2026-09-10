@@ -235,6 +235,12 @@ fun MetricDetailScreen(
         "$lo-$hi bpm"
     } else null
 
+    val heartRatePeriodRange = if (metricKey == "heartRate" && selectedRange != "D") {
+        val mins = chronologicalData.map { it.heartRateMin }.filter { it > 0 }
+        val maxs = chronologicalData.map { it.heartRateMax }.filter { it > 0 }
+        if (mins.isNotEmpty() && maxs.isNotEmpty()) "${mins.min()}-${maxs.max()} bpm" else null
+    } else null
+
     val averageVal = remember(chronologicalData, metricKey) {
         val nonZeroValues = chronologicalData.mapNotNull {
             when (metricKey) {
@@ -424,6 +430,7 @@ fun MetricDetailScreen(
                         text = when {
                             metricKey == "exerciseDays" -> "Total Active Days"
                             heartRateDayRange != null -> "Range"
+                            heartRatePeriodRange != null -> "Range"
                             else -> "Latest Reading"
                         },
                         fontSize = 13.sp,
@@ -432,7 +439,7 @@ fun MetricDetailScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = heartRateDayRange ?: displayValue,
+                        text = heartRateDayRange ?: heartRatePeriodRange ?: displayValue,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -964,80 +971,135 @@ private fun ZoneBarChart(
                 .fillMaxSize()
                 .horizontalScroll(rememberScrollState())
         ) {
-            Canvas(modifier = Modifier.width(contentWidth).fillMaxHeight().padding(vertical = 16.dp)) {
-                val values = data.map {
-                    if (metricKey == "heartRate") it.heartRate.toFloat() else it.oxygenSaturation
-                }
-                val dataMax = (values.maxOfOrNull { it } ?: 100f).coerceAtLeast(1f)
-                val effectiveMax = if (goalValue != null && goalValue > 0f) maxOf(dataMax, goalValue) else dataMax
-                val count = data.size
-                val width = size.width
-                val height = size.height
-                val barWidth = (width / (count * 1.5f)).coerceIn(4.dp.toPx(), 24.dp.toPx())
-                val spacing = if (count > 1) (width - (count * barWidth)) / (count - 1) else 0f
+            if (metricKey == "heartRate") {
+                Canvas(modifier = Modifier.width(contentWidth).fillMaxHeight().padding(vertical = 16.dp)) {
+                    val dayMins = data.map { it.heartRateMin }.filter { it > 0 }
+                    val dayMaxs = data.map { it.heartRateMax }.filter { it > 0 }
+                    val dataMin = dayMins.minOrNull() ?: 40
+                    val dataMax = dayMaxs.maxOrNull() ?: 160
+                    val goalInt = goalValue?.toInt()
+                    val rawAxisMin = (if (goalInt != null) minOf(dataMin, goalInt) else dataMin) - 10
+                    val rawAxisMax = (if (goalInt != null) maxOf(dataMax, goalInt) else dataMax) + 15
+                    val axisMin = (rawAxisMin / 10 * 10).coerceAtLeast(0)
+                    val axisMax = ((rawAxisMax / 10) + 1) * 10
+                    val axisRange = (axisMax - axisMin).coerceAtLeast(1)
 
-                data.forEachIndexed { index, metric ->
-                    val value = if (metricKey == "heartRate") metric.heartRate.toFloat() else metric.oxygenSaturation
-                    if (value > 0) {
-                        val color = if (metricKey == "heartRate") {
-                            when {
-                                value < 60f -> Slate500
-                                value <= 100f -> Emerald500
-                                else -> Red500
-                            }
+                    val count = data.size
+                    val height = size.height
+                    val rightPadding = 32.dp.toPx()
+                    val chartWidth = size.width - rightPadding
+                    val barWidth = (chartWidth / (count * 1.5f)).coerceIn(4.dp.toPx(), 24.dp.toPx())
+                    val spacing = if (count > 1) (chartWidth - (count * barWidth)) / (count - 1) else 0f
+
+                    fun getY(bpm: Int): Float {
+                        val ratio = ((bpm - axisMin).toFloat() / axisRange).coerceIn(0f, 1f)
+                        return height - 8.dp.toPx() - ratio * (height - 16.dp.toPx())
+                    }
+
+                    val barColor = Red500
+
+                    data.forEachIndexed { index, metric ->
+                        val x = if (count > 1) index * (barWidth + spacing) else (chartWidth - barWidth) / 2f
+                        if (metric.heartRateMax > 0) {
+                            val yTop = getY(metric.heartRateMax)
+                            val yBottom = getY(metric.heartRateMin.takeIf { it > 0 } ?: metric.heartRateMax)
+                            drawRoundRect(
+                                color = barColor,
+                                topLeft = Offset(x, yTop),
+                                size = Size(barWidth, (yBottom - yTop).coerceAtLeast(4.dp.toPx())),
+                                cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
+                            )
                         } else {
-                            when {
+                            drawRoundRect(
+                                color = Slate500.copy(alpha = 0.35f),
+                                topLeft = Offset(x, height - 16.dp.toPx()),
+                                size = Size(barWidth, 8.dp.toPx()),
+                                cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
+                            )
+                        }
+                    }
+
+                    val dashEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                    val gridColor = Slate500.copy(alpha = 0.3f)
+                    val gridTextPaint = Paint().apply {
+                        this.color = Slate500.toArgb()
+                        this.textSize = 10.sp.toPx()
+                        this.isAntiAlias = true
+                    }
+                    val midVal = (axisMin + axisMax) / 2
+                    listOf(axisMin, midVal, axisMax).forEach { value ->
+                        val y = getY(value)
+                        drawLine(
+                            color = gridColor,
+                            start = Offset(0f, y),
+                            end = Offset(chartWidth, y),
+                            strokeWidth = 1.dp.toPx(),
+                            pathEffect = dashEffect
+                        )
+                        drawIntoCanvas { canvas ->
+                            canvas.nativeCanvas.drawText(value.toString(), chartWidth + 6.dp.toPx(), y + 4.dp.toPx(), gridTextPaint)
+                        }
+                    }
+
+                    if (goalValue != null && goalValue > 0f) {
+                        val lineY = getY(goalValue.toInt())
+                        drawLine(
+                            color = goalLineColor,
+                            start = Offset(0f, lineY),
+                            end = Offset(chartWidth, lineY),
+                            strokeWidth = 1.dp.toPx(),
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f), 0f)
+                        )
+                        val goalLabel = "Target: ${goalValue.toInt()}"
+                        val textPaint = Paint().apply {
+                            this.color = goalLineColor.toArgb()
+                            this.textSize = 10.sp.toPx()
+                            this.isAntiAlias = true
+                            this.textAlign = Paint.Align.LEFT
+                        }
+                        drawIntoCanvas { canvas ->
+                            canvas.nativeCanvas.drawText(goalLabel, 4.dp.toPx(), lineY - 4.dp.toPx(), textPaint)
+                        }
+                    }
+                }
+            } else {
+                // Oxygen Saturation — unchanged behavior, just moved into this branch
+                Canvas(modifier = Modifier.width(contentWidth).fillMaxHeight().padding(vertical = 16.dp)) {
+                    val values = data.map { it.oxygenSaturation }
+                    val effectiveMax = (values.maxOfOrNull { it } ?: 100f).coerceAtLeast(1f)
+                    val count = data.size
+                    val width = size.width
+                    val height = size.height
+                    val barWidth = (width / (count * 1.5f)).coerceIn(4.dp.toPx(), 24.dp.toPx())
+                    val spacing = if (count > 1) (width - (count * barWidth)) / (count - 1) else 0f
+
+                    data.forEachIndexed { index, metric ->
+                        val value = metric.oxygenSaturation
+                        if (value > 0) {
+                            val color = when {
                                 value < 90f -> Red500
                                 value < 95f -> Orange500
                                 else -> Emerald500
                             }
+                            val x = if (count > 1) index * (barWidth + spacing) else (width - barWidth) / 2f
+                            val ratio = (value / effectiveMax).coerceIn(0f, 1f)
+                            val barHeight = (ratio * (height - 8.dp.toPx())).coerceAtLeast(4.dp.toPx())
+                            val y = height - barHeight
+                            drawRoundRect(
+                                color = color,
+                                topLeft = Offset(x, y),
+                                size = Size(barWidth, barHeight),
+                                cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
+                            )
+                        } else {
+                            val x = if (count > 1) index * (barWidth + spacing) else (width - barWidth) / 2f
+                            drawRoundRect(
+                                color = Slate500.copy(alpha = 0.35f),
+                                topLeft = Offset(x, height - 8.dp.toPx()),
+                                size = Size(barWidth, 8.dp.toPx()),
+                                cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
+                            )
                         }
-
-                        val x = if (count > 1) index * (barWidth + spacing) else (width - barWidth) / 2f
-                        val ratio = (value / effectiveMax).coerceIn(0f, 1f)
-                        val barHeight = (ratio * (height - 8.dp.toPx())).coerceAtLeast(4.dp.toPx())
-                        val y = height - barHeight
-
-                        drawRoundRect(
-                            color = color,
-                            topLeft = Offset(x, y),
-                            size = Size(barWidth, barHeight),
-                            cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
-                        )
-                    } else {
-                        val x = if (count > 1) index * (barWidth + spacing) else (width - barWidth) / 2f
-                        drawRoundRect(
-                            color = Slate500.copy(alpha = 0.35f),
-                            topLeft = Offset(x, height - 8.dp.toPx()),
-                            size = Size(barWidth, 8.dp.toPx()),
-                            cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
-                        )
-                    }
-                }
-
-                if (goalValue != null && goalValue > 0f) {
-                    val rawY = height - (goalValue / effectiveMax) * (height - 8.dp.toPx())
-                    val lineY = rawY.coerceAtLeast(14.dp.toPx())
-
-                    drawLine(
-                        color = goalLineColor,
-                        start = Offset(0f, lineY),
-                        end = Offset(width, lineY),
-                        strokeWidth = 1.dp.toPx(),
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f), 0f)
-                    )
-
-                    val goalLabel = "Target: ${goalValue.toInt()} bpm"
-
-                    val textPaint = Paint().apply {
-                        this.color = goalLineColor.toArgb()
-                        this.textSize = 10.sp.toPx()
-                        this.isAntiAlias = true
-                        this.textAlign = Paint.Align.LEFT
-                    }
-
-                    drawIntoCanvas { canvas ->
-                        canvas.nativeCanvas.drawText(goalLabel, 4.dp.toPx(), lineY - 4.dp.toPx(), textPaint)
                     }
                 }
             }
