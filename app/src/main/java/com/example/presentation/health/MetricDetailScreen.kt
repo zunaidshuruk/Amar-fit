@@ -229,6 +229,12 @@ fun MetricDetailScreen(
         "--"
     }
 
+    val heartRateDayRange = if (metricKey == "heartRate" && selectedRange == "D" && heartRateDaySamples.isNotEmpty()) {
+        val lo = heartRateDaySamples.minOf { it.second }
+        val hi = heartRateDaySamples.maxOf { it.second }
+        "$lo-$hi bpm"
+    } else null
+
     val averageVal = remember(chronologicalData, metricKey) {
         val nonZeroValues = chronologicalData.mapNotNull {
             when (metricKey) {
@@ -415,14 +421,18 @@ fun MetricDetailScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = if (metricKey == "exerciseDays") "Total Active Days" else "Latest Reading",
+                        text = when {
+                            metricKey == "exerciseDays" -> "Total Active Days"
+                            heartRateDayRange != null -> "Range"
+                            else -> "Latest Reading"
+                        },
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = displayValue,
+                        text = heartRateDayRange ?: displayValue,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -555,11 +565,18 @@ fun MetricDetailScreen(
                                 )
                             }
                             "heartRate", "oxygenSaturation" -> {
-                                ZoneBarChart(
-                                    data = chronologicalData,
-                                    metricKey = metricKey,
-                                    age = profile?.age ?: 0
-                                )
+                                if (metricKey == "heartRate" && selectedRange == "D") {
+                                    IntradayRangeBarChart(
+                                        samples = heartRateDaySamples,
+                                        isDark = isDark
+                                    )
+                                } else {
+                                    ZoneBarChart(
+                                        data = chronologicalData,
+                                        metricKey = metricKey,
+                                        age = profile?.age ?: 0
+                                    )
+                                }
                             }
                             "heartRateVariability", "skinTemperatureCelsius", "respiratoryRate" -> {
                                 LineChartMetric(
@@ -1324,6 +1341,123 @@ private fun IntradayHeartRateChart(
                         val y = height - 4.dp.toPx()
                         drawIntoCanvas { canvas ->
                             canvas.nativeCanvas.drawText(label, x, y, timePaint)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun IntradayRangeBarChart(
+    samples: List<Pair<Instant, Int>>,
+    isDark: Boolean
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        if (samples.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxWidth().height(220.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No heart rate data for this day",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            Column(modifier = Modifier.padding(16.dp)) {
+                val zoneId = ZoneId.systemDefault()
+                // Bucket samples into 24 hourly slots, each holding min/max bpm for that hour
+                val hourlyBuckets = remember(samples) {
+                    val buckets = Array(24) { mutableListOf<Int>() }
+                    samples.forEach { (instant, bpm) ->
+                        val hour = instant.atZone(zoneId).hour
+                        if (hour in 0..23 && bpm > 0) buckets[hour].add(bpm)
+                    }
+                    buckets.map { if (it.isNotEmpty()) it.min() to it.max() else null }
+                }
+
+                val overallMin = samples.minOf { it.second }
+                val overallMax = samples.maxOf { it.second }
+                // Round the axis bounds to clean multiples of 10, with headroom
+                val axisMin = ((overallMin - 10) / 10 * 10).coerceAtMost(overallMin - 5).coerceAtLeast(0)
+                val axisMax = (((overallMax + 15) / 10) + 1) * 10
+
+                Canvas(
+                    modifier = Modifier.fillMaxWidth().height(220.dp)
+                ) {
+                    val width = size.width
+                    val height = size.height
+                    val leftPadding = 8.dp.toPx()
+                    val rightPadding = 32.dp.toPx()
+                    val topPadding = 16.dp.toPx()
+                    val bottomPadding = 24.dp.toPx()
+                    val chartWidth = width - leftPadding - rightPadding
+                    val chartHeight = height - topPadding - bottomPadding
+
+                    val range = (axisMax - axisMin).coerceAtLeast(1)
+                    fun getY(bpm: Int): Float {
+                        val ratio = ((bpm - axisMin).toFloat() / range).coerceIn(0f, 1f)
+                        return topPadding + chartHeight * (1f - ratio)
+                    }
+
+                    val barColor = if (isDark) Color(0xFFFF6B6B) else Red500
+                    val slotWidth = chartWidth / 24
+                    val barWidth = (slotWidth * 0.4f).coerceAtLeast(3.dp.toPx())
+
+                    hourlyBuckets.forEachIndexed { hour, minMax ->
+                        if (minMax != null) {
+                            val (lo, hi) = minMax
+                            val x = leftPadding + hour * slotWidth + slotWidth / 2f
+                            drawLine(
+                                color = barColor,
+                                start = Offset(x, getY(lo)),
+                                end = Offset(x, getY(hi)),
+                                strokeWidth = barWidth,
+                                cap = androidx.compose.ui.graphics.StrokeCap.Round
+                            )
+                        }
+                    }
+
+                    // Dashed gridlines + labels at axisMin, midpoint, axisMax (matching the
+                    // reference's 3-line y-axis)
+                    val dashEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                    val gridColor = (if (isDark) Slate400 else Slate600).copy(alpha = 0.3f)
+                    val textPaint = Paint().apply {
+                        this.color = (if (isDark) Slate400 else Slate600).toArgb()
+                        this.textSize = 10.sp.toPx()
+                        this.isAntiAlias = true
+                    }
+                    val midVal = (axisMin + axisMax) / 2
+                    listOf(axisMin, midVal, axisMax).forEach { value ->
+                        val y = getY(value)
+                        drawLine(
+                            color = gridColor,
+                            start = Offset(leftPadding, y),
+                            end = Offset(width - rightPadding, y),
+                            strokeWidth = 1.dp.toPx(),
+                            pathEffect = dashEffect
+                        )
+                        drawIntoCanvas { canvas ->
+                            canvas.nativeCanvas.drawText(value.toString(), width - rightPadding + 6.dp.toPx(), y + 4.dp.toPx(), textPaint)
+                        }
+                    }
+
+                    // X-axis labels: 0, 6, 12, 18, 24
+                    listOf(0, 6, 12, 18, 24).forEach { hourMark ->
+                        val x = leftPadding + (hourMark.coerceAtMost(23)) * slotWidth + (if (hourMark == 24) slotWidth else slotWidth / 2f)
+                        drawIntoCanvas { canvas ->
+                            canvas.nativeCanvas.drawText(hourMark.toString(), x, height - 4.dp.toPx(), textPaint)
                         }
                     }
                 }
