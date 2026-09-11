@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -51,6 +52,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.flowOf
 
 private data class EntryRow(val label: String, val value: String, val metGoal: Boolean = false)
+private data class RestingHrAlert(val todayBpm: Int, val baselineAvg: Double, val delta: Int)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,6 +83,15 @@ fun MetricDetailScreen(
     }
     val previousHistory by (previousHistoryFlow ?: remember { flowOf(emptyList()) }).collectAsState(initial = emptyList())
     val previousChronologicalData = remember(previousHistory) { previousHistory.reversed() }
+
+    val monthBaselineFlow = remember(metricKey) {
+        if (metricKey == "heartRate") {
+            viewModel.getMetricsHistoryFlowForPeriod("M", 0)
+        } else {
+            null
+        }
+    }
+    val monthBaselineHistory by (monthBaselineFlow ?: remember { flowOf(emptyList()) }).collectAsState(initial = emptyList())
 
     val selectedDayDate = remember(periodOffset) {
         LocalDate.now().minusDays(periodOffset.toLong())
@@ -278,6 +289,28 @@ fun MetricDetailScreen(
     val previousRestingHrAvg = remember(previousChronologicalData) {
         val values = previousChronologicalData.map { it.restingHeartRate }.filter { it > 0 }
         if (values.isNotEmpty()) values.average() else null
+    }
+
+    val restingHrAlert = remember(monthBaselineHistory, metricKey) {
+        if (metricKey == "heartRate" && monthBaselineHistory.isNotEmpty()) {
+            val validEntries = monthBaselineHistory.filter { it.restingHeartRate > 0 }
+            val todaysRestingEntry = validEntries.maxByOrNull { it.date }
+            val todayStr = LocalDate.now().toString()
+            if (todaysRestingEntry != null && todaysRestingEntry.date == todayStr) {
+                val baselineEntries = validEntries.filter { it.date != todayStr }
+                if (baselineEntries.size >= 5) {
+                    val baselineAvg = baselineEntries.map { it.restingHeartRate }.average()
+                    val todayBpm = todaysRestingEntry.restingHeartRate
+                    if (todayBpm >= baselineAvg + 10.0) {
+                        RestingHrAlert(
+                            todayBpm = todayBpm,
+                            baselineAvg = baselineAvg,
+                            delta = (todayBpm - baselineAvg).roundToInt()
+                        )
+                    } else null
+                } else null
+            } else null
+        } else null
     }
 
     val heartRateDelta = if (metricKey == "heartRate" && averageVal != null && previousAverageVal != null) {
@@ -605,6 +638,54 @@ fun MetricDetailScreen(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            if (metricKey == "heartRate" && selectedRange == "D" && restingHrAlert != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(if (isDark) Orange900.copy(alpha = 0.35f) else Orange50)
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = "Warning",
+                            tint = Orange500,
+                            modifier = Modifier
+                                .size(24.dp)
+                                .padding(top = 2.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = "Resting heart rate is elevated today",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDark) Orange100 else Orange900
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "${restingHrAlert.todayBpm} bpm vs your 30-day average of ${restingHrAlert.baselineAvg.roundToInt()} bpm",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = if (isDark) Orange100.copy(alpha = 0.9f) else Orange700
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "This is not a medical diagnosis. Consult a healthcare professional if you have concerns.",
+                                fontSize = 11.sp,
+                                color = if (isDark) Orange100.copy(alpha = 0.7f) else Orange900.copy(alpha = 0.7f),
+                                lineHeight = 14.sp
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
             if (metricKey == "heartRate" && restingHrAvg != null) {
