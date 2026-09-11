@@ -40,6 +40,7 @@ import com.example.ui.components.MarkdownText
 import com.example.ui.components.MealTypeSelector
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.Background
+import com.example.ui.theme.Emerald50
 import com.example.ui.theme.Emerald500
 import com.example.ui.theme.Emerald600
 import com.example.ui.theme.Emerald900
@@ -80,10 +81,17 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
     var parsedFat by remember { mutableStateOf(0f) }
     var parsedDescription by remember { mutableStateOf("") }
     var selectedMealType by remember { mutableStateOf("Snack") }
+    var portionMultiplier by remember { mutableStateOf(1f) }
+
+    val adjustedCalories = (parsedCalories * portionMultiplier).toInt()
+    val adjustedCarbs = parsedCarbs * portionMultiplier
+    val adjustedProtein = parsedProtein * portionMultiplier
+    val adjustedFat = parsedFat * portionMultiplier
 
     LaunchedEffect(scanResult) {
         if (scanResult != null) {
             selectedMealType = "Snack"
+            portionMultiplier = 1f
             try {
                 // Find JSON block if AI wrapped it in markdown or something
                 val jsonString = scanResult!!.substringAfter("{").substringBeforeLast("}")
@@ -96,6 +104,7 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                 parsedFat = json.optDouble("fat", 0.0).toFloat()
                 parsedDescription = json.optString("description", "")
             } catch (e: Exception) {
+                portionMultiplier = 1f
                 parsedName = "Scan Failed"
                 parsedDescription = "Could not parse response: ${e.message}"
                 parsedCategory = "Error"
@@ -222,6 +231,7 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                             IconButton(onClick = { 
                                 viewModel.clearScanResult() 
                                 selectedMealType = "Snack"
+                                portionMultiplier = 1f
                             }) {
                                 Icon(Icons.Default.Close, "Close")
                             }
@@ -230,11 +240,59 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Slate100)
                         
                         MarkdownText(
-                            text = "$parsedName ($parsedCalories kcal)\n\nCategory: $parsedCategory\n\n$parsedDescription",
+                            text = "$parsedName ($adjustedCalories kcal)\n\nCategory: $parsedCategory\n\n$parsedDescription",
                             color = TextPrimary,
                             modifier = Modifier.verticalScroll(rememberScrollState()).weight(1f, fill = false)
                         )
                         
+                        if (scanMode == ScanMode.SCAN_BARCODE && parsedCalories > 0) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Emerald50)
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        portionMultiplier = (portionMultiplier - 0.25f).coerceIn(0.25f, 5.0f)
+                                    },
+                                    enabled = portionMultiplier > 0.25f
+                                ) {
+                                    Text(
+                                        "−",
+                                        fontSize = 22.sp,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                        color = if (portionMultiplier > 0.25f) Emerald900 else Emerald900.copy(alpha = 0.38f)
+                                    )
+                                }
+
+                                Text(
+                                    text = String.format(java.util.Locale.US, "%.1fx • %d kcal", portionMultiplier, adjustedCalories),
+                                    fontSize = 15.sp,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                    color = Emerald900
+                                )
+
+                                IconButton(
+                                    onClick = {
+                                        portionMultiplier = (portionMultiplier + 0.25f).coerceIn(0.25f, 5.0f)
+                                    },
+                                    enabled = portionMultiplier < 5.0f
+                                ) {
+                                    Text(
+                                        "+",
+                                        fontSize = 22.sp,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                        color = if (portionMultiplier < 5.0f) Emerald900 else Emerald900.copy(alpha = 0.38f)
+                                    )
+                                }
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(16.dp))
 
                         MealTypeSelector(
@@ -250,19 +308,21 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                                     viewModel.logScannedFood(
                                         name = parsedName,
                                         category = parsedCategory,
-                                        calories = parsedCalories,
+                                        calories = adjustedCalories,
                                         description = parsedDescription,
                                         mealType = selectedMealType,
-                                        carbsG = parsedCarbs,
-                                        proteinG = parsedProtein,
-                                        fatG = parsedFat
+                                        carbsG = adjustedCarbs,
+                                        proteinG = adjustedProtein,
+                                        fatG = adjustedFat
                                     )
                                     viewModel.clearScanResult() 
                                     selectedMealType = "Snack"
+                                    portionMultiplier = 1f
                                     onNavigateBack()
                                 } else {
                                     viewModel.clearScanResult() 
                                     selectedMealType = "Snack"
+                                    portionMultiplier = 1f
                                 }
                             },
                             modifier = Modifier.fillMaxWidth().height(50.dp),

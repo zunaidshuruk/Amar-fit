@@ -27,6 +27,7 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.request.AggregateGroupByDurationRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.NutritionRecord
@@ -667,6 +668,22 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
 
+                // 5b. Latest Resting Heart Rate
+                var restingHeartRateValue = 0
+                try {
+                    val restingHrResponse = healthConnectClient.readRecords(
+                        ReadRecordsRequest(RestingHeartRateRecord::class, timeRangeFilter)
+                    )
+                    if (restingHrResponse.records.isNotEmpty()) {
+                        val latestRestingRecord = restingHrResponse.records.maxByOrNull { it.time }
+                        if (latestRestingRecord != null) {
+                            restingHeartRateValue = latestRestingRecord.beatsPerMinute.toInt()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
                 // 6. Distance using Aggregate
                 val distanceAggregate = healthConnectClient.aggregate(
                     AggregateRequest(
@@ -835,6 +852,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     heartRate = if (heartRate > 0) heartRate else current.heartRate,
                     heartRateMin = if (heartRateMin > 0) heartRateMin else current.heartRateMin,
                     heartRateMax = if (heartRateMax > 0) heartRateMax else current.heartRateMax,
+                    restingHeartRate = if (restingHeartRateValue > 0) restingHeartRateValue else current.restingHeartRate,
                     distanceMeters = if (totalDistance > 0f) totalDistance else current.distanceMeters,
                     exerciseMinutes = if (exerciseMinutes > 0) exerciseMinutes else current.exerciseMinutes,
                     externalNutritionCalories = if (externalNutritionCalories > 0) externalNutritionCalories else current.externalNutritionCalories,

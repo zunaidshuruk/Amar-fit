@@ -15,6 +15,7 @@ import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
+import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SkinTemperatureRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
@@ -26,6 +27,7 @@ object HealthConnectManager {
         HealthPermission.getReadPermission(BloodPressureRecord::class),
         HealthPermission.getReadPermission(BloodGlucoseRecord::class),
         HealthPermission.getReadPermission(HeartRateRecord::class),
+        HealthPermission.getReadPermission(RestingHeartRateRecord::class),
         HealthPermission.getReadPermission(DistanceRecord::class),
         HealthPermission.getReadPermission(ExerciseSessionRecord::class),
         HealthPermission.getReadPermission(NutritionRecord::class),
@@ -80,6 +82,7 @@ object HealthConnectManager {
             permission.contains("Exercise", ignoreCase = true) -> "Exercise"
             permission.contains("Nutrition", ignoreCase = true) -> "Nutrition"
             permission.contains("HeartRateVariability", ignoreCase = true) -> "Heart Rate Variability (HRV)"
+            permission.contains("RestingHeartRate", ignoreCase = true) -> "Resting Heart Rate"
             permission.contains("HeartRate", ignoreCase = true) -> "Heart Rate"
             permission.contains("BloodPressure", ignoreCase = true) -> "Blood Pressure"
             permission.contains("BloodGlucose", ignoreCase = true) -> "Blood Glucose"
