@@ -271,6 +271,15 @@ fun MetricDetailScreen(
         }
     }
 
+    val restingHrAvg = remember(chronologicalData) {
+        val values = chronologicalData.map { it.restingHeartRate }.filter { it > 0 }
+        if (values.isNotEmpty()) values.average() else null
+    }
+    val previousRestingHrAvg = remember(previousChronologicalData) {
+        val values = previousChronologicalData.map { it.restingHeartRate }.filter { it > 0 }
+        if (values.isNotEmpty()) values.average() else null
+    }
+
     val heartRateDelta = if (metricKey == "heartRate" && averageVal != null && previousAverageVal != null) {
         averageVal - previousAverageVal
     } else {
@@ -591,6 +600,85 @@ fun MetricDetailScreen(
                                     metricKey = metricKey
                                 )
                             }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            if (metricKey == "heartRate" && restingHrAvg != null) {
+                Text(
+                    text = "Resting Heart Rate",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(16.dp)
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "This Period",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "${restingHrAvg.toInt()} bpm avg",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "Last Period",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = if (previousRestingHrAvg != null) {
+                                        "${previousRestingHrAvg.toInt()} bpm avg"
+                                    } else {
+                                        "No data"
+                                    },
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (previousRestingHrAvg != null) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    }
+                                )
+                            }
+                        }
+
+                        if (previousRestingHrAvg != null) {
+                            val rhrDelta = (restingHrAvg - previousRestingHrAvg).toInt()
+                            val sign = if (rhrDelta >= 0) "+" else ""
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "$sign$rhrDelta bpm vs last period",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.align(Alignment.CenterHorizontally)
+                            )
                         }
                     }
                 }
