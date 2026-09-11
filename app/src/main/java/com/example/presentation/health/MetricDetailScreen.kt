@@ -637,7 +637,7 @@ fun MetricDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "${restingHrAvg.toInt()} bpm avg",
+                                    text = "${restingHrAvg.roundToInt()} bpm avg",
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
@@ -654,7 +654,7 @@ fun MetricDetailScreen(
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = if (previousRestingHrAvg != null) {
-                                        "${previousRestingHrAvg.toInt()} bpm avg"
+                                        "${previousRestingHrAvg.roundToInt()} bpm avg"
                                     } else {
                                         "No data"
                                     },
@@ -670,7 +670,7 @@ fun MetricDetailScreen(
                         }
 
                         if (previousRestingHrAvg != null) {
-                            val rhrDelta = (restingHrAvg - previousRestingHrAvg).toInt()
+                            val rhrDelta = (restingHrAvg - previousRestingHrAvg).roundToInt()
                             val sign = if (rhrDelta >= 0) "+" else ""
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
