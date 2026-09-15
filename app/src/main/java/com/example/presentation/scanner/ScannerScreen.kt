@@ -245,7 +245,7 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                             modifier = Modifier.verticalScroll(rememberScrollState()).weight(1f, fill = false)
                         )
                         
-                        if (scanMode == ScanMode.SCAN_BARCODE && parsedCalories > 0) {
+                        if (parsedCalories > 0) {
                             Spacer(modifier = Modifier.height(12.dp))
                             Row(
                                 modifier = Modifier
