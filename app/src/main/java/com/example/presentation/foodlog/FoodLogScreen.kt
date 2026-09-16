@@ -8,12 +8,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.AddAPhoto
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Check
@@ -31,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.presentation.viewmodel.ShasthoViewModel
@@ -56,8 +55,14 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
     
     var animationPlayed by remember { mutableStateOf(false) }
     var showManualEntry by remember { mutableStateOf(false) }
+    var manualEntryMode by remember { mutableStateOf("Describe") } // "Describe" or "Enter Values"
     var manualText by remember { mutableStateOf("") }
     var manualMealType by remember { mutableStateOf("Snack") }
+    var manualFoodName by remember { mutableStateOf("") }
+    var manualCalories by remember { mutableStateOf("") }
+    var manualCarbs by remember { mutableStateOf("") }
+    var manualProtein by remember { mutableStateOf("") }
+    var manualFat by remember { mutableStateOf("") }
     
     var showEditDialog by remember { mutableStateOf(false) }
     var editingLog by remember { mutableStateOf<com.example.data.local.FoodLog?>(null) }
@@ -145,54 +150,219 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
     }
 
     if (showManualEntry) {
+        val isEnterValuesValid = manualFoodName.isNotBlank() && (manualCalories.toIntOrNull() ?: -1) >= 0
+        val isDescribeValid = manualText.isNotBlank()
+        val isSaveEnabled = if (manualEntryMode == "Enter Values") isEnterValuesValid else (!isScanning && isDescribeValid)
+
         AlertDialog(
-            onDismissRequest = { showManualEntry = false },
+            onDismissRequest = {
+                showManualEntry = false
+                manualEntryMode = "Describe"
+                manualText = ""
+                manualFoodName = ""
+                manualCalories = ""
+                manualCarbs = ""
+                manualProtein = ""
+                manualFat = ""
+                manualMealType = "Snack"
+            },
             title = { Text("Manual Food Entry") },
             text = {
                 Column {
-                    Text("What did you eat?", color = Slate500, fontSize = 14.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = manualText,
-                        onValueChange = { manualText = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("e.g. 2 slices of bread and an egg") },
-                        enabled = !isScanning
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("Meal Type", color = Slate500, fontSize = 14.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    MealTypeSelector(
-                        selectedMealType = manualMealType,
-                        onMealTypeSelected = { manualMealType = it }
-                    )
-                    if (isScanning) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Emerald500)
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Text("Analyzing...", color = Slate500)
+                    // Segmented 2-option toggle: "Describe" vs "Enter Values"
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(if (isDark) Slate800 else Slate100)
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            onClick = { manualEntryMode = "Describe" },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (manualEntryMode == "Describe") Emerald500 else Color.Transparent,
+                            contentColor = if (manualEntryMode == "Describe") Color.White else (if (isDark) Slate300 else Slate700)
+                        ) {
+                            Text(
+                                text = "Describe",
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
                         }
+                        Surface(
+                            onClick = { manualEntryMode = "Enter Values" },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (manualEntryMode == "Enter Values") Emerald500 else Color.Transparent,
+                            contentColor = if (manualEntryMode == "Enter Values") Color.White else (if (isDark) Slate300 else Slate700)
+                        ) {
+                            Text(
+                                text = "Enter Values",
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (manualEntryMode == "Describe") {
+                        Text("What did you eat?", color = Slate500, fontSize = 14.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = manualText,
+                            onValueChange = { manualText = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("e.g. 2 slices of bread and an egg") },
+                            enabled = !isScanning
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Meal Type", color = Slate500, fontSize = 14.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        MealTypeSelector(
+                            selectedMealType = manualMealType,
+                            onMealTypeSelected = { manualMealType = it }
+                        )
+                        if (isScanning) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Emerald500)
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Text("Analyzing...", color = Slate500)
+                            }
+                        }
+                    } else {
+                        // Enter Values mode (Direct macro entry, no AI)
+                        OutlinedTextField(
+                            value = manualFoodName,
+                            onValueChange = { manualFoodName = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Food Name *") },
+                            placeholder = { Text("e.g. Boiled Rice") },
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = manualCalories,
+                            onValueChange = { manualCalories = it.filter { char -> char.isDigit() } },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Calories (kcal) *") },
+                            placeholder = { Text("e.g. 250") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = manualCarbs,
+                                onValueChange = { manualCarbs = it.filter { char -> char.isDigit() || char == '.' } },
+                                modifier = Modifier.weight(1f),
+                                label = { Text("Carbs (g)") },
+                                placeholder = { Text("0") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                singleLine = true
+                            )
+                            OutlinedTextField(
+                                value = manualProtein,
+                                onValueChange = { manualProtein = it.filter { char -> char.isDigit() || char == '.' } },
+                                modifier = Modifier.weight(1f),
+                                label = { Text("Protein (g)") },
+                                placeholder = { Text("0") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                singleLine = true
+                            )
+                            OutlinedTextField(
+                                value = manualFat,
+                                onValueChange = { manualFat = it.filter { char -> char.isDigit() || char == '.' } },
+                                modifier = Modifier.weight(1f),
+                                label = { Text("Fat (g)") },
+                                placeholder = { Text("0") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                singleLine = true
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Meal Type", color = Slate500, fontSize = 14.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        MealTypeSelector(
+                            selectedMealType = manualMealType,
+                            onMealTypeSelected = { manualMealType = it }
+                        )
                     }
                 }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        if (manualText.isNotBlank()) {
-                            viewModel.analyzeFoodText(manualText, manualMealType)
+                        if (manualEntryMode == "Enter Values") {
+                            val cal = manualCalories.toIntOrNull() ?: 0
+                            val carbs = manualCarbs.toFloatOrNull() ?: 0f
+                            val protein = manualProtein.toFloatOrNull() ?: 0f
+                            val fat = manualFat.toFloatOrNull() ?: 0f
+                            viewModel.logScannedFood(
+                                name = manualFoodName.trim(),
+                                category = "Manual",
+                                calories = cal,
+                                description = manualFoodName.trim(),
+                                mealType = manualMealType,
+                                carbsG = carbs,
+                                proteinG = protein,
+                                fatG = fat
+                            )
+                            manualEntryMode = "Describe"
+                            manualFoodName = ""
+                            manualCalories = ""
+                            manualCarbs = ""
+                            manualProtein = ""
+                            manualFat = ""
                             manualText = ""
                             manualMealType = "Snack"
                             showManualEntry = false
+                        } else {
+                            if (manualText.isNotBlank()) {
+                                viewModel.analyzeFoodText(manualText, manualMealType)
+                                manualEntryMode = "Describe"
+                                manualText = ""
+                                manualFoodName = ""
+                                manualCalories = ""
+                                manualCarbs = ""
+                                manualProtein = ""
+                                manualFat = ""
+                                manualMealType = "Snack"
+                                showManualEntry = false
+                            }
                         }
                     },
-                    enabled = !isScanning && manualText.isNotBlank()
+                    enabled = isSaveEnabled
                 ) {
-                    Text("Save", color = Emerald600)
+                    Text("Save", color = if (isSaveEnabled) Emerald600 else Slate500)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showManualEntry = false }, enabled = !isScanning) {
+                TextButton(
+                    onClick = {
+                        showManualEntry = false
+                        manualEntryMode = "Describe"
+                        manualText = ""
+                        manualFoodName = ""
+                        manualCalories = ""
+                        manualCarbs = ""
+                        manualProtein = ""
+                        manualFat = ""
+                        manualMealType = "Snack"
+                    },
+                    enabled = !isScanning
+                ) {
                     Text("Cancel", color = Slate500)
                 }
             }
