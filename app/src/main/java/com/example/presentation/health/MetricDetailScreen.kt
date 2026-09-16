@@ -11,6 +11,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
@@ -66,6 +68,7 @@ fun MetricDetailScreen(
 
     var selectedRange by remember { mutableStateOf("W") }
     var periodOffset by remember(selectedRange) { mutableStateOf(0) }
+    var yearDropdownExpanded by remember { mutableStateOf(false) }
     var selectedHrTab by remember(metricKey, selectedRange) { mutableStateOf("Zones") }
 
     val historyFlow = remember(selectedRange, periodOffset) {
@@ -424,12 +427,81 @@ fun MetricDetailScreen(
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    Text(
-                        text = periodLabel,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
+
+                    if (selectedRange == "Y") {
+                        Box {
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { yearDropdownExpanded = true }
+                                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = periodLabel,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = "Select year window",
+                                    tint = MaterialTheme.colorScheme.onBackground
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = yearDropdownExpanded,
+                                onDismissRequest = { yearDropdownExpanded = false }
+                            ) {
+                                (0..4).forEach { offset ->
+                                    val isCurrent = periodOffset == offset
+                                    val offsetLabel = remember(offset) {
+                                        val windowDays = 365
+                                        val today = LocalDate.now()
+                                        val endDate = today.minusDays(offset.toLong() * windowDays)
+                                        val startDate = endDate.minusDays((windowDays - 1).toLong())
+                                        if (startDate.year != endDate.year) {
+                                            "${startDate.format(DateTimeFormatter.ofPattern("MMM yyyy", Locale.US))} - ${endDate.format(DateTimeFormatter.ofPattern("MMM yyyy", Locale.US))}"
+                                        } else {
+                                            "${startDate.format(DateTimeFormatter.ofPattern("MMM", Locale.US))} - ${endDate.format(DateTimeFormatter.ofPattern("MMM", Locale.US))} ${endDate.year}"
+                                        }
+                                    }
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = offsetLabel,
+                                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        },
+                                        trailingIcon = if (isCurrent) {
+                                            {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = "Selected",
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        } else null,
+                                        onClick = {
+                                            periodOffset = offset
+                                            yearDropdownExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = periodLabel,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+
                     IconButton(
                         onClick = { if (periodOffset > 0) periodOffset-- },
                         enabled = periodOffset > 0
