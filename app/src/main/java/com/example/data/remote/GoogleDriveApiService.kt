@@ -1,6 +1,7 @@
 package com.example.data.remote
 
 import okhttp3.MultipartBody
+import okhttp3.ResponseBody
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Multipart
@@ -26,6 +27,13 @@ interface GoogleDriveApiService {
         @Query("q") query: String,
         @Query("fields") fields: String = "files(id,name)"
     ): DriveFileListResponse
+
+    @GET("drive/v3/files/{fileId}")
+    suspend fun downloadFile(
+        @Header("Authorization") token: String,
+        @Path("fileId") fileId: String,
+        @Query("alt") alt: String = "media"
+    ): ResponseBody
 
     @Multipart
     @POST("upload/drive/v3/files?uploadType=multipart")

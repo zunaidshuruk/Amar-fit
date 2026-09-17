@@ -1487,6 +1487,94 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 onResult(false, e.message ?: "Google Drive authorization failed")
             }
     }
+
+    fun performFetchDriveBackupWithToken(
+        token: String,
+        onResult: (com.example.data.repository.DriveBackupPayload?, String) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val payload = com.example.data.repository.GoogleDriveManager.restoreFromDrive(token)
+                withContext(Dispatchers.Main) {
+                    if (payload != null) {
+                        onResult(payload, "Backup fetched successfully")
+                    } else {
+                        onResult(null, "No backup found in Google Drive")
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    onResult(null, e.message ?: "Failed to fetch backup")
+                }
+            }
+        }
+    }
+
+    fun fetchDriveBackupForRestore(
+        context: Context,
+        onRequiresResolution: ((android.app.PendingIntent) -> Unit)? = null,
+        onResult: (com.example.data.repository.DriveBackupPayload?, String) -> Unit
+    ) {
+        com.example.data.repository.GoogleDriveManager.requestAuthorization(context)
+            .addOnSuccessListener { authResult ->
+                if (authResult.hasResolution()) {
+                    val pendingIntent = authResult.pendingIntent
+                    if (pendingIntent != null && onRequiresResolution != null) {
+                        onRequiresResolution(pendingIntent)
+                    } else {
+                        onResult(null, "Authorization resolution required")
+                    }
+                } else {
+                    val token = authResult.accessToken
+                    if (!token.isNullOrBlank()) {
+                        performFetchDriveBackupWithToken(token, onResult)
+                    } else {
+                        onResult(null, "Failed to obtain Google Drive authorization token")
+                    }
+                }
+            }
+            .addOnFailureListener { e ->
+                onResult(null, e.message ?: "Google Drive authorization failed")
+            }
+    }
+
+    fun applyDriveBackup(
+        payload: com.example.data.repository.DriveBackupPayload,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                if (payload.profile != null) {
+                    repository.saveUserProfile(payload.profile)
+                }
+                for (metric in payload.dailyMetrics) {
+                    repository.saveMetrics(metric)
+                }
+                for (foodLog in payload.foodLogs) {
+                    repository.saveFoodLog(foodLog.copy(id = 0))
+                }
+                for (chart in payload.savedDietCharts) {
+                    repository.saveDietChart(chart.copy(id = 0))
+                }
+                for (workout in payload.savedWorkouts) {
+                    repository.saveWorkout(workout)
+                }
+                for (chat in payload.savedChats) {
+                    repository.saveChat(chat)
+                }
+                for (record in payload.medicalRecords) {
+                    repository.addMedicalRecord(record)
+                }
+                withContext(Dispatchers.Main) {
+                    onResult(true, "Restore complete")
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    onResult(false, e.message ?: "Restore failed")
+                }
+            }
+        }
+    }
 }
 
 data class ResilienceResult(

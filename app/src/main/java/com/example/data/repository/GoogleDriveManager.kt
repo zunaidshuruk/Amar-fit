@@ -83,4 +83,39 @@ object GoogleDriveManager {
             false
         }
     }
+
+    suspend fun restoreFromDrive(accessToken: String): DriveBackupPayload? {
+        return try {
+            val authHeader = if (accessToken.startsWith("Bearer ", ignoreCase = true)) {
+                accessToken
+            } else {
+                "Bearer $accessToken"
+            }
+
+            val searchQuery = "name='$BACKUP_FILE_NAME' and trashed=false"
+            val searchResponse = GoogleDriveClient.service.searchFiles(
+                token = authHeader,
+                query = searchQuery
+            )
+
+            val existingFileId = searchResponse.files?.firstOrNull()?.id
+            if (existingFileId.isNullOrBlank()) {
+                Log.d(TAG, "No backup file found in Google Drive")
+                return null
+            }
+
+            val responseBody = GoogleDriveClient.service.downloadFile(
+                token = authHeader,
+                fileId = existingFileId,
+                alt = "media"
+            )
+
+            val jsonString = responseBody.string()
+            val jsonAdapter = RetrofitClient.moshi.adapter(DriveBackupPayload::class.java)
+            jsonAdapter.fromJson(jsonString)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to restore data from Google Drive", e)
+            null
+        }
+    }
 }

@@ -46,6 +46,7 @@ import kotlinx.coroutines.tasks.await
 import android.widget.Toast
 import androidx.activity.result.IntentSenderRequest
 import com.google.android.gms.auth.api.identity.Identity
+import com.example.data.repository.DriveBackupPayload
 
 
 @Composable
@@ -133,6 +134,9 @@ fun SettingsScreen(
     }
 
     var isBackingUp by remember { mutableStateOf(false) }
+    var isRestoring by remember { mutableStateOf(false) }
+    var showRestoreConfirmDialog by remember { mutableStateOf(false) }
+    var pendingRestorePayload by remember { mutableStateOf<DriveBackupPayload?>(null) }
 
     val driveAuthLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -156,6 +160,37 @@ fun SettingsScreen(
             }
         } else {
             isBackingUp = false
+            Toast.makeText(context, "Google Drive authorization cancelled", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val driveRestoreAuthLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK && result.data != null) {
+            try {
+                val authResult = Identity.getAuthorizationClient(context).getAuthorizationResultFromIntent(result.data)
+                val token = authResult.accessToken
+                if (!token.isNullOrBlank()) {
+                    viewModel.performFetchDriveBackupWithToken(token) { payload, msg ->
+                        isRestoring = false
+                        if (payload != null) {
+                            pendingRestorePayload = payload
+                            showRestoreConfirmDialog = true
+                        } else {
+                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } else {
+                    isRestoring = false
+                    Toast.makeText(context, "Google Drive authorization was not granted", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                isRestoring = false
+                Toast.makeText(context, "Failed to get authorization: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            isRestoring = false
             Toast.makeText(context, "Google Drive authorization cancelled", Toast.LENGTH_SHORT).show()
         }
     }
@@ -469,46 +504,89 @@ fun SettingsScreen(
                     }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                        Text("Google Drive Backup", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
-                        Text("Save a copy of your data to your own Drive", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Button(
-                        onClick = {
-                            isBackingUp = true
-                            viewModel.backupToDrive(
-                                context = context,
-                                onRequiresResolution = { pendingIntent ->
-                                    try {
-                                        val intentSenderRequest = IntentSenderRequest.Builder(pendingIntent.intentSender).build()
-                                        driveAuthLauncher.launch(intentSenderRequest)
-                                    } catch (e: Exception) {
-                                        isBackingUp = false
-                                        Toast.makeText(context, "Could not start authorization: ${e.message}", Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                onResult = { success, msg ->
-                                    isBackingUp = false
-                                    Toast.makeText(context, if (success) "Backup saved to Google Drive" else msg, Toast.LENGTH_SHORT).show()
-                                }
-                            )
-                        },
-                        enabled = !isBackingUp,
-                        colors = ButtonDefaults.buttonColors(containerColor = Emerald600)
+                    Text("Google Drive Backup", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
+                    Text("Save a copy of your data or restore from your Google Drive", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        if (isBackingUp) {
-                            CircularProgressIndicator(
-                                color = Color.White,
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Text("Backup Now")
+                        Button(
+                            onClick = {
+                                isBackingUp = true
+                                viewModel.backupToDrive(
+                                    context = context,
+                                    onRequiresResolution = { pendingIntent ->
+                                        try {
+                                            val intentSenderRequest = IntentSenderRequest.Builder(pendingIntent.intentSender).build()
+                                            driveAuthLauncher.launch(intentSenderRequest)
+                                        } catch (e: Exception) {
+                                            isBackingUp = false
+                                            Toast.makeText(context, "Could not start authorization: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    onResult = { success, msg ->
+                                        isBackingUp = false
+                                        Toast.makeText(context, if (success) "Backup saved to Google Drive" else msg, Toast.LENGTH_SHORT).show()
+                                    }
+                                )
+                            },
+                            enabled = !isBackingUp && !isRestoring,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = Emerald600)
+                        ) {
+                            if (isBackingUp) {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("Backup Now")
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                isRestoring = true
+                                viewModel.fetchDriveBackupForRestore(
+                                    context = context,
+                                    onRequiresResolution = { pendingIntent ->
+                                        try {
+                                            val intentSenderRequest = IntentSenderRequest.Builder(pendingIntent.intentSender).build()
+                                            driveRestoreAuthLauncher.launch(intentSenderRequest)
+                                        } catch (e: Exception) {
+                                            isRestoring = false
+                                            Toast.makeText(context, "Could not start authorization: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    onResult = { payload, msg ->
+                                        isRestoring = false
+                                        if (payload != null) {
+                                            pendingRestorePayload = payload
+                                            showRestoreConfirmDialog = true
+                                        } else {
+                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                )
+                            },
+                            enabled = !isBackingUp && !isRestoring,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Emerald600)
+                        ) {
+                            if (isRestoring) {
+                                CircularProgressIndicator(
+                                    color = Emerald600,
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("Restore Now")
+                            }
                         }
                     }
                 }
@@ -549,6 +627,49 @@ fun SettingsScreen(
             Text("Delete Account", color = Color.White)
         }
         Spacer(modifier = Modifier.height(100.dp))
+    }
+
+    if (showRestoreConfirmDialog && pendingRestorePayload != null) {
+        val backupDate = pendingRestorePayload?.backupDate ?: "unknown date"
+        AlertDialog(
+            onDismissRequest = {
+                showRestoreConfirmDialog = false
+                pendingRestorePayload = null
+            },
+            title = { Text("Restore Backup?") },
+            text = {
+                Text("This will replace your local data with the backup from $backupDate — continue?")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val payloadToApply = pendingRestorePayload
+                        showRestoreConfirmDialog = false
+                        pendingRestorePayload = null
+                        if (payloadToApply != null) {
+                            isRestoring = true
+                            viewModel.applyDriveBackup(payloadToApply) { success, msg ->
+                                isRestoring = false
+                                Toast.makeText(context, if (success) "Restore complete" else msg, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Emerald600)
+                ) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showRestoreConfirmDialog = false
+                        pendingRestorePayload = null
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     if (showLogoutDialog) {
