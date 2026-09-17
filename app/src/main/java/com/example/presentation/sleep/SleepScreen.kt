@@ -56,6 +56,14 @@ fun SleepScreen(viewModel: ShasthoViewModel, navController: NavController) {
             Text(text = "SLEEP TRACKING", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = sleepAccent.onBg)
             Spacer(modifier = Modifier.height(16.dp))
             Text(text = String.format("%.1f Hours", sleepHours), fontSize = 32.sp, fontWeight = FontWeight.Bold, color = sleepAccent.onBg)
+            profile?.sleepGoalHours?.let { goal ->
+              Text(
+                text = String.format("of %.1f hrs goal", goal),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = sleepAccent.onBg
+              )
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = "(+ Tap to log manually)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = sleepAccent.onBg)
           }
