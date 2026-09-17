@@ -44,6 +44,8 @@ import androidx.health.connect.client.PermissionController
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import android.widget.Toast
+import androidx.activity.result.IntentSenderRequest
+import com.google.android.gms.auth.api.identity.Identity
 
 
 @Composable
@@ -128,6 +130,34 @@ fun SettingsScreen(
 
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
         profilePictureUri = uri?.toString()
+    }
+
+    var isBackingUp by remember { mutableStateOf(false) }
+
+    val driveAuthLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK && result.data != null) {
+            try {
+                val authResult = Identity.getAuthorizationClient(context).getAuthorizationResultFromIntent(result.data)
+                val token = authResult.accessToken
+                if (!token.isNullOrBlank()) {
+                    viewModel.performDriveBackupWithToken(token) { success, msg ->
+                        isBackingUp = false
+                        Toast.makeText(context, if (success) "Backup saved to Google Drive" else msg, Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    isBackingUp = false
+                    Toast.makeText(context, "Google Drive authorization was not granted", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                isBackingUp = false
+                Toast.makeText(context, "Failed to get authorization: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            isBackingUp = false
+            Toast.makeText(context, "Google Drive authorization cancelled", Toast.LENGTH_SHORT).show()
+        }
     }
 
     LaunchedEffect(profile) {
@@ -436,6 +466,50 @@ fun SettingsScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = Emerald600)
                     ) {
                         Text("Connect")
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                        Text("Google Drive Backup", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
+                        Text("Save a copy of your data to your own Drive", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Button(
+                        onClick = {
+                            isBackingUp = true
+                            viewModel.backupToDrive(
+                                context = context,
+                                onRequiresResolution = { pendingIntent ->
+                                    try {
+                                        val intentSenderRequest = IntentSenderRequest.Builder(pendingIntent.intentSender).build()
+                                        driveAuthLauncher.launch(intentSenderRequest)
+                                    } catch (e: Exception) {
+                                        isBackingUp = false
+                                        Toast.makeText(context, "Could not start authorization: ${e.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                onResult = { success, msg ->
+                                    isBackingUp = false
+                                    Toast.makeText(context, if (success) "Backup saved to Google Drive" else msg, Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        },
+                        enabled = !isBackingUp,
+                        colors = ButtonDefaults.buttonColors(containerColor = Emerald600)
+                    ) {
+                        if (isBackingUp) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Backup Now")
+                        }
                     }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)

@@ -1418,6 +1418,75 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             )
         }
     }
+
+    private suspend fun gatherBackupPayload(): com.example.data.repository.DriveBackupPayload {
+        val profile = repository.userProfile.firstOrNull()
+        val dailyMetrics = database.metricsDao().getAllMetrics().firstOrNull() ?: emptyList()
+        val foodLogs = database.metricsDao().getAllFoodLogsUnbounded().firstOrNull() ?: emptyList()
+        val savedDietCharts = repository.getAllSavedCharts().firstOrNull() ?: emptyList()
+        val savedWorkouts = repository.getAllSavedWorkouts().firstOrNull() ?: emptyList()
+        val savedChats = repository.getAllSavedChats().firstOrNull() ?: emptyList()
+        val medicalRecords = repository.getMedicalRecords().firstOrNull() ?: emptyList()
+
+        return com.example.data.repository.DriveBackupPayload(
+            backupDate = java.time.Instant.now().toString(),
+            profile = profile,
+            dailyMetrics = dailyMetrics,
+            foodLogs = foodLogs,
+            savedDietCharts = savedDietCharts,
+            savedWorkouts = savedWorkouts,
+            savedChats = savedChats,
+            medicalRecords = medicalRecords
+        )
+    }
+
+    fun performDriveBackupWithToken(token: String, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val payload = gatherBackupPayload()
+                val success = com.example.data.repository.GoogleDriveManager.backupToDrive(token, payload)
+                withContext(Dispatchers.Main) {
+                    if (success) {
+                        onResult(true, "Backup saved to Google Drive")
+                    } else {
+                        onResult(false, "Failed to upload backup to Google Drive")
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    onResult(false, e.message ?: "Backup failed")
+                }
+            }
+        }
+    }
+
+    fun backupToDrive(
+        context: Context,
+        onRequiresResolution: ((android.app.PendingIntent) -> Unit)? = null,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        com.example.data.repository.GoogleDriveManager.requestAuthorization(context)
+            .addOnSuccessListener { authResult ->
+                if (authResult.hasResolution()) {
+                    val pendingIntent = authResult.pendingIntent
+                    if (pendingIntent != null && onRequiresResolution != null) {
+                        onRequiresResolution(pendingIntent)
+                    } else {
+                        onResult(false, "Authorization resolution required")
+                    }
+                } else {
+                    val token = authResult.accessToken
+                    if (!token.isNullOrBlank()) {
+                        performDriveBackupWithToken(token, onResult)
+                    } else {
+                        onResult(false, "Failed to obtain Google Drive authorization token")
+                    }
+                }
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message ?: "Google Drive authorization failed")
+            }
+    }
 }
 
 data class ResilienceResult(

@@ -26,6 +26,9 @@ interface MetricsDao {
     @Query("SELECT * FROM daily_metrics WHERE date >= :startDate AND date <= :endDate ORDER BY date DESC")
     fun getMetricsHistoryRange(startDate: String, endDate: String): Flow<List<DailyMetric>>
 
+    @Query("SELECT * FROM daily_metrics ORDER BY date DESC")
+    fun getAllMetrics(): Flow<List<DailyMetric>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMetrics(metrics: DailyMetric)
     
@@ -33,6 +36,8 @@ interface MetricsDao {
     fun getFoodLogsForDate(date: String): Flow<List<FoodLog>>
     @Query("SELECT * FROM food_logs ORDER BY date DESC LIMIT 100")
     fun getRecentFoodLogs(): Flow<List<FoodLog>>
+    @Query("SELECT * FROM food_logs ORDER BY date DESC")
+    fun getAllFoodLogsUnbounded(): Flow<List<FoodLog>>
     @Delete
     suspend fun deleteFoodLog(foodLog: FoodLog)
 
