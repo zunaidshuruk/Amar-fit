@@ -85,4 +85,25 @@ object HealthGoalCalculator {
             else -> HeartRateZone.RESTING
         }
     }
+
+    fun calculateBodyFatPercent(profile: UserProfile): Float? {
+        val effectiveGender = profile.gender.trim().lowercase().let {
+            if (it == "male" || it == "female") it else profile.bodyFatCalcGender.trim().lowercase()
+        }
+        if (effectiveGender != "male" && effectiveGender != "female") return null
+        if (profile.heightCm <= 0f || profile.waistCm <= 0f || profile.neckCm <= 0f) return null
+
+        return if (effectiveGender == "male") {
+            val logArg = profile.waistCm - profile.neckCm
+            if (logArg <= 0f) return null
+            val result = 495f / (1.0324f - 0.19077f * kotlin.math.log10(logArg.toDouble()).toFloat() + 0.15456f * kotlin.math.log10(profile.heightCm.toDouble()).toFloat()) - 450f
+            result
+        } else {
+            if (profile.hipCm <= 0f) return null
+            val logArg = profile.waistCm + profile.hipCm - profile.neckCm
+            if (logArg <= 0f) return null
+            val result = 495f / (1.29579f - 0.35004f * kotlin.math.log10(logArg.toDouble()).toFloat() + 0.22100f * kotlin.math.log10(profile.heightCm.toDouble()).toFloat()) - 450f
+            result
+        }
+    }
 }
