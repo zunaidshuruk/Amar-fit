@@ -921,6 +921,54 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    suspend fun getHourlyActiveCaloriesForDate(date: java.time.LocalDate): List<Pair<java.time.Instant, Int>> {
+        return try {
+            if (HealthConnectClient.getSdkStatus(getApplication()) != HealthConnectClient.SDK_AVAILABLE) {
+                return emptyList()
+            }
+            val healthConnectClient = HealthConnectClient.getOrCreate(getApplication())
+            val zoneId = ZoneId.systemDefault()
+            val startOfDay = date.atStartOfDay(zoneId).toInstant()
+            val endOfDay = date.plusDays(1).atStartOfDay(zoneId).toInstant()
+            val response = healthConnectClient.aggregateGroupByDuration(
+                AggregateGroupByDurationRequest(
+                    metrics = setOf(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(startOfDay, endOfDay),
+                    timeRangeSlicer = java.time.Duration.ofHours(1)
+                )
+            )
+            response.map { bucket ->
+                bucket.startTime to (bucket.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories?.toInt() ?: 0)
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun getHourlyWaterForDate(date: java.time.LocalDate): List<Pair<java.time.Instant, Float>> {
+        return try {
+            if (HealthConnectClient.getSdkStatus(getApplication()) != HealthConnectClient.SDK_AVAILABLE) {
+                return emptyList()
+            }
+            val healthConnectClient = HealthConnectClient.getOrCreate(getApplication())
+            val zoneId = ZoneId.systemDefault()
+            val startOfDay = date.atStartOfDay(zoneId).toInstant()
+            val endOfDay = date.plusDays(1).atStartOfDay(zoneId).toInstant()
+            val response = healthConnectClient.aggregateGroupByDuration(
+                AggregateGroupByDurationRequest(
+                    metrics = setOf(HydrationRecord.VOLUME_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(startOfDay, endOfDay),
+                    timeRangeSlicer = java.time.Duration.ofHours(1)
+                )
+            )
+            response.map { bucket ->
+                bucket.startTime to (bucket.result[HydrationRecord.VOLUME_TOTAL]?.inLiters?.toFloat() ?: 0f)
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
         fun setSteps(steps: Int) {
         viewModelScope.launch {
             val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
