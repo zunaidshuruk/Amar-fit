@@ -63,6 +63,10 @@ fun SettingsScreen(
     var age by remember { mutableStateOf("") }
     var weight by remember { mutableStateOf("70.0") }
     var height by remember { mutableStateOf("170.0") }
+    var waist by remember { mutableStateOf("0.0") }
+    var neck by remember { mutableStateOf("0.0") }
+    var hip by remember { mutableStateOf("0.0") }
+    var bodyFatCalcGender by remember { mutableStateOf("") }
     var showWeightDialog by remember { mutableStateOf(false) }
     var showHeightDialog by remember { mutableStateOf(false) }
 
@@ -201,6 +205,10 @@ fun SettingsScreen(
             age = profile!!.age.toString()
             weight = profile!!.weightKg.toString()
             height = profile!!.heightCm.toString()
+            waist = profile!!.waistCm.toString()
+            neck = profile!!.neckCm.toString()
+            hip = profile!!.hipCm.toString()
+            bodyFatCalcGender = profile!!.bodyFatCalcGender
             calorieLimit = profile!!.dailyCalorieLimit.toString()
             profilePictureUri = profile!!.profilePictureUri
             isDarkMode = profile!!.isDarkMode
@@ -332,6 +340,53 @@ fun SettingsScreen(
                     }
                 }
 
+                Text("Body Measurements (for Body Fat %)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = waist,
+                        onValueChange = { waist = it },
+                        label = { Text("Waist (cm)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = neck,
+                        onValueChange = { neck = it },
+                        label = { Text("Neck (cm)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                val effectiveGenderLower = profile?.gender?.trim()?.lowercase() ?: ""
+                val needsHip = effectiveGenderLower == "female" || (effectiveGenderLower != "male" && effectiveGenderLower != "female" && bodyFatCalcGender.equals("female", ignoreCase = true))
+                if (needsHip) {
+                    OutlinedTextField(
+                        value = hip,
+                        onValueChange = { hip = it },
+                        label = { Text("Hip (cm)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                if (effectiveGenderLower != "male" && effectiveGenderLower != "female") {
+                    Text("Calculate my body fat using:", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = bodyFatCalcGender.equals("male", ignoreCase = true),
+                            onClick = { bodyFatCalcGender = "male" },
+                            label = { Text("Male formula") }
+                        )
+                        FilterChip(
+                            selected = bodyFatCalcGender.equals("female", ignoreCase = true),
+                            onClick = { bodyFatCalcGender = "female" },
+                            label = { Text("Female formula") }
+                        )
+                    }
+                }
+
                 Button(
                     onClick = {
                         profile?.let {
@@ -387,6 +442,10 @@ fun SettingsScreen(
                                     age = age.toIntOrNull() ?: it.age,
                                     weightKg = weight.toFloatOrNull() ?: it.weightKg,
                                     heightCm = height.toFloatOrNull() ?: it.heightCm,
+                                    waistCm = waist.toFloatOrNull() ?: it.waistCm,
+                                    neckCm = neck.toFloatOrNull() ?: it.neckCm,
+                                    hipCm = hip.toFloatOrNull() ?: it.hipCm,
+                                    bodyFatCalcGender = bodyFatCalcGender,
                                     dailyCalorieLimit = calorieLimit.toIntOrNull() ?: it.dailyCalorieLimit,
                                     profilePictureUri = finalPhotoUrl,
                                     isDarkMode = isDarkMode,

@@ -31,6 +31,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.data.health.HealthGoalCalculator
 import com.example.presentation.navigation.navigateToTab
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
@@ -78,6 +79,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val heightM = (profile?.heightCm ?: 170f) / 100f
     val bmi = if (heightM > 0) weight / (heightM * heightM) else 0f
     val bmiFillFraction = if (bmi > 0f) ((bmi - 15f) / (35f - 15f)).coerceIn(0f, 1f) else 0f
+    val bodyFatPercent = profile?.let { HealthGoalCalculator.calculateBodyFatPercent(it) }
     
     var showBpDialog by remember { mutableStateOf(false) }
     var showBmiDialog by remember { mutableStateOf(false) }
@@ -197,6 +199,27 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                 .background(bmiFillColor)
                         )
                     }
+                }
+            }
+        }
+
+        // Body Fat % Card
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(weightAccent.bg)
+                .padding(16.dp)
+        ) {
+            Column {
+                Text(text = "BODY FAT %", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = weightAccent.onBg)
+                Spacer(modifier = Modifier.height(16.dp))
+                if (bodyFatPercent != null) {
+                    Text(text = String.format("%.1f%%", bodyFatPercent), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = weightAccent.onBg)
+                } else {
+                    Text(text = "--", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = weightAccent.onBg)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = "Add waist & neck measurements in Settings", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = weightAccent.onBg)
                 }
             }
         }
