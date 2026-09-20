@@ -11,6 +11,7 @@ import com.example.data.local.UserProfile
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.AccentColors
 import com.example.ui.theme.AccentTokens
+import com.example.util.formatWeight
 import java.util.Locale
 
 val ALL_LARGE_TILE_IDS = listOf(
@@ -257,7 +258,7 @@ fun resolveSmallTile(
             ResolvedSmallTile(
                 id = "weight",
                 label = "Weight",
-                value = if (currentWeight > 0f) "${String.format(Locale.US, "%.1f", currentWeight)} kg" else "--",
+                value = if (currentWeight > 0f) formatWeight(currentWeight, profile?.useImperialUnits ?: false) else "--",
                 icon = Icons.Default.MonitorWeight,
                 accent = if (currentWeight > 0f) weightAccent else null,
                 isMuted = currentWeight <= 0f,
