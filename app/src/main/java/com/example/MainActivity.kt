@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -163,10 +164,17 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                                   in 17..20 -> "Good Evening"
                                   else -> "Good Night"
                               }
-                              val name = userProfile?.name ?: "Guest"
+                              val name = (userProfile?.name ?: "Guest").trim().split(" ").firstOrNull { it.isNotBlank() } ?: "Guest"
                               Column {
                                   Text(text = "HEALTH & DIET", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = Emerald700, letterSpacing = 1.sp)
-                                  Text(text = "$greeting, $name", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+                                  Text(
+                                      text = "$greeting, $name",
+                                      fontSize = 18.sp,
+                                      fontWeight = FontWeight.Bold,
+                                      color = MaterialTheme.colorScheme.onBackground,
+                                      maxLines = 1,
+                                      overflow = TextOverflow.Ellipsis
+                                  )
                               }
                           },
                           actions = {
