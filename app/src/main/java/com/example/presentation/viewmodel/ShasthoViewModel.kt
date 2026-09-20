@@ -35,9 +35,11 @@ import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.MindfulnessSessionRecord
+import androidx.health.connect.client.records.MealType
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.SkinTemperatureRecord
+import androidx.health.connect.client.units.BloodGlucose
 import androidx.health.connect.client.units.Energy
 import androidx.health.connect.client.units.Pressure
 import androidx.health.connect.client.units.Volume
@@ -652,6 +654,105 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             }
         }
     }
+
+    private suspend fun writeGlucoseToHealthConnect(
+        value: Float,
+        mealType: Int,
+        relationToMeal: Int,
+        specimenSource: String
+    ) {
+        try {
+            val healthConnectClient = HealthConnectClient.getOrCreate(getApplication())
+            val now = Instant.now()
+            val zoneOffset = ZoneId.systemDefault().rules.getOffset(now)
+            val source = when (specimenSource) {
+                "Interstitial fluid" -> BloodGlucoseRecord.SPECIMEN_SOURCE_INTERSTITIAL_FLUID
+                "Capillary blood" -> BloodGlucoseRecord.SPECIMEN_SOURCE_CAPILLARY_BLOOD
+                "Plasma" -> BloodGlucoseRecord.SPECIMEN_SOURCE_PLASMA
+                "Serum" -> BloodGlucoseRecord.SPECIMEN_SOURCE_SERUM
+                "Tears" -> BloodGlucoseRecord.SPECIMEN_SOURCE_TEARS
+                "Whole blood" -> BloodGlucoseRecord.SPECIMEN_SOURCE_WHOLE_BLOOD
+                else -> BloodGlucoseRecord.SPECIMEN_SOURCE_UNKNOWN
+            }
+            val record = BloodGlucoseRecord(
+                time = now,
+                zoneOffset = zoneOffset,
+                level = BloodGlucose.millimolesPerLiter(value.toDouble()),
+                specimenSource = source,
+                mealType = mealType,
+                relationToMeal = relationToMeal
+            )
+            healthConnectClient.insertRecords(listOf(record))
+        } catch (e: Exception) {
+            // Silently ignore — matches setBloodPressure's existing error-handling convention
+        }
+    }
+
+    fun setBloodGlucoseBeforeBreakfast(value: Float, specimenSource: String = "Not set") {
+        viewModelScope.launch {
+            val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
+            val updated = current.copy(bloodGlucoseBeforeBreakfast = value, bloodGlucoseSpecimenSource = specimenSource)
+            repository.saveMetrics(updated)
+            repository.checkAndAwardBadges(updated)
+            repository.logActivityEvent("glucose", "Logged blood glucose (before breakfast): ${value} mmol/L")
+            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_BREAKFAST, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource)
+        }
+    }
+
+    fun setBloodGlucoseAfterBreakfast(value: Float, specimenSource: String = "Not set") {
+        viewModelScope.launch {
+            val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
+            val updated = current.copy(bloodGlucoseAfterBreakfast = value, bloodGlucoseSpecimenSource = specimenSource)
+            repository.saveMetrics(updated)
+            repository.checkAndAwardBadges(updated)
+            repository.logActivityEvent("glucose", "Logged blood glucose (after breakfast): ${value} mmol/L")
+            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_BREAKFAST, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource)
+        }
+    }
+
+    fun setBloodGlucoseBeforeLunch(value: Float, specimenSource: String = "Not set") {
+        viewModelScope.launch {
+            val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
+            val updated = current.copy(bloodGlucoseBeforeLunch = value, bloodGlucoseSpecimenSource = specimenSource)
+            repository.saveMetrics(updated)
+            repository.checkAndAwardBadges(updated)
+            repository.logActivityEvent("glucose", "Logged blood glucose (before lunch): ${value} mmol/L")
+            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_LUNCH, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource)
+        }
+    }
+
+    fun setBloodGlucoseAfterLunch(value: Float, specimenSource: String = "Not set") {
+        viewModelScope.launch {
+            val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
+            val updated = current.copy(bloodGlucoseAfterLunch = value, bloodGlucoseSpecimenSource = specimenSource)
+            repository.saveMetrics(updated)
+            repository.checkAndAwardBadges(updated)
+            repository.logActivityEvent("glucose", "Logged blood glucose (after lunch): ${value} mmol/L")
+            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_LUNCH, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource)
+        }
+    }
+
+    fun setBloodGlucoseBeforeDinner(value: Float, specimenSource: String = "Not set") {
+        viewModelScope.launch {
+            val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
+            val updated = current.copy(bloodGlucoseBeforeDinner = value, bloodGlucoseSpecimenSource = specimenSource)
+            repository.saveMetrics(updated)
+            repository.checkAndAwardBadges(updated)
+            repository.logActivityEvent("glucose", "Logged blood glucose (before dinner): ${value} mmol/L")
+            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_DINNER, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource)
+        }
+    }
+
+    fun setBloodGlucoseAfterDinner(value: Float, specimenSource: String = "Not set") {
+        viewModelScope.launch {
+            val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
+            val updated = current.copy(bloodGlucoseAfterDinner = value, bloodGlucoseSpecimenSource = specimenSource)
+            repository.saveMetrics(updated)
+            repository.checkAndAwardBadges(updated)
+            repository.logActivityEvent("glucose", "Logged blood glucose (after dinner): ${value} mmol/L")
+            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_DINNER, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource)
+        }
+    }
     
     
     @OptIn(ExperimentalFeatureAvailabilityApi::class)
@@ -719,7 +820,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 if (bgResponse.records.isNotEmpty()) {
                     val latest = bgResponse.records.maxByOrNull { it.time }
                     if (latest != null) {
-                        bloodGlucose = latest.level.inMilligramsPerDeciliter.toFloat()
+                        bloodGlucose = latest.level.inMillimolesPerLiter.toFloat()
                     }
                 }
 
