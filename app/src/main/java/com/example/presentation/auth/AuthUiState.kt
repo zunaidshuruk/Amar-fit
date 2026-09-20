@@ -7,6 +7,7 @@ sealed interface AuthUiState {
     data object EmailVerificationRequired : AuthUiState
     data object EmailNotFound : AuthUiState
     data object InvalidCredentials : AuthUiState
+    data object PasswordResetEmailSent : AuthUiState
     data class ValidationError(val msg: String) : AuthUiState
     data class Error(val msg: String) : AuthUiState
 }

@@ -52,6 +52,22 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
         }
     }
 
+    fun sendPasswordReset(email: String) {
+        val trimmedEmail = email.trim()
+        if (trimmedEmail.isEmpty() || !"^[A-Za-z0-9+_.-]+@(.+)\$".toRegex().matches(trimmedEmail)) {
+            _uiState.value = AuthUiState.ValidationError("Please enter a valid email address")
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = AuthUiState.Loading
+            when (val result = repository.sendPasswordResetEmail(trimmedEmail)) {
+                is AuthResult.Success -> _uiState.value = AuthUiState.PasswordResetEmailSent
+                is AuthResult.Error -> _uiState.value = AuthUiState.Error(result.message)
+                else -> _uiState.value = AuthUiState.Error("Unexpected error sending reset email")
+            }
+        }
+    }
+
     fun resendVerificationEmail() {
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading

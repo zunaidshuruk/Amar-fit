@@ -57,6 +57,8 @@ fun AuthScreen(
     val isVerificationRequired = uiState is com.example.presentation.auth.AuthUiState.EmailVerificationRequired
     var showEmailNotFoundDialog by remember { mutableStateOf(false) }
     var showErrorDialog by remember { mutableStateOf<String?>(null) }
+    var showForgotPasswordDialog by remember { mutableStateOf(false) }
+    var resetEmail by remember { mutableStateOf("") }
     var resendCooldownSeconds by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(resendCooldownSeconds) {
@@ -87,6 +89,11 @@ fun AuthScreen(
             }
             is com.example.presentation.auth.AuthUiState.ValidationError -> {
                 android.widget.Toast.makeText(context, state.msg, android.widget.Toast.LENGTH_LONG).show()
+                authViewModel.resetState()
+            }
+            is com.example.presentation.auth.AuthUiState.PasswordResetEmailSent -> {
+                showForgotPasswordDialog = false
+                android.widget.Toast.makeText(context, "Password reset email sent. Check your inbox.", android.widget.Toast.LENGTH_LONG).show()
                 authViewModel.resetState()
             }
             is com.example.presentation.auth.AuthUiState.Error -> {
@@ -138,6 +145,42 @@ fun AuthScreen(
                     authViewModel.resetState()
                 }) {
                     Text("OK")
+                }
+            }
+        )
+    }
+
+    if (showForgotPasswordDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showForgotPasswordDialog = false
+                authViewModel.resetState()
+            },
+            title = { Text("Reset Password") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Enter your email address and we'll send you a link to reset your password.")
+                    OutlinedTextField(
+                        value = resetEmail,
+                        onValueChange = { resetEmail = it },
+                        label = { Text("Email") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { authViewModel.sendPasswordReset(resetEmail) }) {
+                    Text("Send Reset Link")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showForgotPasswordDialog = false
+                    authViewModel.resetState()
+                }) {
+                    Text("Cancel")
                 }
             }
         )
@@ -345,6 +388,18 @@ fun AuthScreen(
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
+                
+                if (isLogin) {
+                    TextButton(
+                        onClick = {
+                            resetEmail = email
+                            showForgotPasswordDialog = true
+                        },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("Forgot Password?", fontSize = 13.sp, color = Emerald600)
+                    }
+                }
                 
                 Button(
                     onClick = { 

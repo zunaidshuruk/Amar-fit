@@ -19,6 +19,7 @@ interface AuthRepository {
     suspend fun signInWithGoogle(credential: androidx.credentials.Credential): AuthResult
     suspend fun resendVerificationEmail(): AuthResult
     suspend fun checkEmailVerified(): AuthResult
+    suspend fun sendPasswordResetEmail(email: String): AuthResult
 }
 
 class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
@@ -91,6 +92,15 @@ class FirebaseAuthRepository(private val auth: FirebaseAuth) : AuthRepository {
             }
         } catch (e: Exception) {
             AuthResult.Error(e.message ?: "Failed to verify email status.")
+        }
+    }
+
+    override suspend fun sendPasswordResetEmail(email: String): AuthResult {
+        return try {
+            auth.sendPasswordResetEmail(email).await()
+            AuthResult.Success
+        } catch (e: Exception) {
+            AuthResult.Error(e.message ?: "Failed to send password reset email.")
         }
     }
 
