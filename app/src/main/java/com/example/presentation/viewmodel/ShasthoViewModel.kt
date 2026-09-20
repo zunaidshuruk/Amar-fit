@@ -252,12 +252,16 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 val parsedCarbs = json.optDouble("carbs", 0.0).toFloat()
                 val parsedProtein = json.optDouble("protein", 0.0).toFloat()
                 val parsedFat = json.optDouble("fat", 0.0).toFloat()
+                val parsedSodium = json.optDouble("sodium", 0.0).toFloat()
+                val parsedSugar = json.optDouble("sugar", 0.0).toFloat()
+                val parsedFiber = json.optDouble("fiber", 0.0).toFloat()
                 val parsedDescription = json.optString("description", "")
                 if (parsedCalories > 0) {
                     logScannedFood(
                         parsedName, parsedCategory, parsedCalories, parsedDescription,
                         mealType = mealType,
-                        carbsG = parsedCarbs, proteinG = parsedProtein, fatG = parsedFat
+                        carbsG = parsedCarbs, proteinG = parsedProtein, fatG = parsedFat,
+                        sodiumMg = parsedSodium, sugarG = parsedSugar, fiberG = parsedFiber
                     )
                 }
             } catch (e: Exception) {
@@ -1033,7 +1037,10 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         mealType: String = "Snack",
         carbsG: Float = 0f,
         proteinG: Float = 0f,
-        fatG: Float = 0f
+        fatG: Float = 0f,
+        sodiumMg: Float = 0f,
+        sugarG: Float = 0f,
+        fiberG: Float = 0f
     ) {
         viewModelScope.launch {
             val foodLog = com.example.data.local.FoodLog(
@@ -1046,7 +1053,10 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 mealType = mealType,
                 carbsG = carbsG,
                 proteinG = proteinG,
-                fatG = fatG
+                fatG = fatG,
+                sodiumMg = sodiumMg,
+                sugarG = sugarG,
+                fiberG = fiberG
             )
             repository.saveFoodLog(foodLog)
 

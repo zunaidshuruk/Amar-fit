@@ -79,6 +79,9 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
     var parsedCarbs by remember { mutableStateOf(0f) }
     var parsedProtein by remember { mutableStateOf(0f) }
     var parsedFat by remember { mutableStateOf(0f) }
+    var parsedSodium by remember { mutableStateOf(0f) }
+    var parsedSugar by remember { mutableStateOf(0f) }
+    var parsedFiber by remember { mutableStateOf(0f) }
     var parsedDescription by remember { mutableStateOf("") }
     var selectedMealType by remember { mutableStateOf("Snack") }
     var portionMultiplier by remember { mutableStateOf(1f) }
@@ -87,6 +90,9 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
     val adjustedCarbs = parsedCarbs * portionMultiplier
     val adjustedProtein = parsedProtein * portionMultiplier
     val adjustedFat = parsedFat * portionMultiplier
+    val adjustedSodium = parsedSodium * portionMultiplier
+    val adjustedSugar = parsedSugar * portionMultiplier
+    val adjustedFiber = parsedFiber * portionMultiplier
 
     LaunchedEffect(scanResult) {
         if (scanResult != null) {
@@ -102,6 +108,9 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                 parsedCarbs = json.optDouble("carbs", 0.0).toFloat()
                 parsedProtein = json.optDouble("protein", 0.0).toFloat()
                 parsedFat = json.optDouble("fat", 0.0).toFloat()
+                parsedSodium = json.optDouble("sodium", 0.0).toFloat()
+                parsedSugar = json.optDouble("sugar", 0.0).toFloat()
+                parsedFiber = json.optDouble("fiber", 0.0).toFloat()
                 parsedDescription = json.optString("description", "")
             } catch (e: Exception) {
                 portionMultiplier = 1f
@@ -112,6 +121,9 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                 parsedCarbs = 0f
                 parsedProtein = 0f
                 parsedFat = 0f
+                parsedSodium = 0f
+                parsedSugar = 0f
+                parsedFiber = 0f
             }
         }
     }
@@ -313,7 +325,10 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                                         mealType = selectedMealType,
                                         carbsG = adjustedCarbs,
                                         proteinG = adjustedProtein,
-                                        fatG = adjustedFat
+                                        fatG = adjustedFat,
+                                        sodiumMg = adjustedSodium,
+                                        sugarG = adjustedSugar,
+                                        fiberG = adjustedFiber
                                     )
                                     viewModel.clearScanResult() 
                                     selectedMealType = "Snack"

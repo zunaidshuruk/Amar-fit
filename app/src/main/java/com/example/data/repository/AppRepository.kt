@@ -426,7 +426,7 @@ class AppRepository(
             Based on the provided text description of a meal, identify the food, estimate the portion size, and provide a rough estimate of the total calories and macronutrients.
             You MUST return ONLY a raw JSON object with NO markdown formatting, NO code blocks, and NO extra text.
             The JSON MUST have these exact keys:
-            "name" (string), "category" (string), "calories" (integer), "carbs" (number, grams), "protein" (number, grams), "fat" (number, grams), "description" (string).
+            "name" (string), "category" (string), "calories" (integer), "carbs" (number, grams), "protein" (number, grams), "fat" (number, grams), "sodium" (number, milligrams), "sugar" (number, grams), "fiber" (number, grams), "description" (string).
         """.trimIndent()
 
         val request = GenerateContentRequest(
@@ -442,12 +442,12 @@ class AppRepository(
 
         try {
             val response = executeGeminiCallWithBackoff(request)
-            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "Could not analyze the food."}"""
+            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "sodium": 0, "sugar": 0, "fiber": 0, "description": "Could not analyze the food."}"""
         } catch (e: HttpException) {
             val msg = if (e.code() == 429) "AI quota exceeded. Retries exhausted (429)." else "Error: ${e.message}"
-            """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "$msg"}"""
+            """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "sodium": 0, "sugar": 0, "fiber": 0, "description": "$msg"}"""
         } catch (e: Exception) {
-            """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "Error: ${e.message}"}"""
+            """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "sodium": 0, "sugar": 0, "fiber": 0, "description": "Error: ${e.message}"}"""
         }
     }
 
@@ -459,7 +459,7 @@ class AppRepository(
             Identify the food, estimate the portion size, and provide a rough estimate of the total calories and macronutrients.
             You MUST return ONLY a raw JSON object with NO markdown formatting, NO code blocks, and NO extra text.
             The JSON MUST have these exact keys:
-            "name" (string), "category" (string), "calories" (integer), "carbs" (number, grams), "protein" (number, grams), "fat" (number, grams), "description" (string).
+            "name" (string), "category" (string), "calories" (integer), "carbs" (number, grams), "protein" (number, grams), "fat" (number, grams), "sodium" (number, milligrams), "sugar" (number, grams), "fiber" (number, grams), "description" (string).
         """.trimIndent()
 
         val request = GenerateContentRequest(
@@ -476,19 +476,19 @@ class AppRepository(
 
         try {
             val response = executeGeminiCallWithBackoff(request, model = "gemini-3.5-flash-lite")
-            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "Could not analyze the image."}"""
+            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "sodium": 0, "sugar": 0, "fiber": 0, "description": "Could not analyze the image."}"""
         } catch (e: HttpException) {
             val msg = if (e.code() == 429) "AI quota exceeded. Retries exhausted (429)." else "Error: ${e.message}"
-            """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "$msg"}"""
+            """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "sodium": 0, "sugar": 0, "fiber": 0, "description": "$msg"}"""
         } catch (e: Exception) {
-            """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "Error: ${e.message}"}"""
+            """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "sodium": 0, "sugar": 0, "fiber": 0, "description": "Error: ${e.message}"}"""
         }
     }
 
     suspend fun lookupBarcodeProduct(barcode: String): String = withContext(Dispatchers.IO) {
         val cleanBarcode = barcode.trim()
         if (cleanBarcode.isEmpty()) {
-            return@withContext """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "Invalid barcode."}"""
+            return@withContext """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "sodium": 0, "sugar": 0, "fiber": 0, "description": "Invalid barcode."}"""
         }
         val url = "https://world.openfoodfacts.org/api/v0/product/$cleanBarcode.json"
         val request = okhttp3.Request.Builder()
@@ -500,12 +500,12 @@ class AppRepository(
             val response = RetrofitClient.okHttpClient.newCall(request).execute()
             val responseBody = response.body?.string() ?: ""
             if (!response.isSuccessful) {
-                return@withContext """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "Barcode $cleanBarcode not found in Open Food Facts database (HTTP ${response.code})."}"""
+                return@withContext """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "sodium": 0, "sugar": 0, "fiber": 0, "description": "Barcode $cleanBarcode not found in Open Food Facts database (HTTP ${response.code})."}"""
             }
             val rootJson = org.json.JSONObject(responseBody)
             val status = rootJson.optInt("status", 0)
             if (status != 1 || !rootJson.has("product")) {
-                return@withContext """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "Barcode $cleanBarcode was not found in the Open Food Facts database."}"""
+                return@withContext """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "sodium": 0, "sugar": 0, "fiber": 0, "description": "Barcode $cleanBarcode was not found in the Open Food Facts database."}"""
             }
             val product = rootJson.getJSONObject("product")
             val productName = product.optString("product_name", "").ifBlank {
@@ -517,6 +517,9 @@ class AppRepository(
             var carbs = 0f
             var protein = 0f
             var fat = 0f
+            var sodium = 0f
+            var sugar = 0f
+            var fiber = 0f
             var isPerServing = false
             val servingSize = product.optString("serving_size", "").trim()
 
@@ -525,12 +528,19 @@ class AppRepository(
                 val carbsServing = nutriments.optDouble("carbohydrates_serving", Double.NaN)
                 val proteinServing = nutriments.optDouble("proteins_serving", Double.NaN)
                 val fatServing = nutriments.optDouble("fat_serving", Double.NaN)
+                val sodiumServing = nutriments.optDouble("sodium_serving", Double.NaN)
+                val sugarServing = nutriments.optDouble("sugars_serving", Double.NaN)
+                val fiberServing = nutriments.optDouble("fiber_serving", Double.NaN)
 
                 if (!energyServing.isNaN() && energyServing > 0) {
                     calories = energyServing.toInt()
                     carbs = if (!carbsServing.isNaN()) carbsServing.toFloat() else 0f
                     protein = if (!proteinServing.isNaN()) proteinServing.toFloat() else 0f
                     fat = if (!fatServing.isNaN()) fatServing.toFloat() else 0f
+                    val sodiumG = if (!sodiumServing.isNaN()) sodiumServing else nutriments.optDouble("sodium_100g", 0.0)
+                    sodium = sodiumG.toFloat() * 1000f
+                    sugar = (if (!sugarServing.isNaN()) sugarServing else nutriments.optDouble("sugars_100g", 0.0)).toFloat()
+                    fiber = (if (!fiberServing.isNaN()) fiberServing else nutriments.optDouble("fiber_100g", 0.0)).toFloat()
                     isPerServing = true
                 } else {
                     val energy100g = nutriments.optDouble("energy-kcal_100g", Double.NaN).let {
@@ -539,11 +549,17 @@ class AppRepository(
                     val carbs100g = nutriments.optDouble("carbohydrates_100g", 0.0)
                     val protein100g = nutriments.optDouble("proteins_100g", 0.0)
                     val fat100g = nutriments.optDouble("fat_100g", 0.0)
+                    val sodium100g = nutriments.optDouble("sodium_100g", 0.0)
+                    val sugar100g = nutriments.optDouble("sugars_100g", 0.0)
+                    val fiber100g = nutriments.optDouble("fiber_100g", 0.0)
 
                     calories = energy100g.toInt()
                     carbs = carbs100g.toFloat()
                     protein = protein100g.toFloat()
                     fat = fat100g.toFloat()
+                    sodium = sodium100g.toFloat() * 1000f
+                    sugar = sugar100g.toFloat()
+                    fiber = fiber100g.toFloat()
                     isPerServing = false
                 }
             }
@@ -561,11 +577,14 @@ class AppRepository(
                 put("carbs", carbs)
                 put("protein", protein)
                 put("fat", fat)
+                put("sodium", sodium)
+                put("sugar", sugar)
+                put("fiber", fiber)
                 put("description", description)
             }
             resultObj.toString()
         } catch (e: Exception) {
-            """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "Error looking up barcode: ${e.localizedMessage ?: e.message}"}"""
+            """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "sodium": 0, "sugar": 0, "fiber": 0, "description": "Error looking up barcode: ${e.localizedMessage ?: e.message}"}"""
         }
     }
 
