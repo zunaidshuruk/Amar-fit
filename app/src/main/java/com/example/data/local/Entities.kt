@@ -36,6 +36,7 @@ data class UserProfile(
     val lastActiveDate: String = "",
     val profilePictureUri: String? = null,
     val isDarkMode: Boolean = false,
+    val useImperialUnits: Boolean = false,
     val notificationsEnabled: Boolean = true,
     val remindersEnabled: Boolean = true,
     val selectedLanguage: String = "English",

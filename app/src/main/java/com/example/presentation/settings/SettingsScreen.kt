@@ -115,6 +115,7 @@ fun SettingsScreen(
 
 
     var isDarkMode by remember { mutableStateOf(false) }
+    var useImperialUnits by remember { mutableStateOf(false) }
     var notificationsEnabled by remember { mutableStateOf(true) }
     var remindersEnabled by remember { mutableStateOf(true) }
 
@@ -224,6 +225,7 @@ fun SettingsScreen(
             calorieLimit = profile!!.dailyCalorieLimit.toString()
             profilePictureUri = profile!!.profilePictureUri
             isDarkMode = profile!!.isDarkMode
+            useImperialUnits = profile!!.useImperialUnits
             notificationsEnabled = profile!!.notificationsEnabled
             remindersEnabled = profile!!.remindersEnabled
         }
@@ -491,6 +493,7 @@ fun SettingsScreen(
                                     dailyCalorieLimit = calorieLimit.toIntOrNull() ?: it.dailyCalorieLimit,
                                     profilePictureUri = finalPhotoUrl,
                                     isDarkMode = isDarkMode,
+                                    useImperialUnits = useImperialUnits,
                                     notificationsEnabled = notificationsEnabled,
                                     remindersEnabled = remindersEnabled
                                 )
@@ -546,6 +549,20 @@ fun SettingsScreen(
                     Switch(
                         checked = isDarkMode,
                         onCheckedChange = { isDarkMode = it },
+                        colors = SwitchDefaults.colors(checkedThumbColor = Emerald600, checkedTrackColor = Emerald200)
+                    )
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Use Imperial Units (ft/in, lbs)", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                    Switch(
+                        checked = useImperialUnits,
+                        onCheckedChange = { useImperialUnits = it },
                         colors = SwitchDefaults.colors(checkedThumbColor = Emerald600, checkedTrackColor = Emerald200)
                     )
                 }
