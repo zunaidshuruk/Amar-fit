@@ -109,6 +109,9 @@ fun SettingsScreen(
     var currentPasswordInput by remember { mutableStateOf("") }
     var newPasswordInput by remember { mutableStateOf("") }
     var confirmPasswordInput by remember { mutableStateOf("") }
+    var showChangeEmailDialog by remember { mutableStateOf(false) }
+    var currentPasswordForEmailChange by remember { mutableStateOf("") }
+    var newEmailInput by remember { mutableStateOf("") }
 
 
     var isDarkMode by remember { mutableStateOf(false) }
@@ -729,6 +732,25 @@ fun SettingsScreen(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showChangeEmailDialog = true }
+                            .padding(vertical = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Change Email", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
+                            Text("Update your account email", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Change Email",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -1023,6 +1045,82 @@ fun SettingsScreen(
                     currentPasswordInput = ""
                     newPasswordInput = ""
                     confirmPasswordInput = ""
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showChangeEmailDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showChangeEmailDialog = false
+                currentPasswordForEmailChange = ""
+                newEmailInput = ""
+            },
+            title = { Text("Change Email") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = currentPasswordForEmailChange,
+                        onValueChange = { currentPasswordForEmailChange = it },
+                        label = { Text("Current Password") },
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = newEmailInput,
+                        onValueChange = { newEmailInput = it },
+                        label = { Text("New Email") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val trimmedNewEmail = newEmailInput.trim()
+                    when {
+                        currentPasswordForEmailChange.isBlank() || trimmedNewEmail.isBlank() -> {
+                            Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+                        }
+                        !"^[A-Za-z0-9+_.-]+@(.+)$".toRegex().matches(trimmedNewEmail) -> {
+                            Toast.makeText(context, "Please enter a valid email address", Toast.LENGTH_SHORT).show()
+                        }
+                        trimmedNewEmail.equals(com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.email, ignoreCase = true) -> {
+                            Toast.makeText(context, "New email must be different from your current email", Toast.LENGTH_SHORT).show()
+                        }
+                        else -> {
+                            coroutineScope.launch {
+                                try {
+                                    val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+                                    val user = auth.currentUser
+                                    val email = user?.email ?: ""
+                                    val credential = com.google.firebase.auth.EmailAuthProvider.getCredential(email, currentPasswordForEmailChange)
+                                    user?.reauthenticate(credential)?.await()
+                                    user?.verifyBeforeUpdateEmail(trimmedNewEmail)?.await()
+                                    showChangeEmailDialog = false
+                                    currentPasswordForEmailChange = ""
+                                    newEmailInput = ""
+                                    Toast.makeText(context, "Verification email sent to $trimmedNewEmail — check your inbox to confirm the change", Toast.LENGTH_LONG).show()
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, e.message ?: "Failed to update email. Check your current password.", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }
+                    }
+                }) {
+                    Text("Change Email")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showChangeEmailDialog = false
+                    currentPasswordForEmailChange = ""
+                    newEmailInput = ""
                 }) {
                     Text("Cancel")
                 }
