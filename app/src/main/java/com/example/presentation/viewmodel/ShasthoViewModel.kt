@@ -224,6 +224,21 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         initialValue = emptyList()
     )
 
+    val frequentFoods: StateFlow<List<com.example.data.local.FoodLog>> = allFoodLogs
+        .map { logs ->
+            logs.groupBy { it.name }
+                .values
+                .map { group -> group.maxByOrNull { it.id }!! to group.size }
+                .sortedByDescending { it.second }
+                .take(8)
+                .map { it.first }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     
     private val _chatHistory = MutableStateFlow<List<ChatMessage>>(
         listOf(ChatMessage("Hello! I am Amar-Fit AI, your universal health bot. Ask me anything about fitness, wellness, nutrition, or lifestyle!", false))
@@ -1092,6 +1107,22 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 e.printStackTrace()
             }
         }
+    }
+
+    fun relogFood(log: com.example.data.local.FoodLog) {
+        logScannedFood(
+            name = log.name,
+            category = log.category,
+            calories = log.calories,
+            description = log.description,
+            mealType = log.mealType,
+            carbsG = log.carbsG,
+            proteinG = log.proteinG,
+            fatG = log.fatG,
+            sodiumMg = log.sodiumMg,
+            sugarG = log.sugarG,
+            fiberG = log.fiberG
+        )
     }
     
     fun sendChatMessage(message: String) {

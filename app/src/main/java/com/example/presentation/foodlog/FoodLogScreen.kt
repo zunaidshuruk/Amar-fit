@@ -4,8 +4,10 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -28,8 +30,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.presentation.viewmodel.ShasthoViewModel
@@ -45,6 +49,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit = {}, onNavigateBack: () -> Unit = {}) {
     val todayFoodLogs by viewModel.todayFoodLogs.collectAsState()
     val allFoodLogs by viewModel.allFoodLogs.collectAsState()
+    val frequentFoods by viewModel.frequentFoods.collectAsState()
+    val context = LocalContext.current
     val profile by viewModel.userProfile.collectAsState()
     val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
     val foodLogAccent = AccentTokens.foodLogAccent(isDark)
@@ -509,6 +515,57 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                                 Icon(Icons.Default.AutoGraph, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Generate AI Insights", fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (frequentFoods.isNotEmpty()) {
+                item {
+                    Column(modifier = Modifier.padding(bottom = 24.dp)) {
+                        Text(
+                            text = "Recent Foods",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(frequentFoods) { food ->
+                                Column(
+                                    modifier = Modifier
+                                        .width(120.dp)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(MaterialTheme.colorScheme.surface)
+                                        .clickable {
+                                            viewModel.relogFood(food)
+                                            android.widget.Toast.makeText(
+                                                context,
+                                                "Logged ${food.name}",
+                                                android.widget.Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                        .padding(12.dp)
+                                ) {
+                                    Icon(Icons.Default.Restaurant, contentDescription = null, tint = foodLogAccent.onBg)
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = food.name,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 14.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${food.calories} kcal",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
