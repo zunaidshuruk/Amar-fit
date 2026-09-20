@@ -39,6 +39,7 @@ import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.SkinTemperatureRecord
 import androidx.health.connect.client.units.Energy
+import androidx.health.connect.client.units.Pressure
 import androidx.health.connect.client.units.Volume
 
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -597,13 +598,58 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
     
-    fun setBloodPressure(value: String) {
+    fun setBloodPressure(
+        systolic: Int,
+        diastolic: Int,
+        bodyPosition: String = "Not set",
+        armLocation: String = "Not set",
+        onHealthConnectSyncResult: (Boolean) -> Unit = {}
+    ) {
         viewModelScope.launch {
+            val value = "$systolic/$diastolic"
             val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
-            val updated = current.copy(bloodPressure = value)
+            val updated = current.copy(
+                bloodPressure = value,
+                bloodPressureBodyPosition = bodyPosition,
+                bloodPressureArmLocation = armLocation
+            )
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("blood_pressure", "Logged blood pressure: ${value}")
+
+            // Write to Health Connect
+            try {
+                val healthConnectClient = HealthConnectClient.getOrCreate(getApplication())
+                val now = Instant.now()
+                val zoneOffset = ZoneId.systemDefault().rules.getOffset(now)
+                val bpPosition = when (bodyPosition) {
+                    "Standing" -> BloodPressureRecord.BODY_POSITION_STANDING_UP
+                    "Sitting" -> BloodPressureRecord.BODY_POSITION_SITTING_DOWN
+                    "Lying down" -> BloodPressureRecord.BODY_POSITION_LYING_DOWN
+                    "Reclining" -> BloodPressureRecord.BODY_POSITION_RECLINING
+                    else -> BloodPressureRecord.BODY_POSITION_UNKNOWN
+                }
+                val bpLocation = when (armLocation) {
+                    "Left wrist" -> BloodPressureRecord.MEASUREMENT_LOCATION_LEFT_WRIST
+                    "Right wrist" -> BloodPressureRecord.MEASUREMENT_LOCATION_RIGHT_WRIST
+                    "Left upper arm" -> BloodPressureRecord.MEASUREMENT_LOCATION_LEFT_UPPER_ARM
+                    "Right upper arm" -> BloodPressureRecord.MEASUREMENT_LOCATION_RIGHT_UPPER_ARM
+                    else -> BloodPressureRecord.MEASUREMENT_LOCATION_UNKNOWN
+                }
+                val bpRecord = BloodPressureRecord(
+                    time = now,
+                    zoneOffset = zoneOffset,
+                    systolic = Pressure.millimetersOfMercury(systolic.toDouble()),
+                    diastolic = Pressure.millimetersOfMercury(diastolic.toDouble()),
+                    bodyPosition = bpPosition,
+                    measurementLocation = bpLocation
+                )
+                healthConnectClient.insertRecords(listOf(bpRecord))
+                onHealthConnectSyncResult(true)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onHealthConnectSyncResult(false)
+            }
         }
     }
     

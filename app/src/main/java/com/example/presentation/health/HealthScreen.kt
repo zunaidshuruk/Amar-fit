@@ -37,8 +37,10 @@ import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
 import com.example.util.formatHeight
 import com.example.util.formatWeight
+import android.widget.Toast
 import java.text.NumberFormat
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val profile by viewModel.userProfile.collectAsState()
@@ -939,6 +941,13 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
     if (showBpDialog) {
         var systolicInput by remember { mutableStateOf("") }
         var diastolicInput by remember { mutableStateOf("") }
+        var bodyPosition by remember { mutableStateOf("Not set") }
+        var armLocation by remember { mutableStateOf("Not set") }
+        var expandedBodyPosition by remember { mutableStateOf(false) }
+        var expandedArmLocation by remember { mutableStateOf(false) }
+        val bodyPositionOptions = listOf("Not set", "Standing", "Sitting", "Lying down", "Reclining")
+        val armLocationOptions = listOf("Not set", "Left wrist", "Right wrist", "Left upper arm", "Right upper arm")
+
         AlertDialog(
             onDismissRequest = { showBpDialog = false },
             title = {
@@ -949,28 +958,100 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 )
             },
             text = {
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    OutlinedTextField(
-                        value = systolicInput,
-                        onValueChange = { systolicInput = it },
-                        label = { Text("Systolic") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = systolicInput,
+                            onValueChange = { systolicInput = it },
+                            label = { Text("Systolic") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        OutlinedTextField(
+                            value = diastolicInput,
+                            onValueChange = { diastolicInput = it },
+                            label = { Text("Diastolic") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+
+                    Text(
+                        text = "MEASUREMENT DETAILS",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    OutlinedTextField(
-                        value = diastolicInput,
-                        onValueChange = { diastolicInput = it },
-                        label = { Text("Diastolic") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
-                    )
+
+                    ExposedDropdownMenuBox(
+                        expanded = expandedBodyPosition,
+                        onExpandedChange = { expandedBodyPosition = !expandedBodyPosition },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = bodyPosition,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Body position") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedBodyPosition) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expandedBodyPosition,
+                            onDismissRequest = { expandedBodyPosition = false }
+                        ) {
+                            bodyPositionOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        bodyPosition = option
+                                        expandedBodyPosition = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    ExposedDropdownMenuBox(
+                        expanded = expandedArmLocation,
+                        onExpandedChange = { expandedArmLocation = !expandedArmLocation },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = armLocation,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Arm location") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedArmLocation) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expandedArmLocation,
+                            onDismissRequest = { expandedArmLocation = false }
+                        ) {
+                            armLocationOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        armLocation = option
+                                        expandedArmLocation = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -978,7 +1059,17 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     val sys = systolicInput.toIntOrNull()
                     val dia = diastolicInput.toIntOrNull()
                     if (sys != null && sys > 0 && dia != null && dia > 0) {
-                        viewModel.setBloodPressure("$sys/$dia")
+                        viewModel.setBloodPressure(sys, dia, bodyPosition, armLocation) { success ->
+                            if (!success) {
+                                Toast.makeText(
+                                    navController.context,
+                                    "Blood pressure logged (didn't sync to Health Connect)",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                        bodyPosition = "Not set"
+                        armLocation = "Not set"
                         showBpDialog = false
                     }
                 }) {
@@ -986,7 +1077,11 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showBpDialog = false }) {
+                TextButton(onClick = {
+                    bodyPosition = "Not set"
+                    armLocation = "Not set"
+                    showBpDialog = false
+                }) {
                     Text("Cancel")
                 }
             }

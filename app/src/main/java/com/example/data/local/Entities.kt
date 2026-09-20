@@ -52,6 +52,8 @@ data class DailyMetric(
     val bloodGlucoseMorning: Float = 0f,
     val bloodGlucoseNight: Float = 0f,
     val bloodPressure: String = "", 
+    val bloodPressureBodyPosition: String = "Not set",
+    val bloodPressureArmLocation: String = "Not set",
     val weightKg: Float = 0f,
     val sleepHours: Float = 0f,
     val heartRate: Int = 0,

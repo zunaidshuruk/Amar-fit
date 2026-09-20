@@ -37,6 +37,7 @@ object HealthConnectManager {
         HealthPermission.getReadPermission(SkinTemperatureRecord::class),
         HealthPermission.getReadPermission(RespiratoryRateRecord::class),
         HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
+        HealthPermission.getWritePermission(BloodPressureRecord::class),
         HealthPermission.getWritePermission(NutritionRecord::class),
         HealthPermission.getWritePermission(HydrationRecord::class),
         HealthPermission.getWritePermission(SleepSessionRecord::class),
