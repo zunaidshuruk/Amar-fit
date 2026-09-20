@@ -105,6 +105,10 @@ fun SettingsScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showPasswordReauthDialog by remember { mutableStateOf(false) }
     var reauthPassword by remember { mutableStateOf("") }
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
+    var currentPasswordInput by remember { mutableStateOf("") }
+    var newPasswordInput by remember { mutableStateOf("") }
+    var confirmPasswordInput by remember { mutableStateOf("") }
 
 
     var isDarkMode by remember { mutableStateOf(false) }
@@ -704,6 +708,29 @@ fun SettingsScreen(
                     )
                 }
 
+                val currentUserProviders = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.providerData?.map { it.providerId } ?: emptyList()
+                if (currentUserProviders.contains("password")) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showChangePasswordDialog = true }
+                            .padding(vertical = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Change Password", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
+                            Text("Update your account password", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Change Password",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
         Spacer(modifier = Modifier.height(32.dp))
         Button(
             onClick = { showLogoutDialog = true },
@@ -906,6 +933,96 @@ fun SettingsScreen(
                 TextButton(onClick = {
                     showPasswordReauthDialog = false
                     reauthPassword = ""
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showChangePasswordDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showChangePasswordDialog = false
+                currentPasswordInput = ""
+                newPasswordInput = ""
+                confirmPasswordInput = ""
+            },
+            title = { Text("Change Password") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = currentPasswordInput,
+                        onValueChange = { currentPasswordInput = it },
+                        label = { Text("Current Password") },
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = newPasswordInput,
+                        onValueChange = { newPasswordInput = it },
+                        label = { Text("New Password") },
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = confirmPasswordInput,
+                        onValueChange = { confirmPasswordInput = it },
+                        label = { Text("Confirm New Password") },
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    when {
+                        currentPasswordInput.isBlank() || newPasswordInput.isBlank() -> {
+                            Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+                        }
+                        newPasswordInput.length < 6 -> {
+                            Toast.makeText(context, "New password must be at least 6 characters", Toast.LENGTH_SHORT).show()
+                        }
+                        newPasswordInput != confirmPasswordInput -> {
+                            Toast.makeText(context, "New passwords do not match", Toast.LENGTH_SHORT).show()
+                        }
+                        else -> {
+                            coroutineScope.launch {
+                                try {
+                                    val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+                                    val user = auth.currentUser
+                                    val email = user?.email
+                                    if (!email.isNullOrBlank()) {
+                                        val credential = com.google.firebase.auth.EmailAuthProvider.getCredential(email, currentPasswordInput)
+                                        user.reauthenticate(credential).await()
+                                        user.updatePassword(newPasswordInput).await()
+                                        showChangePasswordDialog = false
+                                        currentPasswordInput = ""
+                                        newPasswordInput = ""
+                                        confirmPasswordInput = ""
+                                        Toast.makeText(context, "Password changed successfully", Toast.LENGTH_LONG).show()
+                                    } else {
+                                        Toast.makeText(context, "No email associated with this account", Toast.LENGTH_LONG).show()
+                                    }
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, e.message ?: "Failed to change password. Check your current password.", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }
+                    }
+                }) {
+                    Text("Change Password")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showChangePasswordDialog = false
+                    currentPasswordInput = ""
+                    newPasswordInput = ""
+                    confirmPasswordInput = ""
                 }) {
                     Text("Cancel")
                 }
