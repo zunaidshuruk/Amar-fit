@@ -20,6 +20,13 @@ object ReminderManager {
         scheduleAlarmForMeal(context, alarmManager, "Dinner", 20, 0, 300)
     }
 
+    fun cancelMealReminders(context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        cancelAlarmForMeal(context, alarmManager, "Breakfast", 100)
+        cancelAlarmForMeal(context, alarmManager, "Lunch", 200)
+        cancelAlarmForMeal(context, alarmManager, "Dinner", 300)
+    }
+
     private fun scheduleAlarmForMeal(
         context: Context,
         alarmManager: AlarmManager,
@@ -58,5 +65,24 @@ object ReminderManager {
             AlarmManager.INTERVAL_DAY,
             pendingIntent
         )
+    }
+
+    private fun cancelAlarmForMeal(
+        context: Context,
+        alarmManager: AlarmManager,
+        mealType: String,
+        requestCode: Int
+    ) {
+        val intent = Intent(context, MealReminderReceiver::class.java).apply {
+            putExtra("MEAL_TYPE", mealType)
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(pendingIntent)
+        pendingIntent.cancel()
     }
 }

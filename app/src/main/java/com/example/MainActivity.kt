@@ -108,10 +108,16 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             permissionState.launchMultiplePermissionRequest()
         }
         
-        LaunchedEffect(permissionState.allPermissionsGranted) {
+        LaunchedEffect(permissionState.allPermissionsGranted, userProfile?.remindersEnabled, userProfile?.notificationsEnabled) {
              if (permissionState.allPermissionsGranted) {
-                 com.example.presentation.notifications.ReminderManager.scheduleMealReminders(this@MainActivity)
-                 viewModel.checkNutritionalDeficiencies(this@MainActivity)
+                 if (userProfile?.remindersEnabled != false) {
+                     com.example.presentation.notifications.ReminderManager.scheduleMealReminders(this@MainActivity)
+                 } else {
+                     com.example.presentation.notifications.ReminderManager.cancelMealReminders(this@MainActivity)
+                 }
+                 if (userProfile?.notificationsEnabled != false) {
+                     viewModel.checkNutritionalDeficiencies(this@MainActivity)
+                 }
              }
         }
         
