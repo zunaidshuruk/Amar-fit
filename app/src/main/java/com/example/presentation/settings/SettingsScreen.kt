@@ -47,6 +47,8 @@ import android.widget.Toast
 import androidx.activity.result.IntentSenderRequest
 import com.google.android.gms.auth.api.identity.Identity
 import com.example.data.repository.DriveBackupPayload
+import com.example.util.formatHeight
+import com.example.util.formatWeight
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,6 +80,7 @@ fun SettingsScreen(
         com.example.ui.components.HeightWeightPickerDialog(
             mode = com.example.ui.components.PickerMode.WEIGHT,
             initialValue = weight.toFloatOrNull() ?: 70f,
+            useImperialUnits = profile?.useImperialUnits ?: false,
             onDismiss = { showWeightDialog = false },
             onConfirm = { kg ->
                 weight = kg.toString()
@@ -90,6 +93,7 @@ fun SettingsScreen(
         com.example.ui.components.HeightWeightPickerDialog(
             mode = com.example.ui.components.PickerMode.HEIGHT,
             initialValue = height.toFloatOrNull() ?: 170f,
+            useImperialUnits = profile?.useImperialUnits ?: false,
             onDismiss = { showHeightDialog = false },
             onConfirm = { cm ->
                 height = cm.toString()
@@ -334,7 +338,7 @@ fun SettingsScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(modifier = Modifier.weight(1f)) {
                         OutlinedTextField(
-                            value = "${height.toFloatOrNull() ?: 170f} cm",
+                            value = formatHeight(height.toFloatOrNull() ?: 170f, profile?.useImperialUnits ?: false),
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Height") },
@@ -344,7 +348,7 @@ fun SettingsScreen(
                     }
                     Box(modifier = Modifier.weight(1f)) {
                         OutlinedTextField(
-                            value = "${weight.toFloatOrNull() ?: 70f} kg",
+                            value = formatWeight(weight.toFloatOrNull() ?: 70f, profile?.useImperialUnits ?: false),
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Weight") },

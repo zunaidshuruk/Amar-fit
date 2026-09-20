@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
+import com.example.util.formatHeight
+import com.example.util.formatWeight
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,6 +48,7 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
         com.example.ui.components.HeightWeightPickerDialog(
             mode = com.example.ui.components.PickerMode.WEIGHT,
             initialValue = weightInput.toFloatOrNull() ?: 70f,
+            useImperialUnits = profile?.useImperialUnits ?: false,
             onDismiss = { showWeightDialog = false },
             onConfirm = { kg ->
                 weightInput = kg.toString()
@@ -58,6 +61,7 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
         com.example.ui.components.HeightWeightPickerDialog(
             mode = com.example.ui.components.PickerMode.HEIGHT,
             initialValue = heightInput.toFloatOrNull() ?: 170f,
+            useImperialUnits = profile?.useImperialUnits ?: false,
             onDismiss = { showHeightDialog = false },
             onConfirm = { cm ->
                 heightInput = cm.toString()
@@ -117,7 +121,7 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(modifier = Modifier.weight(1f)) {
                         OutlinedTextField(
-                            value = "${weightInput.toFloatOrNull() ?: 70f} kg",
+                            value = formatWeight(weightInput.toFloatOrNull() ?: 70f, profile?.useImperialUnits ?: false),
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Weight") },
@@ -127,7 +131,7 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
                     }
                     Box(modifier = Modifier.weight(1f)) {
                         OutlinedTextField(
-                            value = "${heightInput.toFloatOrNull() ?: 170f} cm",
+                            value = formatHeight(heightInput.toFloatOrNull() ?: 170f, profile?.useImperialUnits ?: false),
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Height") },
@@ -177,11 +181,11 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
                     Divider(color = statusColor.copy(alpha = 0.2f))
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    Text("Ideal Weight (BMI 22): ${String.format("%.1f", idealWeight)} kg", fontWeight = FontWeight.Medium)
+                    Text("Ideal Weight (BMI 22): ${formatWeight(idealWeight, profile?.useImperialUnits ?: false)}", fontWeight = FontWeight.Medium)
                     if (weightDiff > 1f) {
-                        Text("Target to reduce: ${String.format("%.1f", weightDiff)} kg", color = Red700, fontWeight = FontWeight.Bold)
+                        Text("Target to reduce: ${formatWeight(weightDiff, profile?.useImperialUnits ?: false)}", color = Red700, fontWeight = FontWeight.Bold)
                     } else if (weightDiff < -1f) {
-                        Text("Target to gain: ${String.format("%.1f", -weightDiff)} kg", color = Orange700, fontWeight = FontWeight.Bold)
+                        Text("Target to gain: ${formatWeight(-weightDiff, profile?.useImperialUnits ?: false)}", color = Orange700, fontWeight = FontWeight.Bold)
                     } else {
                         Text("You are at your ideal weight! Great job!", color = Emerald600, fontWeight = FontWeight.Bold)
                     }

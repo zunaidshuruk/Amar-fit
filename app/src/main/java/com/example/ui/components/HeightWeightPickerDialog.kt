@@ -33,11 +33,12 @@ enum class WeightUnit {
 fun HeightWeightPickerDialog(
     mode: PickerMode,
     initialValue: Float, // height in cm or weight in kg
+    useImperialUnits: Boolean = false,
     onDismiss: () -> Unit,
     onConfirm: (Float) -> Unit
 ) {
-    var heightUnit by remember { mutableStateOf(HeightUnit.CM) }
-    var weightUnit by remember { mutableStateOf(WeightUnit.KG) }
+    var heightUnit by remember { mutableStateOf(if (useImperialUnits) HeightUnit.FT else HeightUnit.CM) }
+    var weightUnit by remember { mutableStateOf(if (useImperialUnits) WeightUnit.LB else WeightUnit.KG) }
 
     var currentCm by remember { mutableStateOf(if (initialValue > 0f) initialValue else 170f) }
     var currentKg by remember { mutableStateOf(if (initialValue > 0f) initialValue else 70f) }

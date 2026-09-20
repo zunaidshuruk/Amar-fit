@@ -35,6 +35,8 @@ import com.example.data.health.HealthGoalCalculator
 import com.example.presentation.navigation.navigateToTab
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
+import com.example.util.formatHeight
+import com.example.util.formatWeight
 import java.text.NumberFormat
 
 @Composable
@@ -146,7 +148,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 Column {
                     Text(text = "WEIGHT", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = weightAccent.onBg)
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = "$weight kg", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = weightAccent.onBg)
+                    Text(text = formatWeight(weight, profile?.useImperialUnits ?: false), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = weightAccent.onBg)
                     Text(text = "(+ Tap to log)", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = weightAccent.onBg)
                 }
             }
@@ -348,7 +350,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
         val validWeights = remember(last7Days) { last7Days.filter { it.weightKg > 0f } }
         val latestWeight = validWeights.lastOrNull()?.weightKg
         val weightCallout = if (latestWeight != null) {
-            String.format(java.util.Locale.US, "%.1f kg", latestWeight)
+            formatWeight(latestWeight, profile?.useImperialUnits ?: false)
         } else {
             "--"
         }
@@ -1001,6 +1003,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
             com.example.ui.components.HeightWeightPickerDialog(
                 mode = com.example.ui.components.PickerMode.WEIGHT,
                 initialValue = weightInput.toFloatOrNull() ?: 70f,
+                useImperialUnits = profile?.useImperialUnits ?: false,
                 onDismiss = { showWeightDialog = false },
                 onConfirm = { kg ->
                     weightInput = kg.toString()
@@ -1013,6 +1016,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
             com.example.ui.components.HeightWeightPickerDialog(
                 mode = com.example.ui.components.PickerMode.HEIGHT,
                 initialValue = heightInput.toFloatOrNull() ?: 170f,
+                useImperialUnits = profile?.useImperialUnits ?: false,
                 onDismiss = { showHeightDialog = false },
                 onConfirm = { cm ->
                     heightInput = cm.toString()
@@ -1032,7 +1036,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(modifier = Modifier.fillMaxWidth()) {
                         OutlinedTextField(
-                            value = "${weightInput.toFloatOrNull() ?: 70f} kg",
+                            value = formatWeight(weightInput.toFloatOrNull() ?: 70f, profile?.useImperialUnits ?: false),
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Weight") },
@@ -1042,7 +1046,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     }
                     Box(modifier = Modifier.fillMaxWidth()) {
                         OutlinedTextField(
-                            value = "${heightInput.toFloatOrNull() ?: 170f} cm",
+                            value = formatHeight(heightInput.toFloatOrNull() ?: 170f, profile?.useImperialUnits ?: false),
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Height") },
