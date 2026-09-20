@@ -78,6 +78,10 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
     var expandedGender by rememberSaveable { mutableStateOf(false) }
     val genderOptions = listOf("Male", "Female", "Other")
 
+    var activityLevel by rememberSaveable { mutableStateOf("Moderate") }
+    var expandedActivityLevel by rememberSaveable { mutableStateOf(false) }
+    val activityLevelOptions = listOf("Sedentary", "Light", "Moderate", "Active", "Very Active")
+
     // Height & Weight Picker state
     var heightCm by rememberSaveable { mutableStateOf(170f) }
     var weightKg by rememberSaveable { mutableStateOf(70f) }
@@ -209,6 +213,35 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
                         onClick = {
                             gender = selectionOption
                             expandedGender = false
+                        }
+                    )
+                }
+            }
+        }
+
+        ExposedDropdownMenuBox(
+            expanded = expandedActivityLevel,
+            onExpandedChange = { expandedActivityLevel = !expandedActivityLevel },
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+        ) {
+            OutlinedTextField(
+                value = activityLevel,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Activity Level") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedActivityLevel) },
+                modifier = Modifier.menuAnchor().fillMaxWidth()
+            )
+            ExposedDropdownMenu(
+                expanded = expandedActivityLevel,
+                onDismissRequest = { expandedActivityLevel = false }
+            ) {
+                activityLevelOptions.forEach { selectionOption ->
+                    DropdownMenuItem(
+                        text = { Text(selectionOption) },
+                        onClick = {
+                            activityLevel = selectionOption
+                            expandedActivityLevel = false
                         }
                     )
                 }
@@ -355,6 +388,7 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
                         onboardingCompleted = true,
                         dateOfBirth = dateOfBirthStr,
                         gender = gender,
+                        activityLevel = activityLevel,
                         heightCm = calculatedHeightCm,
                         weightKg = kg,
                         dietaryRestrictions = if (finalDiets.isEmpty()) "None" else finalDiets.joinToString(", "),

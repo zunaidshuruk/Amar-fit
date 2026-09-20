@@ -49,6 +49,7 @@ import com.google.android.gms.auth.api.identity.Identity
 import com.example.data.repository.DriveBackupPayload
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: ShasthoViewModel,
@@ -67,6 +68,9 @@ fun SettingsScreen(
     var neck by remember { mutableStateOf("0.0") }
     var hip by remember { mutableStateOf("0.0") }
     var bodyFatCalcGender by remember { mutableStateOf("") }
+    var activityLevel by remember { mutableStateOf("Moderate") }
+    var expandedActivityLevel by remember { mutableStateOf(false) }
+    val activityLevelOptions = listOf("Sedentary", "Light", "Moderate", "Active", "Very Active")
     var showWeightDialog by remember { mutableStateOf(false) }
     var showHeightDialog by remember { mutableStateOf(false) }
 
@@ -209,6 +213,7 @@ fun SettingsScreen(
             neck = profile!!.neckCm.toString()
             hip = profile!!.hipCm.toString()
             bodyFatCalcGender = profile!!.bodyFatCalcGender
+            activityLevel = profile!!.activityLevel
             calorieLimit = profile!!.dailyCalorieLimit.toString()
             profilePictureUri = profile!!.profilePictureUri
             isDarkMode = profile!!.isDarkMode
@@ -387,6 +392,35 @@ fun SettingsScreen(
                     }
                 }
 
+                ExposedDropdownMenuBox(
+                    expanded = expandedActivityLevel,
+                    onExpandedChange = { expandedActivityLevel = !expandedActivityLevel },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                ) {
+                    OutlinedTextField(
+                        value = activityLevel,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Activity Level") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedActivityLevel) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expandedActivityLevel,
+                        onDismissRequest = { expandedActivityLevel = false }
+                    ) {
+                        activityLevelOptions.forEach { selectionOption ->
+                            DropdownMenuItem(
+                                text = { Text(selectionOption) },
+                                onClick = {
+                                    activityLevel = selectionOption
+                                    expandedActivityLevel = false
+                                }
+                            )
+                        }
+                    }
+                }
+
                 Button(
                     onClick = {
                         profile?.let {
@@ -446,6 +480,7 @@ fun SettingsScreen(
                                     neckCm = neck.toFloatOrNull() ?: it.neckCm,
                                     hipCm = hip.toFloatOrNull() ?: it.hipCm,
                                     bodyFatCalcGender = bodyFatCalcGender,
+                                    activityLevel = activityLevel,
                                     dailyCalorieLimit = calorieLimit.toIntOrNull() ?: it.dailyCalorieLimit,
                                     profilePictureUri = finalPhotoUrl,
                                     isDarkMode = isDarkMode,
