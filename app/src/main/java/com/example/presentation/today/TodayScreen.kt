@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.data.health.HealthConnectManager
+import com.example.data.model.ALL_BADGES
 import com.example.presentation.navigation.navigateToTab
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
@@ -250,12 +251,37 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = "Badges",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { navController.navigate("badges") },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Badges",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = "View All",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Emerald600
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = "View All Badges",
+                                tint = Emerald600,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
 
                     if (badges.isEmpty()) {
                         Text(
@@ -269,12 +295,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             badges.forEach { badge ->
-                                val badgeIcon = when (badge) {
-                                    "Hydration Hero" -> Icons.Default.WaterDrop
-                                    "10k Steps Master" -> Icons.AutoMirrored.Filled.DirectionsWalk
-                                    "Consistency Starter" -> Icons.Default.EventAvailable
-                                    else -> Icons.Default.EmojiEvents
-                                }
+                                val badgeIcon = ALL_BADGES.find { it.id == badge }?.icon ?: Icons.Default.EmojiEvents
                                 Row(
                                     modifier = Modifier
                                         .clip(CircleShape)

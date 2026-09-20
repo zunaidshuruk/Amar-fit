@@ -268,7 +268,7 @@ class AppRepository(
             pointsToAdd += 100
         }
 
-        if (!currentBadges.contains("Consistency Starter")) {
+        if (newStreak >= 3 && !currentBadges.contains("Consistency Starter")) {
             currentBadges.add("Consistency Starter")
             pointsToAdd += 20
         }

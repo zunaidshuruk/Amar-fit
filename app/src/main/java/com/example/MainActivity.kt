@@ -35,6 +35,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import coil.compose.AsyncImage
 import com.example.presentation.auth.AuthScreen
+import com.example.presentation.badges.BadgeGalleryScreen
 import com.example.presentation.chat.ChatScreen
 import com.example.presentation.coach.CoachScreen
 import com.example.presentation.fitness.FitnessScreen
@@ -346,6 +347,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                   composable("mealplan") { MealPlanScreen(onNavigateBack = { navController.popBackStack() }) }
                   composable("glucoselog") { GlucoseLogScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("weightlog") { WeightLogScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                  composable("badges") { BadgeGalleryScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("recipe") { RecipeScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("foodlog") { FoodLogScreen(viewModel = viewModel, onNavigateToScanner = { navController.navigate("scanner") }, onNavigateBack = { navController.popBackStack() }) }
                   composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }, onNavigateToHealthGoals = { navController.navigate("health_goals") }) }
