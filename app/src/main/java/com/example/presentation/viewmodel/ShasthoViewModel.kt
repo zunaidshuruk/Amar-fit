@@ -143,6 +143,15 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             initialValue = emptyList()
         )
 
+    val workoutHistory: StateFlow<List<com.example.data.local.ActivityEvent>> = repository
+        .getAllActivityEvents()
+        .map { events -> events.filter { it.type == "workout" && it.description.startsWith("Completed workout") } }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     fun logActivityEvent(type: String, description: String) {
         viewModelScope.launch {
             repository.logActivityEvent(type, description)

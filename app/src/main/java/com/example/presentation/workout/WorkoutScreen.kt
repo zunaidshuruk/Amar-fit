@@ -47,8 +47,9 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
     val isLoadingStructured by viewModel.isLoadingStructuredWorkout.collectAsState()
     val structuredError by viewModel.structuredWorkoutError.collectAsState()
     val savedWorkouts by viewModel.savedWorkouts.collectAsState()
+    val workoutHistory by viewModel.workoutHistory.collectAsState()
     
-    var selectedTab by remember { mutableStateOf(0) } // 0 = AI Workouts, 1 = Saved
+    var selectedTab by remember { mutableStateOf(0) } // 0 = AI Workouts, 1 = Saved, 2 = History
     var selectedSavedWorkout by remember { mutableStateOf<SavedWorkout?>(null) }
     var showSaveDialog by remember { mutableStateOf(false) }
     var workoutTitle by remember { mutableStateOf("") }
@@ -124,10 +125,21 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                         containerColor = if (selectedTab == 1) Orange500 else MaterialTheme.colorScheme.surfaceVariant,
                         contentColor = if (selectedTab == 1) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                     ),
-                    modifier = Modifier.weight(1f).padding(start = 4.dp),
+                    modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Text("Saved", color = if (selectedTab == 1) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Button(
+                    onClick = { selectedTab = 2 },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (selectedTab == 2) Orange500 else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (selectedTab == 2) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    modifier = Modifier.weight(1f).padding(start = 4.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text("History", color = if (selectedTab == 2) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
@@ -302,7 +314,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                     videoQuery = "Wim Hof method breathing tutorial",
                     onStartSession = { navController?.navigate("mindfulness_timer") }
                 )
-            } else {
+            } else if (selectedTab == 1) {
                 // Saved View
                 if (savedWorkouts.isEmpty()) {
                     Box(modifier = Modifier.fillMaxWidth().padding(top = 40.dp), contentAlignment = Alignment.Center) {
@@ -332,6 +344,31 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                                 IconButton(onClick = { viewModel.deleteWorkout(workout) }) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Red500)
                                 }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // History View
+                if (workoutHistory.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(top = 40.dp), contentAlignment = Alignment.Center) {
+                        Text("No completed workouts yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else {
+                    workoutHistory.forEach { event ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                            shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                                Text(event.description, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                Text(
+                                    SimpleDateFormat("MMM dd, yyyy 'at' h:mm a").format(Date(event.timestamp)),
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
