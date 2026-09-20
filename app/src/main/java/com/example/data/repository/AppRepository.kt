@@ -362,6 +362,44 @@ class AppRepository(
         }
     }
 
+    suspend fun generateHealthInsight(
+        profile: com.example.data.local.UserProfile,
+        metrics: List<com.example.data.local.DailyMetric>,
+        foodLogs: List<com.example.data.local.FoodLog>
+    ): String = withContext(Dispatchers.IO) {
+        if (metrics.isEmpty()) return@withContext "Keep logging your health data daily to unlock personalized wellness insights."
+
+        val metricsText = metrics.take(7).joinToString("\n") { m ->
+            "${m.date}: steps=${m.steps}, sleepHours=${m.sleepHours}, restingHR=${m.restingHeartRate}, weightKg=${m.weightKg}, waterLiters=${m.waterLiters}/${profile.dailyWaterLimitLiters}, caloriesConsumed=${m.caloriesConsumed}/${profile.dailyCalorieLimit}, bloodGlucoseMorning=${m.bloodGlucoseMorning}, bloodGlucoseNight=${m.bloodGlucoseNight}, bloodPressure=${m.bloodPressure}, oxygenSaturation=${m.oxygenSaturation}"
+        }
+        val foodLogsText = foodLogs.take(21).joinToString("\n") { "${it.date}: ${it.name} (${it.calories} kcal)" }
+
+        val systemInstruction = """
+            You are a wellness assistant generating a short daily health insight card for a fitness app user.
+            Profile: ${profile.age} years old, ${profile.gender}, ${profile.heightCm}cm, ${profile.weightKg}kg, activity level: ${profile.activityLevel}.
+            Based on the last 7 days of health metrics and recent food logs below, write a SHORT (2-3 sentences max) summary covering:
+            1. A notable trend or pattern from the data (positive or needing attention).
+            2. One general wellness or lifestyle-risk awareness point relevant to the data, if applicable.
+            STRICT RULES — non-negotiable:
+            - NEVER name a specific disease, diagnosis, or medical condition.
+            - NEVER claim certainty about the user's health status.
+            - Frame everything as general wellness/lifestyle awareness only, never medical advice.
+            - Keep it encouraging and actionable, not alarming.
+            - Do not use markdown formatting — plain sentences only.
+        """.trimIndent()
+
+        val request = GenerateContentRequest(
+            contents = listOf(Content(parts = listOf(Part(text = "7-Day Metrics:\n$metricsText\n\nRecent Food Logs:\n$foodLogsText")))),
+            systemInstruction = Content(parts = listOf(Part(text = systemInstruction)))
+        )
+        try {
+            val response = executeGeminiCallWithBackoff(request)
+            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim() ?: "Keep up your healthy habits! Check back tomorrow for a fresh insight."
+        } catch (e: Exception) {
+            "Keep up your healthy habits! Check back tomorrow for a fresh insight."
+        }
+    }
+
     suspend fun generateNutritionalInsights(logs: List<com.example.data.local.FoodLog>): String = withContext(Dispatchers.IO) {
         if (logs.isEmpty()) return@withContext "Not enough food logged yet to generate insights. Keep logging your meals!"
         

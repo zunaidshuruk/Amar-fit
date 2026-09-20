@@ -1031,11 +1031,36 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                             title = "Nutritional Alert",
                             message = deficiencyAlert,
                             notificationId = 400
-                        )
+                         )
                     }
                     sharedPrefs.edit().putLong("last_deficiency_check", now).apply()
                 }
             }
+        }
+    }
+
+    private val _healthInsight = MutableStateFlow<String?>(null)
+    val healthInsight: StateFlow<String?> = _healthInsight.asStateFlow()
+
+    fun checkAndGenerateHealthInsight(context: android.content.Context) {
+        viewModelScope.launch {
+            val sharedPrefs = context.getSharedPreferences("ShasthoPrefs", android.content.Context.MODE_PRIVATE)
+            val lastCheck = sharedPrefs.getLong("last_health_insight_check", 0L)
+            val cachedText = sharedPrefs.getString("cached_health_insight_text", null)
+            val now = System.currentTimeMillis()
+            if (now - lastCheck <= 86400000L && cachedText != null) {
+                _healthInsight.value = cachedText
+                return@launch
+            }
+            val profile = userProfile.filterNotNull().first()
+            val metrics = getMetricsHistoryFlow(7).first()
+            val foodLogs = repository.getRecentFoodLogs().first()
+            val insight = repository.generateHealthInsight(profile, metrics, foodLogs)
+            _healthInsight.value = insight
+            sharedPrefs.edit()
+                .putLong("last_health_insight_check", now)
+                .putString("cached_health_insight_text", insight)
+                .apply()
         }
     }
 

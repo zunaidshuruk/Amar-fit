@@ -64,8 +64,13 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.checkAndGenerateHealthInsight(navController.context)
+    }
+
     val metrics by viewModel.todayMetrics.collectAsState()
     val last7Metrics by viewModel.getMetricsHistoryFlow(7).collectAsState(initial = emptyList())
+    val healthInsight by viewModel.healthInsight.collectAsState()
     val todayFoodLogs by viewModel.todayFoodLogs.collectAsState()
     val todayActivityEvents by viewModel.todayActivityEvents.collectAsState()
     
@@ -320,6 +325,32 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                             }
                         }
                     }
+                }
+            }
+        }
+
+        if (healthInsight != null) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(imageVector = Icons.Default.Insights, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        Text(text = "Today's Insight", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    }
+                    Text(text = healthInsight ?: "", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 20.sp)
+                    Text(
+                        text = "This is an AI-generated wellness summary, not a medical diagnosis. Consult a healthcare professional for any health concerns.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        lineHeight = 14.sp
+                    )
                 }
             }
         }
