@@ -20,7 +20,7 @@ import androidx.core.view.WindowCompat
 
 // Redesign Sprint 2 - Robust dark mode mappings
 private val DarkColorScheme =  darkColorScheme(
-    primary = Primary, // Deep forest green still primary identity
+    primary = Secondary, // Leaf green identity for contrast in dark mode
     secondary = Secondary, // Leaf green identity
     tertiary = Orange500,
     background = Color(0xFF121212), // Material recommended dark theme base
