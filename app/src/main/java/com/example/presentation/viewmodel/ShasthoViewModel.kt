@@ -288,6 +288,97 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    data class GlucoseCsvImportResult(val daysImported: Int, val daysSkippedAlreadyLogged: Int, val rowsSkippedInvalid: Int)
+
+    suspend fun importGlucoseCsv(uri: android.net.Uri): GlucoseCsvImportResult = withContext(Dispatchers.IO) {
+        var daysImported = 0
+        var daysSkippedAlreadyLogged = 0
+        var rowsSkippedInvalid = 0
+        try {
+            val inputStream = getApplication<Application>().contentResolver.openInputStream(uri)
+            if (inputStream == null) {
+                return@withContext GlucoseCsvImportResult(0, 0, 1)
+            }
+            val lines = inputStream.bufferedReader().use { it.readLines() }
+            val dataLines = lines.drop(1).filter { it.isNotBlank() }
+
+            for (line in dataLines) {
+                val parts = line.split(",")
+                if (parts.size != 8) {
+                    rowsSkippedInvalid++
+                    continue
+                }
+                val dateStr = parts[0].trim()
+                try {
+                    java.time.LocalDate.parse(dateStr)
+                } catch (e: Exception) {
+                    rowsSkippedInvalid++
+                    continue
+                }
+
+                val existing = repository.getMetricsForDate(dateStr).firstOrNull()
+                val hasExistingGlucose = existing != null && listOf(
+                    existing.bloodGlucoseMorning,
+                    existing.bloodGlucoseNight,
+                    existing.bloodGlucoseBeforeBreakfast,
+                    existing.bloodGlucoseAfterBreakfast,
+                    existing.bloodGlucoseBeforeLunch,
+                    existing.bloodGlucoseAfterLunch,
+                    existing.bloodGlucoseBeforeDinner,
+                    existing.bloodGlucoseAfterDinner
+                ).any { it > 0f }
+
+                if (hasExistingGlucose) {
+                    daysSkippedAlreadyLogged++
+                    continue
+                }
+
+                val specimenSourceRaw = parts[7].trim()
+                val specimenSource = if (specimenSourceRaw.isNotBlank() && specimenSourceRaw != "Not set") specimenSourceRaw else "Not set"
+
+                val bb = parts[1].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
+                val ab = parts[2].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
+                val bl = parts[3].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
+                val al = parts[4].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
+                val bd = parts[5].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
+                val ad = parts[6].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
+
+                var setterCalled = false
+                bb?.let {
+                    setBloodGlucoseBeforeBreakfast(it, specimenSource, dateStr)
+                    setterCalled = true
+                }
+                ab?.let {
+                    setBloodGlucoseAfterBreakfast(it, specimenSource, dateStr)
+                    setterCalled = true
+                }
+                bl?.let {
+                    setBloodGlucoseBeforeLunch(it, specimenSource, dateStr)
+                    setterCalled = true
+                }
+                al?.let {
+                    setBloodGlucoseAfterLunch(it, specimenSource, dateStr)
+                    setterCalled = true
+                }
+                bd?.let {
+                    setBloodGlucoseBeforeDinner(it, specimenSource, dateStr)
+                    setterCalled = true
+                }
+                ad?.let {
+                    setBloodGlucoseAfterDinner(it, specimenSource, dateStr)
+                    setterCalled = true
+                }
+
+                if (setterCalled) {
+                    daysImported++
+                }
+            }
+        } catch (e: Exception) {
+            // Return accumulated counts on unexpected exception
+        }
+        GlucoseCsvImportResult(daysImported, daysSkippedAlreadyLogged, rowsSkippedInvalid)
+    }
+
     val todayFoodLogs = repository.getFoodLogsForDate(todayDateString).stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),

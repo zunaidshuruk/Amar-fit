@@ -1,6 +1,8 @@
 package com.example.presentation.metrics
 
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -45,6 +47,16 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
     val coroutineScope = rememberCoroutineScope()
     val glucoseGuidance by viewModel.glucoseGuidance.collectAsState()
     val isLoadingGlucoseGuidance by viewModel.isLoadingGlucoseGuidance.collectAsState()
+    
+    val importLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: android.net.Uri? ->
+        if (uri != null) {
+            coroutineScope.launch {
+                val result = viewModel.importGlucoseCsv(uri)
+                val message = "Imported ${result.daysImported} day(s). Skipped ${result.daysSkippedAlreadyLogged} already logged, ${result.rowsSkippedInvalid} invalid row(s)."
+                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+    }
     
     var beforeBreakfastInput by remember { mutableStateOf(today?.bloodGlucoseBeforeBreakfast?.takeIf { it > 0 }?.toString() ?: "") }
     var afterBreakfastInput by remember { mutableStateOf(today?.bloodGlucoseAfterBreakfast?.takeIf { it > 0 }?.toString() ?: "") }
@@ -108,6 +120,15 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
             modifier = Modifier.align(Alignment.End)
         ) {
             Text("Download CSV Template")
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        TextButton(
+            onClick = {
+                importLauncher.launch("text/*")
+            },
+            modifier = Modifier.align(Alignment.End)
+        ) {
+            Text("Import CSV")
         }
         Spacer(modifier = Modifier.height(8.dp))
         
