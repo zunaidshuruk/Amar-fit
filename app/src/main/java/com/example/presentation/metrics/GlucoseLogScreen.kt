@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -263,6 +264,10 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
                 if (readings.isNotEmpty()) readings.average().toFloat() else null
             }
 
+            val targetMin = profile?.bloodGlucoseTargetMin ?: 0f
+            val targetMax = profile?.bloodGlucoseTargetMax ?: 0f
+            val hasTargetRange = targetMin > 0f && targetMax > 0f && targetMin < targetMax
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -273,10 +278,21 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val validMax = dailyAverages.filterNotNull().maxOrNull() ?: 10f
-                    val maxVal = maxOf(10f, validMax)
+                    val targetCeiling = if (hasTargetRange) targetMax else 0f
+                    val maxVal = maxOf(10f, validMax, targetCeiling)
                     val width = size.width
                     val height = size.height
                     val count = chartData.size
+
+                    if (hasTargetRange) {
+                        val bandTopY = height - ((targetMax / maxVal) * height)
+                        val bandBottomY = height - ((targetMin / maxVal) * height)
+                        drawRect(
+                            color = Emerald600.copy(alpha = 0.15f),
+                            topLeft = Offset(0f, bandTopY),
+                            size = Size(width, bandBottomY - bandTopY)
+                        )
+                    }
                     
                     val stepX = if (count > 1) width / (count - 1) else width
                     val path = Path()
@@ -299,6 +315,21 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
                     
                     drawPath(path, color = Indigo600, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
                 }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            if (hasTargetRange) {
+                Text(
+                    text = "Shaded band shows your target range: ${targetMin} – ${targetMax} mmol/L",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Text(
+                    text = "Set a target range in Health Goals to see it shaded here.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
         
