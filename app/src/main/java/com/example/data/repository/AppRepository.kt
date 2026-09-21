@@ -362,6 +362,57 @@ class AppRepository(
         }
     }
 
+    suspend fun generateGlucoseGuidance(
+        profile: com.example.data.local.UserProfile,
+        metrics: List<com.example.data.local.DailyMetric>
+    ): String = withContext(Dispatchers.IO) {
+        val glucoseReadings = metrics.flatMap { m ->
+            listOfNotNull(
+                m.bloodGlucoseMorning.takeIf { it > 0 },
+                m.bloodGlucoseNight.takeIf { it > 0 },
+                m.bloodGlucoseBeforeBreakfast.takeIf { it > 0 },
+                m.bloodGlucoseAfterBreakfast.takeIf { it > 0 },
+                m.bloodGlucoseBeforeLunch.takeIf { it > 0 },
+                m.bloodGlucoseAfterLunch.takeIf { it > 0 },
+                m.bloodGlucoseBeforeDinner.takeIf { it > 0 },
+                m.bloodGlucoseAfterDinner.takeIf { it > 0 }
+            )
+        }
+        if (glucoseReadings.isEmpty()) return@withContext "Log a few blood glucose readings first so suggestions can be based on your actual data."
+
+        val metricsText = metrics.take(7).joinToString("\n") { m ->
+            "${m.date}: bgBeforeBreakfast=${m.bloodGlucoseBeforeBreakfast}, bgAfterBreakfast=${m.bloodGlucoseAfterBreakfast}, bgBeforeLunch=${m.bloodGlucoseBeforeLunch}, bgAfterLunch=${m.bloodGlucoseAfterLunch}, bgBeforeDinner=${m.bloodGlucoseBeforeDinner}, bgAfterDinner=${m.bloodGlucoseAfterDinner}, steps=${m.steps}, sleepHours=${m.sleepHours}, weightKg=${m.weightKg}, bloodPressure=${m.bloodPressure}, waterLiters=${m.waterLiters}, caloriesConsumed=${m.caloriesConsumed}, carbsG=${m.carbsG}, proteinG=${m.proteinG}, fatG=${m.fatG}, exerciseMinutes=${m.exerciseMinutes}"
+        }
+        val targetRangeText = if (profile.bloodGlucoseTargetMin > 0f && profile.bloodGlucoseTargetMax > 0f) {
+            "User's target range: ${profile.bloodGlucoseTargetMin}-${profile.bloodGlucoseTargetMax} mmol/L."
+        } else {
+            "User has not set a target range."
+        }
+
+        val systemInstruction = """
+            You are a wellness assistant. Based on the user's last 7 days of health metrics below (blood glucose readings, steps, sleep, weight, blood pressure, water, calories, macros, exercise minutes), suggest 3-5 SHORT, actionable, general lifestyle changes that could help lower or better manage blood glucose.
+            Profile: ${profile.age} years old, ${profile.gender}, activity level: ${profile.activityLevel}. $targetRangeText
+            STRICT RULES — non-negotiable:
+            - NEVER name a specific disease, diagnosis, or medical condition (e.g. do not say "diabetes").
+            - NEVER claim certainty about the user's health status or guarantee a result.
+            - Frame every suggestion as general wellness/lifestyle awareness only, never medical advice or a treatment plan.
+            - Base suggestions only on patterns actually visible in the data provided (e.g. low exercise minutes, high evening readings, low water intake) — do not invent patterns that aren't there.
+            - Format as a short markdown bullet list, one suggestion per bullet, each 1 sentence.
+        """.trimIndent()
+
+        val request = GenerateContentRequest(
+            contents = listOf(Content(parts = listOf(Part(text = "7-Day Metrics:\n$metricsText")))),
+            systemInstruction = Content(parts = listOf(Part(text = systemInstruction)))
+        )
+        try {
+            val response = executeGeminiCallWithBackoff(request)
+            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
+                ?: "Could not generate suggestions right now. Please try again later."
+        } catch (e: Exception) {
+            "Could not generate suggestions right now. Please try again later."
+        }
+    }
+
     suspend fun generateHealthInsight(
         profile: com.example.data.local.UserProfile,
         metrics: List<com.example.data.local.DailyMetric>,

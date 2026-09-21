@@ -10,6 +10,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.TipsAndUpdates
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.presentation.viewmodel.ShasthoViewModel
+import com.example.ui.components.MarkdownText
 import com.example.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,6 +40,8 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
     val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
     val glucoseAccent = AccentTokens.glucoseAccent(isDark)
     val context = LocalContext.current
+    val glucoseGuidance by viewModel.glucoseGuidance.collectAsState()
+    val isLoadingGlucoseGuidance by viewModel.isLoadingGlucoseGuidance.collectAsState()
     
     var beforeBreakfastInput by remember { mutableStateOf(today?.bloodGlucoseBeforeBreakfast?.takeIf { it > 0 }?.toString() ?: "") }
     var afterBreakfastInput by remember { mutableStateOf(today?.bloodGlucoseAfterBreakfast?.takeIf { it > 0 }?.toString() ?: "") }
@@ -330,6 +334,53 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.TipsAndUpdates, contentDescription = null, tint = Indigo600)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("AI Glucose Suggestions", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+
+                val guidance = glucoseGuidance
+                if (guidance != null) {
+                    MarkdownText(text = guidance, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "This is general wellness guidance, not medical advice. Consult a healthcare professional for any health concerns.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                } else if (isLoadingGlucoseGuidance) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Indigo600, strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Analyzing your recent data...", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                    }
+                } else {
+                    Text("Get lifestyle suggestions based on your recent glucose readings and other health data.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = { viewModel.fetchGlucoseGuidance() },
+                        colors = ButtonDefaults.buttonColors(containerColor = Indigo600),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.TipsAndUpdates, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Get AI Suggestions", fontWeight = FontWeight.SemiBold)
+                    }
+                }
             }
         }
         

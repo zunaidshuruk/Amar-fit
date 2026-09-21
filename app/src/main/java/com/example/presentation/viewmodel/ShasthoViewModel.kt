@@ -224,6 +224,23 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private val _glucoseGuidance = MutableStateFlow<String?>(null)
+    val glucoseGuidance: StateFlow<String?> = _glucoseGuidance.asStateFlow()
+
+    private val _isLoadingGlucoseGuidance = MutableStateFlow(false)
+    val isLoadingGlucoseGuidance: StateFlow<Boolean> = _isLoadingGlucoseGuidance.asStateFlow()
+
+    fun fetchGlucoseGuidance() {
+        viewModelScope.launch {
+            _isLoadingGlucoseGuidance.value = true
+            val profile = userProfile.filterNotNull().first()
+            val metrics = getMetricsHistoryFlow(7).first()
+            val guidance = repository.generateGlucoseGuidance(profile, metrics)
+            _glucoseGuidance.value = guidance
+            _isLoadingGlucoseGuidance.value = false
+        }
+    }
+
     val todayFoodLogs = repository.getFoodLogsForDate(todayDateString).stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
