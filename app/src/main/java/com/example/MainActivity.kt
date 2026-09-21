@@ -1,6 +1,7 @@
 package com.example
 
 import android.content.Context
+import android.content.Intent
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -87,10 +88,12 @@ class MainActivity : ComponentActivity(), SensorEventListener {
   private var sensorManager: SensorManager? = null
   private var stepSensor: Sensor? = null
   private var isSensorRegistered = false
+  private var pendingNavigationRoute by mutableStateOf<String?>(null)
 
   @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    pendingNavigationRoute = intent.getStringExtra("NAVIGATE_TO")
     
     NotificationHelper.createNotificationChannel(this)
     sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -148,6 +151,14 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         } else {
             val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
             val isMainTab = bottomTabs.any { it.route == currentRoute }
+
+            LaunchedEffect(pendingNavigationRoute, sessionChecked) {
+                val route = pendingNavigationRoute
+                if (sessionChecked && route != null) {
+                    navController.navigate(route)
+                    pendingNavigationRoute = null
+                }
+            }
 
             Scaffold(
               modifier = Modifier.fillMaxSize(),
@@ -378,6 +389,12 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         }
       }
     }
+  }
+
+  override fun onNewIntent(intent: Intent) {
+      super.onNewIntent(intent)
+      setIntent(intent)
+      pendingNavigationRoute = intent.getStringExtra("NAVIGATE_TO")
   }
 
   override fun onResume() {

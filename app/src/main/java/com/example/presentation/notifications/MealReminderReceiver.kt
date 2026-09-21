@@ -12,7 +12,8 @@ class MealReminderReceiver : BroadcastReceiver() {
             context = context,
             title = "Time for $mealType!",
             message = "Don't forget to log your $mealType using the AI scanner.",
-            notificationId = mealType.hashCode()
+            notificationId = mealType.hashCode(),
+            targetRoute = "scanner"
         )
     }
 }
