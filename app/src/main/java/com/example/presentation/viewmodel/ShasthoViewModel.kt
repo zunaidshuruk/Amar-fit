@@ -245,6 +245,49 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    suspend fun generateGlucoseCsvUri(): android.net.Uri? = withContext(Dispatchers.IO) {
+        try {
+            val endDate = java.time.LocalDate.now()
+            val startDate = endDate.minusDays(29)
+            val metricsList = repository.getMetricsHistoryRange(startDate.toString(), endDate.toString()).firstOrNull() ?: emptyList()
+            val metricsMap = metricsList.associateBy { it.date }
+
+            val rows = mutableListOf<String>()
+            rows.add("Date,Before Breakfast,After Breakfast,Before Lunch,After Lunch,Before Dinner,After Dinner,Specimen Source")
+
+            var curDate = startDate
+            while (!curDate.isAfter(endDate)) {
+                val dateStr = curDate.toString()
+                val m = metricsMap[dateStr]
+                val bb = if (m != null && m.bloodGlucoseBeforeBreakfast > 0f) m.bloodGlucoseBeforeBreakfast.toString() else ""
+                val ab = if (m != null && m.bloodGlucoseAfterBreakfast > 0f) m.bloodGlucoseAfterBreakfast.toString() else ""
+                val bl = if (m != null && m.bloodGlucoseBeforeLunch > 0f) m.bloodGlucoseBeforeLunch.toString() else ""
+                val al = if (m != null && m.bloodGlucoseAfterLunch > 0f) m.bloodGlucoseAfterLunch.toString() else ""
+                val bd = if (m != null && m.bloodGlucoseBeforeDinner > 0f) m.bloodGlucoseBeforeDinner.toString() else ""
+                val ad = if (m != null && m.bloodGlucoseAfterDinner > 0f) m.bloodGlucoseAfterDinner.toString() else ""
+                val source = if (m != null && m.bloodGlucoseSpecimenSource.isNotBlank() && m.bloodGlucoseSpecimenSource != "Not set") {
+                    m.bloodGlucoseSpecimenSource
+                } else {
+                    ""
+                }
+                rows.add("$dateStr,$bb,$ab,$bl,$al,$bd,$ad,$source")
+                curDate = curDate.plusDays(1)
+            }
+
+            val csvContent = rows.joinToString("\n")
+            val file = java.io.File(getApplication<Application>().cacheDir, "glucose_template.csv")
+            file.writeText(csvContent)
+
+            androidx.core.content.FileProvider.getUriForFile(
+                getApplication(),
+                "${getApplication<Application>().packageName}.fileprovider",
+                file
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     val todayFoodLogs = repository.getFoodLogsForDate(todayDateString).stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),

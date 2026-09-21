@@ -1,5 +1,7 @@
 package com.example.presentation.metrics
 
+import android.content.Intent
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -40,6 +42,7 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
     val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
     val glucoseAccent = AccentTokens.glucoseAccent(isDark)
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val glucoseGuidance by viewModel.glucoseGuidance.collectAsState()
     val isLoadingGlucoseGuidance by viewModel.isLoadingGlucoseGuidance.collectAsState()
     
@@ -84,6 +87,27 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
             modifier = Modifier.align(Alignment.End)
         ) {
             Text("+ Add a Past Day's Reading")
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        TextButton(
+            onClick = {
+                coroutineScope.launch {
+                    val uri = viewModel.generateGlucoseCsvUri()
+                    if (uri != null) {
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/csv"
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, "Share glucose CSV template"))
+                    } else {
+                        android.widget.Toast.makeText(context, "Couldn't generate the CSV file.", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+            modifier = Modifier.align(Alignment.End)
+        ) {
+            Text("Download CSV Template")
         }
         Spacer(modifier = Modifier.height(8.dp))
         
