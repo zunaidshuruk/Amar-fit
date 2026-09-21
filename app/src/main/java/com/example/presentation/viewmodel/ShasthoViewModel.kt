@@ -343,33 +343,9 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 val bd = parts[5].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
                 val ad = parts[6].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
 
-                var setterCalled = false
-                bb?.let {
-                    setBloodGlucoseBeforeBreakfast(it, specimenSource, dateStr)
-                    setterCalled = true
-                }
-                ab?.let {
-                    setBloodGlucoseAfterBreakfast(it, specimenSource, dateStr)
-                    setterCalled = true
-                }
-                bl?.let {
-                    setBloodGlucoseBeforeLunch(it, specimenSource, dateStr)
-                    setterCalled = true
-                }
-                al?.let {
-                    setBloodGlucoseAfterLunch(it, specimenSource, dateStr)
-                    setterCalled = true
-                }
-                bd?.let {
-                    setBloodGlucoseBeforeDinner(it, specimenSource, dateStr)
-                    setterCalled = true
-                }
-                ad?.let {
-                    setBloodGlucoseAfterDinner(it, specimenSource, dateStr)
-                    setterCalled = true
-                }
-
-                if (setterCalled) {
+                val anyValue = listOf(bb, ab, bl, al, bd, ad).any { it != null }
+                if (anyValue) {
+                    saveGlucoseReadingsForDate(dateStr, bb, ab, bl, al, bd, ad, specimenSource)
                     daysImported++
                 }
             }
@@ -377,6 +353,41 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             // Return accumulated counts on unexpected exception
         }
         GlucoseCsvImportResult(daysImported, daysSkippedAlreadyLogged, rowsSkippedInvalid)
+    }
+
+    suspend fun saveGlucoseReadingsForDate(
+        date: String,
+        beforeBreakfast: Float? = null,
+        afterBreakfast: Float? = null,
+        beforeLunch: Float? = null,
+        afterLunch: Float? = null,
+        beforeDinner: Float? = null,
+        afterDinner: Float? = null,
+        specimenSource: String = "Not set"
+    ) {
+        val current = if (date == todayDateString) {
+            todayMetrics.value ?: DailyMetric(date = date)
+        } else {
+            repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
+        }
+        val updated = current.copy(
+            bloodGlucoseBeforeBreakfast = beforeBreakfast ?: current.bloodGlucoseBeforeBreakfast,
+            bloodGlucoseAfterBreakfast = afterBreakfast ?: current.bloodGlucoseAfterBreakfast,
+            bloodGlucoseBeforeLunch = beforeLunch ?: current.bloodGlucoseBeforeLunch,
+            bloodGlucoseAfterLunch = afterLunch ?: current.bloodGlucoseAfterLunch,
+            bloodGlucoseBeforeDinner = beforeDinner ?: current.bloodGlucoseBeforeDinner,
+            bloodGlucoseAfterDinner = afterDinner ?: current.bloodGlucoseAfterDinner,
+            bloodGlucoseSpecimenSource = specimenSource
+        )
+        repository.saveMetrics(updated)
+        repository.checkAndAwardBadges(updated)
+        repository.logActivityEvent("glucose", "Logged blood glucose reading(s) for $date")
+        beforeBreakfast?.let { writeGlucoseToHealthConnect(it, MealType.MEAL_TYPE_BREAKFAST, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource, date) }
+        afterBreakfast?.let { writeGlucoseToHealthConnect(it, MealType.MEAL_TYPE_BREAKFAST, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource, date) }
+        beforeLunch?.let { writeGlucoseToHealthConnect(it, MealType.MEAL_TYPE_LUNCH, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource, date) }
+        afterLunch?.let { writeGlucoseToHealthConnect(it, MealType.MEAL_TYPE_LUNCH, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource, date) }
+        beforeDinner?.let { writeGlucoseToHealthConnect(it, MealType.MEAL_TYPE_DINNER, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource, date) }
+        afterDinner?.let { writeGlucoseToHealthConnect(it, MealType.MEAL_TYPE_DINNER, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource, date) }
     }
 
     val todayFoodLogs = repository.getFoodLogsForDate(todayDateString).stateIn(

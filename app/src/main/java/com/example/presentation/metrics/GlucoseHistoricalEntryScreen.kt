@@ -272,12 +272,16 @@ fun GlucoseHistoricalEntryScreen(viewModel: ShasthoViewModel, onNavigateBack: ()
                             if (hasExistingGlucose) {
                                 android.widget.Toast.makeText(context, "This date already has glucose data logged — skipped to avoid overwriting it", android.widget.Toast.LENGTH_LONG).show()
                             } else {
-                                bb?.let { viewModel.setBloodGlucoseBeforeBreakfast(it, specimenSource, date) }
-                                ab?.let { viewModel.setBloodGlucoseAfterBreakfast(it, specimenSource, date) }
-                                bl?.let { viewModel.setBloodGlucoseBeforeLunch(it, specimenSource, date) }
-                                al?.let { viewModel.setBloodGlucoseAfterLunch(it, specimenSource, date) }
-                                bd?.let { viewModel.setBloodGlucoseBeforeDinner(it, specimenSource, date) }
-                                ad?.let { viewModel.setBloodGlucoseAfterDinner(it, specimenSource, date) }
+                                viewModel.saveGlucoseReadingsForDate(
+                                    date = date,
+                                    beforeBreakfast = bb,
+                                    afterBreakfast = ab,
+                                    beforeLunch = bl,
+                                    afterLunch = al,
+                                    beforeDinner = bd,
+                                    afterDinner = ad,
+                                    specimenSource = specimenSource
+                                )
                                 android.widget.Toast.makeText(context, "Historical reading(s) saved for $selectedDateDisplay", android.widget.Toast.LENGTH_SHORT).show()
                                 onNavigateBack()
                             }

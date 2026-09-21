@@ -39,7 +39,6 @@ import com.example.ui.theme.*
 @Composable
 fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}, onNavigateToHistoricalEntry: () -> Unit = {}) {
     val history by viewModel.metricsHistory.collectAsState()
-    val history30 by remember(viewModel) { viewModel.getMetricsHistoryFlow(30) }.collectAsState(initial = emptyList())
     val today by viewModel.todayMetrics.collectAsState()
     val profile by viewModel.userProfile.collectAsState()
     val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
@@ -244,13 +243,19 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
                         if (bb == null && ab == null && bl == null && al == null && bd == null && ad == null) {
                             android.widget.Toast.makeText(context, "Enter a valid glucose reading", android.widget.Toast.LENGTH_SHORT).show()
                         } else {
-                            bb?.let { viewModel.setBloodGlucoseBeforeBreakfast(it, specimenSource) }
-                            ab?.let { viewModel.setBloodGlucoseAfterBreakfast(it, specimenSource) }
-                            bl?.let { viewModel.setBloodGlucoseBeforeLunch(it, specimenSource) }
-                            al?.let { viewModel.setBloodGlucoseAfterLunch(it, specimenSource) }
-                            bd?.let { viewModel.setBloodGlucoseBeforeDinner(it, specimenSource) }
-                            ad?.let { viewModel.setBloodGlucoseAfterDinner(it, specimenSource) }
-                            android.widget.Toast.makeText(context, "Glucose reading(s) saved", android.widget.Toast.LENGTH_SHORT).show()
+                            coroutineScope.launch {
+                                viewModel.saveGlucoseReadingsForDate(
+                                    date = viewModel.todayDateString,
+                                    beforeBreakfast = bb,
+                                    afterBreakfast = ab,
+                                    beforeLunch = bl,
+                                    afterLunch = al,
+                                    beforeDinner = bd,
+                                    afterDinner = ad,
+                                    specimenSource = specimenSource
+                                )
+                                android.widget.Toast.makeText(context, "Glucose reading(s) saved", android.widget.Toast.LENGTH_SHORT).show()
+                            }
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -301,12 +306,14 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        Text("Last 30 Days Trend", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        Text("Last 3 Months Trend", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(12.dp))
         
-        val chartData = remember(history30) { history30.reversed() }
-        val dailyAverages = remember(chartData) {
-            chartData.map { metric ->
+        if (history.isEmpty()) {
+            Text("No data available to display.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            val chartData = history.reversed()
+            val dailyAverages = chartData.map { metric ->
                 val readings = listOfNotNull(
                     metric.bloodGlucoseMorning.takeIf { it > 0 },
                     metric.bloodGlucoseNight.takeIf { it > 0 },
@@ -319,12 +326,7 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
                 )
                 if (readings.isNotEmpty()) readings.average().toFloat() else null
             }
-        }
-        val hasChartData = remember(dailyAverages) { dailyAverages.any { it != null && it > 0f } }
 
-        if (!hasChartData) {
-            Text("No data available to display.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
             val targetMin = profile?.bloodGlucoseTargetMin ?: 0f
             val targetMax = profile?.bloodGlucoseTargetMax ?: 0f
             val hasTargetRange = targetMin > 0f && targetMax > 0f && targetMin < targetMax
