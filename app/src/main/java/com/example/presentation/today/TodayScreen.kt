@@ -277,12 +277,12 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                 text = "View All",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = Emerald600
+                                color = if (isDark) MaterialTheme.colorScheme.primary else Emerald600
                             )
                             Icon(
                                 imageVector = Icons.Default.ChevronRight,
                                 contentDescription = "View All Badges",
-                                tint = Emerald600,
+                                tint = if (isDark) MaterialTheme.colorScheme.primary else Emerald600,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -369,8 +369,8 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     .testTag("today_log_button"),
                 shape = RoundedCornerShape(28.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isDark) Emerald700 else Primary,
-                    contentColor = Color.White
+                    containerColor = if (isDark) MaterialTheme.colorScheme.primary else Primary,
+                    contentColor = if (isDark) MaterialTheme.colorScheme.onPrimary else Color.White
                 ),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
             ) {
@@ -395,8 +395,8 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     .testTag("today_start_button"),
                 shape = RoundedCornerShape(28.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isDark) Emerald800 else Emerald600,
-                    contentColor = Color.White
+                    containerColor = if (isDark) MaterialTheme.colorScheme.secondary else Emerald600,
+                    contentColor = if (isDark) MaterialTheme.colorScheme.onSecondary else Color.White
                 ),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
             ) {
@@ -432,7 +432,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
         }
 
         // Quick Actions 2x2 Grid
-        Text("Quick Actions", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+        Text("Quick Actions", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -441,18 +441,18 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 modifier = Modifier.weight(1f),
                 title = "Scan Food",
                 icon = Icons.Default.AddAPhoto,
-                bgColor = Surface,
-                iconColor = Primary,
-                textColor = TextPrimary,
+                bgColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface,
+                iconColor = if (isDark) MaterialTheme.colorScheme.primary else Primary,
+                textColor = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
                 onClick = { navController.navigate("scanner") }
             )
             QuickActionCard(
                 modifier = Modifier.weight(1f),
                 title = "Log Workout",
                 icon = Icons.Default.FitnessCenter,
-                bgColor = Surface,
-                iconColor = Primary,
-                textColor = TextPrimary,
+                bgColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface,
+                iconColor = if (isDark) MaterialTheme.colorScheme.primary else Primary,
+                textColor = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
                 onClick = { navigateToTab(navController, "fitness") }
             )
         }
@@ -464,18 +464,18 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 modifier = Modifier.weight(1f),
                 title = "Diet Chart",
                 icon = Icons.Default.RestaurantMenu,
-                bgColor = Surface,
-                iconColor = Primary,
-                textColor = TextPrimary,
+                bgColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface,
+                iconColor = if (isDark) MaterialTheme.colorScheme.primary else Primary,
+                textColor = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
                 onClick = { navController.navigate("dietplan") }
             )
             QuickActionCard(
                 modifier = Modifier.weight(1f),
                 title = "Water Log",
                 icon = Icons.Default.LocalDrink,
-                bgColor = Surface,
-                iconColor = Primary,
-                textColor = TextPrimary,
+                bgColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface,
+                iconColor = if (isDark) MaterialTheme.colorScheme.primary else Primary,
+                textColor = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
                 onClick = { showWaterDialog = true }
             )
         }
@@ -486,7 +486,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 .fillMaxWidth()
                 .shadow(2.dp, RoundedCornerShape(20.dp))
                 .clip(RoundedCornerShape(20.dp))
-                .background(Surface)
+                .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface)
                 .clickable { navController.navigate("chat") }
                 .padding(20.dp)
         ) {
@@ -500,14 +500,14 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(Emerald50),
+                            .background(if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Emerald50),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(imageVector = Icons.Default.ChatBubbleOutline, contentDescription = "AI Assistant", tint = Primary)
+                        Icon(imageVector = Icons.Default.ChatBubbleOutline, contentDescription = "AI Assistant", tint = if (isDark) MaterialTheme.colorScheme.primary else Primary)
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "Ask AI Assistant", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text(text = "Ask AI Assistant", color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         Text(text = "Get instant diet & health answers", color = Slate500, fontSize = 14.sp)
                     }
                 }
@@ -656,8 +656,8 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                         showWaterDialog = false
                                     },
                                 shape = RoundedCornerShape(12.dp),
-                                color = if (isDark) Emerald900.copy(alpha = 0.4f) else Emerald50,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) Emerald700 else Emerald200)
+                                color = if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Emerald50,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f) else Emerald200)
                             ) {
                                 Column(
                                     modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
@@ -677,7 +677,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                         text = label,
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isDark) Emerald300 else Emerald700
+                                        color = if (isDark) MaterialTheme.colorScheme.primary else Emerald700
                                     )
                                 }
                             }
@@ -728,7 +728,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                     showWaterDialog = false
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Emerald600),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (isDark) MaterialTheme.colorScheme.primary else Emerald600),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.height(56.dp)
                         ) {
@@ -807,8 +807,8 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                         showStepsDialog = false
                                     },
                                 shape = RoundedCornerShape(12.dp),
-                                color = if (isDark) Emerald900.copy(alpha = 0.4f) else Emerald50,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) Emerald700 else Emerald200)
+                                color = if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Emerald50,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f) else Emerald200)
                             ) {
                                 Column(
                                     modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
@@ -828,7 +828,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                         text = label,
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isDark) Emerald300 else Emerald700
+                                        color = if (isDark) MaterialTheme.colorScheme.primary else Emerald700
                                     )
                                 }
                             }
@@ -871,7 +871,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                     showStepsDialog = false
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Emerald600),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (isDark) MaterialTheme.colorScheme.primary else Emerald600),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.height(56.dp)
                         ) {
