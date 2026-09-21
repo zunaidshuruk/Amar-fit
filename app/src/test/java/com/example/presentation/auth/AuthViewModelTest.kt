@@ -160,4 +160,8 @@ class FakeAuthRepository : AuthRepository {
     override suspend fun checkEmailVerified(): AuthResult {
         return if (isEmailVerified) AuthResult.Success else AuthResult.EmailVerificationRequired
     }
+
+    override suspend fun sendPasswordResetEmail(email: String): AuthResult {
+        return if (shouldReturnError) AuthResult.Error("Test Error") else AuthResult.Success
+    }
 }

@@ -38,8 +38,15 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
     val glucoseAccent = AccentTokens.glucoseAccent(isDark)
     val context = LocalContext.current
     
-    var morningInput by remember { mutableStateOf(today?.bloodGlucoseMorning?.takeIf { it > 0 }?.toString() ?: "") }
-    var nightInput by remember { mutableStateOf(today?.bloodGlucoseNight?.takeIf { it > 0 }?.toString() ?: "") }
+    var beforeBreakfastInput by remember { mutableStateOf(today?.bloodGlucoseBeforeBreakfast?.takeIf { it > 0 }?.toString() ?: "") }
+    var afterBreakfastInput by remember { mutableStateOf(today?.bloodGlucoseAfterBreakfast?.takeIf { it > 0 }?.toString() ?: "") }
+    var beforeLunchInput by remember { mutableStateOf(today?.bloodGlucoseBeforeLunch?.takeIf { it > 0 }?.toString() ?: "") }
+    var afterLunchInput by remember { mutableStateOf(today?.bloodGlucoseAfterLunch?.takeIf { it > 0 }?.toString() ?: "") }
+    var beforeDinnerInput by remember { mutableStateOf(today?.bloodGlucoseBeforeDinner?.takeIf { it > 0 }?.toString() ?: "") }
+    var afterDinnerInput by remember { mutableStateOf(today?.bloodGlucoseAfterDinner?.takeIf { it > 0 }?.toString() ?: "") }
+    var specimenSource by remember { mutableStateOf(today?.bloodGlucoseSpecimenSource?.takeIf { it != "Not set" } ?: "Not set") }
+    var expandedSpecimenSource by remember { mutableStateOf(false) }
+    val specimenSourceOptions = listOf("Not set", "Interstitial fluid", "Capillary blood", "Plasma", "Serum", "Tears", "Whole blood")
 
     Column(
         modifier = Modifier
@@ -75,33 +82,116 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Today's Readings (mmol/L)", fontWeight = FontWeight.Bold, color = glucoseAccent.onBg)
                 Spacer(modifier = Modifier.height(12.dp))
+
+                Text("Breakfast", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = glucoseAccent.onBg)
+                Spacer(modifier = Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
-                        value = morningInput,
-                        onValueChange = { morningInput = it },
-                        label = { Text("Fasting (Morning)") },
+                        value = beforeBreakfastInput,
+                        onValueChange = { beforeBreakfastInput = it },
+                        label = { Text("Before") },
                         modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                     OutlinedTextField(
-                        value = nightInput,
-                        onValueChange = { nightInput = it },
-                        label = { Text("Post-Meal (Night)") },
+                        value = afterBreakfastInput,
+                        onValueChange = { afterBreakfastInput = it },
+                        label = { Text("After") },
                         modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("Lunch", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = glucoseAccent.onBg)
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = beforeLunchInput,
+                        onValueChange = { beforeLunchInput = it },
+                        label = { Text("Before") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    OutlinedTextField(
+                        value = afterLunchInput,
+                        onValueChange = { afterLunchInput = it },
+                        label = { Text("After") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("Dinner", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = glucoseAccent.onBg)
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = beforeDinnerInput,
+                        onValueChange = { beforeDinnerInput = it },
+                        label = { Text("Before") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    OutlinedTextField(
+                        value = afterDinnerInput,
+                        onValueChange = { afterDinnerInput = it },
+                        label = { Text("After") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                ExposedDropdownMenuBox(
+                    expanded = expandedSpecimenSource,
+                    onExpandedChange = { expandedSpecimenSource = !expandedSpecimenSource },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = specimenSource,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Specimen source") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSpecimenSource) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expandedSpecimenSource,
+                        onDismissRequest = { expandedSpecimenSource = false }
+                    ) {
+                        specimenSourceOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    specimenSource = option
+                                    expandedSpecimenSource = false
+                                }
+                            )
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = {
-                        val m = morningInput.toFloatOrNull()
-                        val n = nightInput.toFloatOrNull()
-                        if (m == null && n == null) {
+                        val bb = beforeBreakfastInput.toFloatOrNull()
+                        val ab = afterBreakfastInput.toFloatOrNull()
+                        val bl = beforeLunchInput.toFloatOrNull()
+                        val al = afterLunchInput.toFloatOrNull()
+                        val bd = beforeDinnerInput.toFloatOrNull()
+                        val ad = afterDinnerInput.toFloatOrNull()
+                        if (bb == null && ab == null && bl == null && al == null && bd == null && ad == null) {
                             android.widget.Toast.makeText(context, "Enter a valid glucose reading", android.widget.Toast.LENGTH_SHORT).show()
                         } else {
-                            m?.let { viewModel.setBloodGlucoseMorning(it) }
-                            n?.let { viewModel.setBloodGlucoseNight(it) }
-                            android.widget.Toast.makeText(context, "Glucose reading saved", android.widget.Toast.LENGTH_SHORT).show()
+                            bb?.let { viewModel.setBloodGlucoseBeforeBreakfast(it, specimenSource) }
+                            ab?.let { viewModel.setBloodGlucoseAfterBreakfast(it, specimenSource) }
+                            bl?.let { viewModel.setBloodGlucoseBeforeLunch(it, specimenSource) }
+                            al?.let { viewModel.setBloodGlucoseAfterLunch(it, specimenSource) }
+                            bd?.let { viewModel.setBloodGlucoseBeforeDinner(it, specimenSource) }
+                            ad?.let { viewModel.setBloodGlucoseAfterDinner(it, specimenSource) }
+                            android.widget.Toast.makeText(context, "Glucose reading(s) saved", android.widget.Toast.LENGTH_SHORT).show()
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -118,7 +208,13 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
         val validReadings = history.flatMap { 
             listOfNotNull(
                 it.bloodGlucoseMorning.takeIf { v -> v > 0 },
-                it.bloodGlucoseNight.takeIf { v -> v > 0 }
+                it.bloodGlucoseNight.takeIf { v -> v > 0 },
+                it.bloodGlucoseBeforeBreakfast.takeIf { v -> v > 0 },
+                it.bloodGlucoseAfterBreakfast.takeIf { v -> v > 0 },
+                it.bloodGlucoseBeforeLunch.takeIf { v -> v > 0 },
+                it.bloodGlucoseAfterLunch.takeIf { v -> v > 0 },
+                it.bloodGlucoseBeforeDinner.takeIf { v -> v > 0 },
+                it.bloodGlucoseAfterDinner.takeIf { v -> v > 0 }
             )
         }
         if (validReadings.isNotEmpty()) {
@@ -153,6 +249,20 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
             Text("No data available to display.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
             val chartData = history.reversed()
+            val dailyAverages = chartData.map { metric ->
+                val readings = listOfNotNull(
+                    metric.bloodGlucoseMorning.takeIf { it > 0 },
+                    metric.bloodGlucoseNight.takeIf { it > 0 },
+                    metric.bloodGlucoseBeforeBreakfast.takeIf { it > 0 },
+                    metric.bloodGlucoseAfterBreakfast.takeIf { it > 0 },
+                    metric.bloodGlucoseBeforeLunch.takeIf { it > 0 },
+                    metric.bloodGlucoseAfterLunch.takeIf { it > 0 },
+                    metric.bloodGlucoseBeforeDinner.takeIf { it > 0 },
+                    metric.bloodGlucoseAfterDinner.takeIf { it > 0 }
+                )
+                if (readings.isNotEmpty()) readings.average().toFloat() else null
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -162,46 +272,32 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
                     .padding(24.dp)
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    val maxVal = maxOf(10f, chartData.maxOfOrNull { maxOf(it.bloodGlucoseMorning, it.bloodGlucoseNight) } ?: 10f)
+                    val validMax = dailyAverages.filterNotNull().maxOrNull() ?: 10f
+                    val maxVal = maxOf(10f, validMax)
                     val width = size.width
                     val height = size.height
+                    val count = chartData.size
                     
-                    val stepX = if (chartData.size > 1) width / (chartData.size - 1) else width
-                    
-                    // Draw Morning path
-                    val morningPath = Path()
-                    // Draw Night path
-                    val nightPath = Path()
-                    
-                    chartData.forEachIndexed { index, metric ->
-                        val x = index * stepX
-                        
-                        val mY = height - ((metric.bloodGlucoseMorning / maxVal) * height)
-                        if (index == 0) morningPath.moveTo(x, mY) else morningPath.lineTo(x, mY)
-                        drawCircle(color = Indigo600, radius = 6.dp.toPx(), center = Offset(x, mY))
-                        
-                        val nY = height - ((metric.bloodGlucoseNight / maxVal) * height)
-                        if (index == 0) nightPath.moveTo(x, nY) else nightPath.lineTo(x, nY)
-                        drawCircle(color = Orange500, radius = 6.dp.toPx(), center = Offset(x, nY))
+                    val stepX = if (count > 1) width / (count - 1) else width
+                    val path = Path()
+                    var lastValidIndex: Int? = null
+
+                    dailyAverages.forEachIndexed { index, avg ->
+                        if (avg != null && avg > 0f) {
+                            val x = if (count > 1) index * stepX else width / 2f
+                            val y = height - ((avg / maxVal) * height)
+
+                            if (lastValidIndex == null || lastValidIndex != index - 1) {
+                                path.moveTo(x, y)
+                            } else {
+                                path.lineTo(x, y)
+                            }
+                            lastValidIndex = index
+                            drawCircle(color = Indigo600, radius = 6.dp.toPx(), center = Offset(x, y))
+                        }
                     }
                     
-                    drawPath(morningPath, color = Indigo600, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
-                    drawPath(nightPath, color = Orange500, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(12.dp).clip(RoundedCornerShape(6.dp)).background(Indigo600))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Morning", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Spacer(modifier = Modifier.width(24.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(12.dp).clip(RoundedCornerShape(6.dp)).background(Orange500))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Night", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    drawPath(path, color = Indigo600, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
                 }
             }
         }

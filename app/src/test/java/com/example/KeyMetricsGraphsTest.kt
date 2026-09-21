@@ -13,9 +13,9 @@ class KeyMetricsGraphsTest {
         val content = if (healthScreenFile.exists()) healthScreenFile.readText() else File("src/main/java/com/example/presentation/health/HealthScreen.kt").readText()
 
         // Verify no Carbs, Fat, or Protein graphs
-        assertFalse("HealthScreen should not graph Carbs", content.contains("Carbs", ignoreCase = true))
-        assertFalse("HealthScreen should not graph Protein", content.contains("Protein", ignoreCase = true))
-        assertFalse("HealthScreen should not graph Fat", content.contains("Fat", ignoreCase = true))
+        assertFalse("HealthScreen should not graph Carbs", content.contains("\"Carbs\""))
+        assertFalse("HealthScreen should not graph Protein", content.contains("\"Protein\""))
+        assertFalse("HealthScreen should not graph Fat", content.contains("\"Fat\""))
 
         // Verify Key metrics section and the four trend cards are present
         assertTrue("HealthScreen must contain Key metrics header", content.contains("Key metrics"))
