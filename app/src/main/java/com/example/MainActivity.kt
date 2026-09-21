@@ -46,6 +46,7 @@ import com.example.presentation.health.HealthScreen
 import com.example.presentation.lifestyle.LifestyleScreen
 import com.example.presentation.mealplan.DietChartScreen
 import com.example.presentation.mealplan.MealPlanScreen
+import com.example.presentation.metrics.GlucoseHistoricalEntryScreen
 import com.example.presentation.metrics.GlucoseLogScreen
 import com.example.presentation.metrics.WeightLogScreen
 import com.example.presentation.notifications.NotificationHelper
@@ -364,7 +365,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                   composable("dietplan") { DietChartScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("lifestyle") { LifestyleScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("mealplan") { MealPlanScreen(onNavigateBack = { navController.popBackStack() }) }
-                  composable("glucoselog") { GlucoseLogScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                  composable("glucoselog") { GlucoseLogScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onNavigateToHistoricalEntry = { navController.navigate("glucose_historical_entry") }) }
+                  composable("glucose_historical_entry") { GlucoseHistoricalEntryScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("weightlog") { WeightLogScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("badges") { BadgeGalleryScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("recipe") { RecipeScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }

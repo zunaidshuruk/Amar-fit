@@ -201,6 +201,10 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         val startDate = endDate.minusDays((windowDays - 1).toLong())
         return repository.getMetricsHistoryRange(startDate.toString(), endDate.toString())
     }
+
+    fun getMetricsForDateFlow(date: String): kotlinx.coroutines.flow.Flow<com.example.data.local.DailyMetric?> {
+        return repository.getMetricsForDate(date)
+    }
     
     val recentFoodLogs = repository.getRecentFoodLogs().stateIn(
         scope = viewModelScope,

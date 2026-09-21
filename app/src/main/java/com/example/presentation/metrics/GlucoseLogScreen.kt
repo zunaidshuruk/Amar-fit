@@ -33,7 +33,7 @@ import com.example.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
+fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}, onNavigateToHistoricalEntry: () -> Unit = {}) {
     val history by viewModel.metricsHistory.collectAsState()
     val today by viewModel.todayMetrics.collectAsState()
     val profile by viewModel.userProfile.collectAsState()
@@ -78,6 +78,14 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
                 color = MaterialTheme.colorScheme.onBackground
             )
         }
+
+        TextButton(
+            onClick = onNavigateToHistoricalEntry,
+            modifier = Modifier.align(Alignment.End)
+        ) {
+            Text("+ Add a Past Day's Reading")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
         
         Card(
             modifier = Modifier.fillMaxWidth(),
