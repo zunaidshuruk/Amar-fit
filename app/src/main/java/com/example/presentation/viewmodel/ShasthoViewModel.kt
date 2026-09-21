@@ -676,12 +676,17 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         value: Float,
         mealType: Int,
         relationToMeal: Int,
-        specimenSource: String
+        specimenSource: String,
+        date: String
     ) {
         try {
             val healthConnectClient = HealthConnectClient.getOrCreate(getApplication())
-            val now = Instant.now()
-            val zoneOffset = ZoneId.systemDefault().rules.getOffset(now)
+            val recordInstant = if (date == todayDateString) {
+                Instant.now()
+            } else {
+                java.time.LocalDate.parse(date).atTime(java.time.LocalTime.NOON).atZone(ZoneId.systemDefault()).toInstant()
+            }
+            val zoneOffset = ZoneId.systemDefault().rules.getOffset(recordInstant)
             val source = when (specimenSource) {
                 "Interstitial fluid" -> BloodGlucoseRecord.SPECIMEN_SOURCE_INTERSTITIAL_FLUID
                 "Capillary blood" -> BloodGlucoseRecord.SPECIMEN_SOURCE_CAPILLARY_BLOOD
@@ -692,7 +697,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 else -> BloodGlucoseRecord.SPECIMEN_SOURCE_UNKNOWN
             }
             val record = BloodGlucoseRecord(
-                time = now,
+                time = recordInstant,
                 zoneOffset = zoneOffset,
                 level = BloodGlucose.millimolesPerLiter(value.toDouble()),
                 specimenSource = source,
@@ -705,69 +710,93 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun setBloodGlucoseBeforeBreakfast(value: Float, specimenSource: String = "Not set") {
+    fun setBloodGlucoseBeforeBreakfast(value: Float, specimenSource: String = "Not set", date: String = todayDateString) {
         viewModelScope.launch {
-            val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
+            val current = if (date == todayDateString) {
+                todayMetrics.value ?: DailyMetric(date = date)
+            } else {
+                repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
+            }
             val updated = current.copy(bloodGlucoseBeforeBreakfast = value, bloodGlucoseSpecimenSource = specimenSource)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("glucose", "Logged blood glucose (before breakfast): ${value} mmol/L")
-            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_BREAKFAST, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource)
+            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_BREAKFAST, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource, date)
         }
     }
 
-    fun setBloodGlucoseAfterBreakfast(value: Float, specimenSource: String = "Not set") {
+    fun setBloodGlucoseAfterBreakfast(value: Float, specimenSource: String = "Not set", date: String = todayDateString) {
         viewModelScope.launch {
-            val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
+            val current = if (date == todayDateString) {
+                todayMetrics.value ?: DailyMetric(date = date)
+            } else {
+                repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
+            }
             val updated = current.copy(bloodGlucoseAfterBreakfast = value, bloodGlucoseSpecimenSource = specimenSource)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("glucose", "Logged blood glucose (after breakfast): ${value} mmol/L")
-            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_BREAKFAST, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource)
+            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_BREAKFAST, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource, date)
         }
     }
 
-    fun setBloodGlucoseBeforeLunch(value: Float, specimenSource: String = "Not set") {
+    fun setBloodGlucoseBeforeLunch(value: Float, specimenSource: String = "Not set", date: String = todayDateString) {
         viewModelScope.launch {
-            val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
+            val current = if (date == todayDateString) {
+                todayMetrics.value ?: DailyMetric(date = date)
+            } else {
+                repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
+            }
             val updated = current.copy(bloodGlucoseBeforeLunch = value, bloodGlucoseSpecimenSource = specimenSource)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("glucose", "Logged blood glucose (before lunch): ${value} mmol/L")
-            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_LUNCH, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource)
+            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_LUNCH, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource, date)
         }
     }
 
-    fun setBloodGlucoseAfterLunch(value: Float, specimenSource: String = "Not set") {
+    fun setBloodGlucoseAfterLunch(value: Float, specimenSource: String = "Not set", date: String = todayDateString) {
         viewModelScope.launch {
-            val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
+            val current = if (date == todayDateString) {
+                todayMetrics.value ?: DailyMetric(date = date)
+            } else {
+                repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
+            }
             val updated = current.copy(bloodGlucoseAfterLunch = value, bloodGlucoseSpecimenSource = specimenSource)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("glucose", "Logged blood glucose (after lunch): ${value} mmol/L")
-            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_LUNCH, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource)
+            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_LUNCH, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource, date)
         }
     }
 
-    fun setBloodGlucoseBeforeDinner(value: Float, specimenSource: String = "Not set") {
+    fun setBloodGlucoseBeforeDinner(value: Float, specimenSource: String = "Not set", date: String = todayDateString) {
         viewModelScope.launch {
-            val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
+            val current = if (date == todayDateString) {
+                todayMetrics.value ?: DailyMetric(date = date)
+            } else {
+                repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
+            }
             val updated = current.copy(bloodGlucoseBeforeDinner = value, bloodGlucoseSpecimenSource = specimenSource)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("glucose", "Logged blood glucose (before dinner): ${value} mmol/L")
-            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_DINNER, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource)
+            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_DINNER, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource, date)
         }
     }
 
-    fun setBloodGlucoseAfterDinner(value: Float, specimenSource: String = "Not set") {
+    fun setBloodGlucoseAfterDinner(value: Float, specimenSource: String = "Not set", date: String = todayDateString) {
         viewModelScope.launch {
-            val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
+            val current = if (date == todayDateString) {
+                todayMetrics.value ?: DailyMetric(date = date)
+            } else {
+                repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
+            }
             val updated = current.copy(bloodGlucoseAfterDinner = value, bloodGlucoseSpecimenSource = specimenSource)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("glucose", "Logged blood glucose (after dinner): ${value} mmol/L")
-            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_DINNER, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource)
+            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_DINNER, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource, date)
         }
     }
     
