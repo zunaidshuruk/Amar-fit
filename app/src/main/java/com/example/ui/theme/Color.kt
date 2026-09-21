@@ -8,6 +8,11 @@ val Primary = Color(0xFF1B4528)
 val Secondary = Color(0xFF2ECC71)
 val TextPrimary = Color(0xFF1E1E1E)
 
+val GunMetal = Color(0xFF00272B)
+val SignatureAccent = Color(0xFFE0FF4F)
+val SecondaryAccent = Color(0xFFCDD2D7)
+val AlertAccent = Color(0xFFF5A623)
+
 val Emerald900 = Color(0xFF064E3B)
 val Emerald800 = Color(0xFF065F46)
 val Emerald700 = Color(0xFF047857)

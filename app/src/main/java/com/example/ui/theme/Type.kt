@@ -34,3 +34,13 @@ val Typography =
     )
     */
   )
+
+object TypeScale {
+    val displayLarge = 56.sp
+    val displayMedium = 48.sp
+    val displaySmall = 40.sp
+    val titleLarge = 20.sp
+    val bodyLarge = 18.sp
+    val bodySmall = 14.sp
+}
+

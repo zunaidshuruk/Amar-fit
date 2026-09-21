@@ -20,19 +20,19 @@ import androidx.core.view.WindowCompat
 
 // Redesign Sprint 2 - Robust dark mode mappings
 private val DarkColorScheme =  darkColorScheme(
-    primary = Secondary, // Leaf green identity for contrast in dark mode
-    secondary = Secondary, // Leaf green identity
-    tertiary = Orange500,
-    background = Color(0xFF121212), // Material recommended dark theme base
-    surface = Color(0xFF1E1E1E), // ~5% white overlay — base cards
-    surfaceVariant = Color(0xFF262626), // ~9% white overlay — stat tiles / elevated cards
-    onPrimary = Color.White,
-    onSecondary = Color.Black,
-    onTertiary = Color.Black,
-    onBackground = Color(0xFFE0E0E0), // high-emphasis, ~87% white
-    onSurface = Color(0xFFE0E0E0), // high-emphasis, ~87% white
-    onSurfaceVariant = Color(0xFFA6A6A6), // medium-emphasis, ~60% white spec
-    outline = Slate600
+    primary = SignatureAccent,
+    onPrimary = GunMetal,
+    secondary = SecondaryAccent,
+    onSecondary = GunMetal,
+    tertiary = AlertAccent,
+    onTertiary = GunMetal,
+    background = GunMetal,
+    surface = Color(0xFF0C3135),
+    surfaceVariant = Color(0xFF163A3E),
+    onBackground = Color(0xFFE0E0E0),
+    onSurface = Color(0xFFE0E0E0),
+    onSurfaceVariant = SecondaryAccent,
+    outline = SecondaryAccent
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -58,7 +58,7 @@ val DefaultButtonHeight = 56.dp
 
 @Composable
 fun MyApplicationTheme(
-  darkTheme: Boolean = false,
+  darkTheme: Boolean = true,
   dynamicColor: Boolean = false,
   content: @Composable () -> Unit,
 ) {

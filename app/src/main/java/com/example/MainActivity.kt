@@ -103,7 +103,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     enableEdgeToEdge()
     setContent {
       val userProfile by viewModel.userProfile.collectAsState()
-      MyApplicationTheme(darkTheme = userProfile?.isDarkMode ?: androidx.compose.foundation.isSystemInDarkTheme()) {
+      MyApplicationTheme(darkTheme = true) {
         val permissionState = rememberMultiplePermissionsState(
             permissions = listOf(
                 android.Manifest.permission.POST_NOTIFICATIONS,
