@@ -81,6 +81,9 @@ fun HealthGoalsScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     val currentProfile = profile
                     if (currentProfile != null) {
+                        var glucoseTargetMinInput by remember(currentProfile.bloodGlucoseTargetMin) { mutableStateOf(currentProfile.bloodGlucoseTargetMin.takeIf { it > 0f }?.toString() ?: "") }
+                        var glucoseTargetMaxInput by remember(currentProfile.bloodGlucoseTargetMax) { mutableStateOf(currentProfile.bloodGlucoseTargetMax.takeIf { it > 0f }?.toString() ?: "") }
+
                         // 1. Steps Goal
                         GoalRow(
                             goalName = "Steps",
@@ -237,6 +240,67 @@ fun HealthGoalsScreen(
                                 }
                             }
                         )
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 12.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+
+                        Text(
+                            text = "Blood Glucose Target Range (mmol/L)",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedTextField(
+                                value = glucoseTargetMinInput,
+                                onValueChange = { glucoseTargetMinInput = it },
+                                label = { Text("Min") },
+                                modifier = Modifier.weight(1f),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                            )
+                            OutlinedTextField(
+                                value = glucoseTargetMaxInput,
+                                onValueChange = { glucoseTargetMaxInput = it },
+                                label = { Text("Max") },
+                                modifier = Modifier.weight(1f),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = {
+                                val min = glucoseTargetMinInput.toFloatOrNull()
+                                val max = glucoseTargetMaxInput.toFloatOrNull()
+                                if (min == null || max == null || min <= 0f || max <= 0f || min >= max) {
+                                    Toast.makeText(context, "Enter a valid min and max (min must be less than max)", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    coroutineScope.launch {
+                                        val success = viewModel.saveProfile(
+                                            currentProfile.copy(
+                                                bloodGlucoseTargetMin = min,
+                                                bloodGlucoseTargetMax = max
+                                            )
+                                        )
+                                        Toast.makeText(
+                                            context,
+                                            if (success) "Blood glucose target range updated" else "Couldn't save — please try again",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Emerald600),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth().height(56.dp)
+                        ) {
+                            Text("Save")
+                        }
                     } else {
                         Box(
                             modifier = Modifier

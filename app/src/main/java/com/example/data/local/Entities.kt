@@ -40,7 +40,9 @@ data class UserProfile(
     val notificationsEnabled: Boolean = true,
     val remindersEnabled: Boolean = true,
     val selectedLanguage: String = "English",
-    val todayTileSlots: String = ""
+    val todayTileSlots: String = "",
+    val bloodGlucoseTargetMin: Float = 0f,
+    val bloodGlucoseTargetMax: Float = 0f
 )
 
 @Entity(tableName = "daily_metrics")
