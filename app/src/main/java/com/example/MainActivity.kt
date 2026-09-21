@@ -103,6 +103,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     enableEdgeToEdge()
     setContent {
       val userProfile by viewModel.userProfile.collectAsState()
+      val isDark = userProfile?.isDarkMode ?: androidx.compose.foundation.isSystemInDarkTheme()
       MyApplicationTheme(darkTheme = true) {
         val permissionState = rememberMultiplePermissionsState(
             permissions = listOf(
@@ -178,7 +179,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                               }
                               val name = (userProfile?.name ?: "Guest").trim().split(" ").firstOrNull { it.isNotBlank() } ?: "Guest"
                               Column {
-                                  Text(text = "HEALTH & DIET", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = Emerald700, letterSpacing = 1.sp)
+                                  Text(text = "HEALTH & DIET", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = if (isDark) MaterialTheme.colorScheme.primary else Emerald700, letterSpacing = 1.sp)
                                   Text(
                                       text = "$greeting, $name",
                                       fontSize = 18.sp,
@@ -211,9 +212,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                                           .size(36.dp)
                                           .clip(CircleShape)
                                           .background(MaterialTheme.colorScheme.surface)
-                                          .border(1.dp, Slate200, CircleShape)
+                                          .border(1.dp, if (isDark) MaterialTheme.colorScheme.outline else Slate200, CircleShape)
                                   ) {
-                                      Icon(Icons.Default.Sync, contentDescription = "Sync Health Connect", tint = Emerald600, modifier = Modifier.size(20.dp))
+                                      Icon(Icons.Default.Sync, contentDescription = "Sync Health Connect", tint = if (isDark) MaterialTheme.colorScheme.primary else Emerald600, modifier = Modifier.size(20.dp))
                                   }
                               }
 
@@ -222,8 +223,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                                       .padding(end = 16.dp)
                                       .size(36.dp)
                                       .clip(CircleShape)
-                                      .background(Emerald200)
-                                      .border(2.dp, Color.White, CircleShape)
+                                      .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Emerald200)
+                                      .border(2.dp, if (isDark) MaterialTheme.colorScheme.outline else Color.White, CircleShape)
                                       .shadow(2.dp, CircleShape)
                                       .clickable { navController.navigate("settings") },
                                   contentAlignment = Alignment.Center
@@ -257,7 +258,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                                       Text(
                                           text = initial,
                                           fontWeight = FontWeight.Bold,
-                                          color = Emerald800,
+                                          color = if (isDark) MaterialTheme.colorScheme.primary else Emerald800,
                                           fontSize = 14.sp
                                       )
                                   }
@@ -280,7 +281,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                   ) {
                     bottomTabs.forEach { tab ->
                         val isSelected = currentRoute == tab.route
-                        val color = if (isSelected) Emerald600 else Slate400
+                        val color = if (isSelected) (if (isDark) MaterialTheme.colorScheme.primary else Emerald600) else Slate400
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.clickable { 
