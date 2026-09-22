@@ -379,6 +379,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     .height(56.dp)
                     .testTag("today_log_button"),
                 shape = RoundedCornerShape(28.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isDark) MaterialTheme.colorScheme.primary else Primary,
                     contentColor = if (isDark) MaterialTheme.colorScheme.onPrimary else Color.White
@@ -394,7 +395,8 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 Text(
                     text = "Log",
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1
                 )
             }
 
@@ -405,6 +407,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     .height(56.dp)
                     .testTag("today_start_button"),
                 shape = RoundedCornerShape(28.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isDark) MaterialTheme.colorScheme.secondary else Emerald600,
                     contentColor = if (isDark) MaterialTheme.colorScheme.onSecondary else Color.White
@@ -420,7 +423,8 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 Text(
                     text = "Start",
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1
                 )
             }
 
@@ -435,7 +439,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 shadowElevation = 2.dp
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
@@ -449,7 +453,8 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                         text = "Edit tiles",
                         color = MaterialTheme.colorScheme.primary,
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1
                     )
                 }
             }
