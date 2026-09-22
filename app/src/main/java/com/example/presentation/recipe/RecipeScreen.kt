@@ -73,7 +73,7 @@ fun RecipeScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Emerald500,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                 focusedContainerColor = MaterialTheme.colorScheme.surface,
                 unfocusedContainerColor = MaterialTheme.colorScheme.surface
@@ -86,7 +86,7 @@ fun RecipeScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
                         }
                     }
                 ) {
-                    Icon(Icons.Default.Search, contentDescription = "Search", tint = Emerald600)
+                    Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.primary)
                 }
             }
         )
@@ -95,7 +95,7 @@ fun RecipeScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
 
         if (isLoading) {
             Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Emerald500)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else if (recipe != null) {
             val hasYouTubeSearch = recipe!!.contains("YOUTUBE_SEARCH:")
@@ -146,7 +146,7 @@ fun RecipeScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.LocalDining, contentDescription = null, tint = Emerald200, modifier = Modifier.size(64.dp))
+                    Icon(Icons.Default.LocalDining, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(64.dp))
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "Enter a health goal or ingredient above to get a customized medicinal recipe with video instructions.",

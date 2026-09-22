@@ -37,6 +37,7 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
     val history by viewModel.metricsHistory.collectAsState()
     val profile by viewModel.userProfile.collectAsState()
     val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val weightAccent = AccentTokens.weightAccent(isDark)
     val context = LocalContext.current
     
     var weightInput by remember { mutableStateOf(profile?.weightKg?.takeIf { it > 0 }?.toString() ?: "70.0") }
@@ -153,7 +154,7 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Emerald600)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text("Save & Calculate")
                 }
@@ -224,9 +225,9 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
                         val y = height - (((metric.weightKg - minW) / range) * height)
                         
                         if (index == 0) weightPath.moveTo(x, y) else weightPath.lineTo(x, y)
-                        drawCircle(color = Emerald500, radius = 6.dp.toPx(), center = Offset(x, y))
+                        drawCircle(color = weightAccent.onBg, radius = 6.dp.toPx(), center = Offset(x, y))
                     }
-                    drawPath(weightPath, color = Emerald500, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
+                    drawPath(weightPath, color = weightAccent.onBg, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
                 }
             }
         }
