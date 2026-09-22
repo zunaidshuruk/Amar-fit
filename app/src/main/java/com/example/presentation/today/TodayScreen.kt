@@ -1,9 +1,12 @@
 package com.example.presentation.today
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -19,8 +22,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -34,6 +40,7 @@ import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 import java.text.SimpleDateFormat
@@ -108,7 +115,8 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Large Ring Tiles (Full-width)
+        // Large Ring Tiles (Full-width, stacked vertically as before). Each card is
+        // flippable in place -- tap or swipe it to reveal a back face with extra detail.
         if (activeLargeIds.isNotEmpty()) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -125,7 +133,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                         onNavigateToFitness = { navigateToTab(navController, "fitness") }
                     )
                     if (resolved != null) {
-                        LargeRingTileCard(
+                        FlippableHeroCard(
                             tile = resolved,
                             isDark = isDark,
                             heroStyle = (largeId == "large_steps")
@@ -1186,65 +1194,149 @@ private fun CalendarStripCard(
     }
 }
 
+/**
+ * A large hero tile that flips between a front face (the ring/progress view) and a
+ * back face (a short list of related detail stats). It flips on either a tap or a
+ * horizontal swipe, so the gesture that feels natural just works. The card's original
+ * navigation/log action (e.g. opening the steps dialog) moves to a small corner
+ * button so it stays reachable without hijacking the flip gesture.
+ */
 @Composable
-private fun LargeRingTileCard(
+private fun FlippableHeroCard(
     tile: ResolvedLargeTile,
     isDark: Boolean,
     heroStyle: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    var flipped by remember(tile.id) { mutableStateOf(false) }
+    val rotation by animateFloatAsState(
+        targetValue = if (flipped) 180f else 0f,
+        animationSpec = tween(durationMillis = 450),
+        label = "heroCardFlip"
+    )
+    val density = LocalDensity.current
+    var dragAccumPx by remember(tile.id) { mutableStateOf(0f) }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .shadow(2.dp, RoundedCornerShape(20.dp))
             .clip(RoundedCornerShape(20.dp))
             .background(if (heroStyle) MaterialTheme.colorScheme.primary else (if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface))
-            .clickable { tile.onClick() }
+            // Swipe (in either direction) toggles the flip, same as a tap.
+            .pointerInput(tile.id) {
+                detectHorizontalDragGestures(
+                    onDragStart = { dragAccumPx = 0f },
+                    onHorizontalDrag = { change, dragAmount ->
+                        change.consume()
+                        dragAccumPx += dragAmount
+                    },
+                    onDragEnd = {
+                        val thresholdPx = with(density) { 56.dp.toPx() }
+                        if (abs(dragAccumPx) > thresholdPx) {
+                            flipped = !flipped
+                        }
+                        dragAccumPx = 0f
+                    },
+                    onDragCancel = { dragAccumPx = 0f }
+                )
+            }
+            .clickable { flipped = !flipped }
+            .graphicsLayer {
+                rotationY = rotation
+                cameraDistance = 12f * density.density
+            }
             .padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
-        val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
-        Box(
-            modifier = Modifier
-                .size(if (heroStyle) 148.dp else 136.dp)
-                .padding(vertical = 4.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val strokeWidth = 11.dp.toPx()
-                if (heroStyle) {
-                    val radius = (size.minDimension - strokeWidth) / 2f
-                    val centerOffset = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
-                    val filledDots = (32 * tile.progress).toInt().coerceIn(0, 32)
-                    for (i in 0 until 32) {
-                        val angleDeg = -90f + i * (360f / 32f)
-                        val angleRad = Math.toRadians(angleDeg.toDouble())
-                        val dotCenter = androidx.compose.ui.geometry.Offset(
-                            x = (centerOffset.x + radius * cos(angleRad)).toFloat(),
-                            y = (centerOffset.y + radius * sin(angleRad)).toFloat()
-                        )
-                        val isFilled = i < filledDots
-                        val dotColor = if (isFilled) onPrimaryColor else onPrimaryColor.copy(alpha = 0.22f)
-                        val dotRadius = if (isFilled) strokeWidth / 2.8f else strokeWidth / 3.2f
-                        drawCircle(
-                            color = dotColor,
-                            radius = dotRadius,
-                            center = dotCenter
-                        )
-                    }
-                } else {
-                    val diameter = size.minDimension - strokeWidth
-                    val topLeftOffset = androidx.compose.ui.geometry.Offset(
-                        (size.width - diameter) / 2f,
-                        (size.height - diameter) / 2f
-                    )
-                    val arcSize = androidx.compose.ui.geometry.Size(diameter, diameter)
+        if (rotation <= 90f) {
+            HeroCardFrontFace(tile = tile, isDark = isDark, heroStyle = heroStyle)
+        } else {
+            // Counter-rotate so the back face's text reads correctly instead of mirrored.
+            Box(modifier = Modifier.graphicsLayer { rotationY = 180f }) {
+                HeroCardBackFace(tile = tile, isDark = isDark, heroStyle = heroStyle)
+            }
+        }
 
-                    // Background Track (Open gauge 270 degrees, gap centered at the top so it doesn't collide with the title text)
+        IconButton(
+            onClick = { tile.onClick() },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(32.dp)
+        ) {
+            Icon(
+                imageVector = if (heroStyle) Icons.Default.Add else Icons.Default.ChevronRight,
+                contentDescription = if (heroStyle) "Log steps" else "Open",
+                tint = if (heroStyle) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f) else tile.accent.onBg,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun HeroCardFrontFace(
+    tile: ResolvedLargeTile,
+    isDark: Boolean,
+    heroStyle: Boolean
+) {
+    val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
+    Box(
+        modifier = Modifier
+            .size(if (heroStyle) 148.dp else 136.dp)
+            .padding(vertical = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val strokeWidth = 11.dp.toPx()
+            if (heroStyle) {
+                val radius = (size.minDimension - strokeWidth) / 2f
+                val centerOffset = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
+                val filledDots = (32 * tile.progress).toInt().coerceIn(0, 32)
+                for (i in 0 until 32) {
+                    val angleDeg = -90f + i * (360f / 32f)
+                    val angleRad = Math.toRadians(angleDeg.toDouble())
+                    val dotCenter = androidx.compose.ui.geometry.Offset(
+                        x = (centerOffset.x + radius * cos(angleRad)).toFloat(),
+                        y = (centerOffset.y + radius * sin(angleRad)).toFloat()
+                    )
+                    val isFilled = i < filledDots
+                    val dotColor = if (isFilled) onPrimaryColor else onPrimaryColor.copy(alpha = 0.22f)
+                    val dotRadius = if (isFilled) strokeWidth / 2.8f else strokeWidth / 3.2f
+                    drawCircle(
+                        color = dotColor,
+                        radius = dotRadius,
+                        center = dotCenter
+                    )
+                }
+            } else {
+                val diameter = size.minDimension - strokeWidth
+                val topLeftOffset = androidx.compose.ui.geometry.Offset(
+                    (size.width - diameter) / 2f,
+                    (size.height - diameter) / 2f
+                )
+                val arcSize = androidx.compose.ui.geometry.Size(diameter, diameter)
+
+                // Background Track (Open gauge 270 degrees, gap centered at the top so it doesn't collide with the title text)
+                drawArc(
+                    color = tile.accent.onBg.copy(alpha = 0.15f),
+                    startAngle = 315f,
+                    sweepAngle = 270f,
+                    useCenter = false,
+                    topLeft = topLeftOffset,
+                    size = arcSize,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(
+                        width = strokeWidth,
+                        cap = StrokeCap.Round
+                    )
+                )
+
+                // Progress Arc
+                if (tile.progress > 0f) {
                     drawArc(
-                        color = tile.accent.onBg.copy(alpha = 0.15f),
+                        color = tile.accent.onBg,
                         startAngle = 315f,
-                        sweepAngle = 270f,
+                        sweepAngle = 270f * tile.progress,
                         useCenter = false,
                         topLeft = topLeftOffset,
                         size = arcSize,
@@ -1253,49 +1345,97 @@ private fun LargeRingTileCard(
                             cap = StrokeCap.Round
                         )
                     )
+                }
+            }
+        }
 
-                    // Progress Arc
-                    if (tile.progress > 0f) {
-                        drawArc(
-                            color = tile.accent.onBg,
-                            startAngle = 315f,
-                            sweepAngle = 270f * tile.progress,
-                            useCenter = false,
-                            topLeft = topLeftOffset,
-                            size = arcSize,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                width = strokeWidth,
-                                cap = StrokeCap.Round
-                            )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = tile.title,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (heroStyle) MaterialTheme.colorScheme.onPrimary else tile.accent.onBg
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = tile.insideValue,
+                fontSize = if (heroStyle) 30.sp else 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (heroStyle) MaterialTheme.colorScheme.onPrimary else (if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary)
+            )
+            Text(
+                text = tile.insideSubtext,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (heroStyle) MaterialTheme.colorScheme.onPrimary else tile.accent.onBg
+            )
+        }
+    }
+}
+
+@Composable
+private fun HeroCardBackFace(
+    tile: ResolvedLargeTile,
+    isDark: Boolean,
+    heroStyle: Boolean
+) {
+    val labelColor = if (heroStyle) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val valueColor = if (heroStyle) MaterialTheme.colorScheme.onPrimary else (if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(if (heroStyle) 148.dp else 136.dp)
+            .padding(vertical = 4.dp, horizontal = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "${tile.title} detail",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = labelColor
+            )
+            if (tile.backStats.isEmpty()) {
+                Text(
+                    text = "No extra detail yet",
+                    fontSize = 13.sp,
+                    color = labelColor
+                )
+            } else {
+                tile.backStats.forEach { (label, value) ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = labelColor,
+                            modifier = Modifier.width(88.dp)
+                        )
+                        Text(
+                            text = value,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = valueColor
                         )
                     }
                 }
             }
-
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = tile.title,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (heroStyle) MaterialTheme.colorScheme.onPrimary else tile.accent.onBg
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = tile.insideValue,
-                    fontSize = if (heroStyle) 30.sp else 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (heroStyle) MaterialTheme.colorScheme.onPrimary else (if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary)
-                )
-                Text(
-                    text = tile.insideSubtext,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = if (heroStyle) MaterialTheme.colorScheme.onPrimary else tile.accent.onBg
-                )
-            }
+            Text(
+                text = "Tap to flip back",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium,
+                color = labelColor.copy(alpha = 0.7f)
+            )
         }
     }
 }

@@ -40,6 +40,16 @@ val ALL_SMALL_TILE_IDS = listOf(
     "food_calories"
 )
 
+/** Formats a "yyyy-MM-dd" date string as a short weekday label (e.g. "Tue"). Falls back to the raw string. */
+private fun formatWeekdayLabel(isoDate: String): String {
+    return try {
+        val parsed = java.time.LocalDate.parse(isoDate)
+        parsed.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.US)
+    } catch (e: Exception) {
+        isoDate
+    }
+}
+
 fun parseTodayTileSlots(raw: String?): Pair<List<String>, List<String>> {
     val defaultLarge = listOf("large_steps")
     val defaultSmall = listOf("steps", "sleep", "distance", "cal_burned", "exercise_days", "heart_rate")
@@ -107,7 +117,9 @@ data class ResolvedLargeTile(
     val insideValue: String,
     val insideSubtext: String,
     val accent: AccentColors,
-    val onClick: () -> Unit
+    val onClick: () -> Unit,
+    /** Label/value pairs shown on the card's flip side for extra detail. */
+    val backStats: List<Pair<String, String>> = emptyList()
 )
 
 data class ResolvedSmallTile(
@@ -135,6 +147,10 @@ fun resolveLargeTile(
             val goal = if (stepGoal > 0) stepGoal else 10000
             val progress = (steps.toFloat() / goal.toFloat()).coerceIn(0f, 1f)
             val accent = AccentTokens.stepsAccent(isDark)
+            val distanceKm = (metrics?.distanceMeters ?: 0f) / 1000f
+            val calBurned = metrics?.activeCaloriesBurned ?: 0
+            val activeMinutes = metrics?.exerciseMinutes ?: 0
+            val avg7DaySteps = if (last7Metrics.isNotEmpty()) last7Metrics.sumOf { it.steps } / last7Metrics.size else 0
             ResolvedLargeTile(
                 id = "large_steps",
                 title = "Daily Steps",
@@ -142,7 +158,13 @@ fun resolveLargeTile(
                 insideValue = String.format(Locale.US, "%,d", steps),
                 insideSubtext = "of ${String.format(Locale.US, "%,d", goal)}",
                 accent = accent,
-                onClick = onOpenStepsDialog
+                onClick = onOpenStepsDialog,
+                backStats = listOf(
+                    "Distance" to "${String.format(Locale.US, "%.2f", distanceKm)} km",
+                    "Cal burned" to "$calBurned kcal",
+                    "Active minutes" to "$activeMinutes min",
+                    "7-day avg" to "${String.format(Locale.US, "%,d", avg7DaySteps)} steps"
+                )
             )
         }
         "large_weekly_cardio" -> {
@@ -150,6 +172,10 @@ fun resolveLargeTile(
             val cardioGoal = 150
             val progress = (weeklyExerciseMinutes.toFloat() / cardioGoal.toFloat()).coerceIn(0f, 1f)
             val accent = AccentTokens.pointsAccent(isDark)
+            val activeDays = last7Metrics.count { it.exerciseMinutes > 0 }
+            val bestDay = last7Metrics.maxByOrNull { it.exerciseMinutes }
+            val bestDayLabel = bestDay?.takeIf { it.exerciseMinutes > 0 }?.let { formatWeekdayLabel(it.date) } ?: "--"
+            val dailyAvg = if (last7Metrics.isNotEmpty()) weeklyExerciseMinutes / last7Metrics.size else 0
             ResolvedLargeTile(
                 id = "large_weekly_cardio",
                 title = "Weekly Cardio",
@@ -157,7 +183,12 @@ fun resolveLargeTile(
                 insideValue = "$weeklyExerciseMinutes",
                 insideSubtext = "of $cardioGoal min",
                 accent = accent,
-                onClick = onNavigateToFitness
+                onClick = onNavigateToFitness,
+                backStats = listOf(
+                    "Days active" to "$activeDays/7",
+                    "Best day" to (if (bestDay != null && bestDay.exerciseMinutes > 0) "$bestDayLabel · ${bestDay.exerciseMinutes} min" else "--"),
+                    "Daily avg" to "$dailyAvg min"
+                )
             )
         }
         else -> null
