@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.SavedChat
@@ -102,7 +103,7 @@ fun ChatScreen(viewModel: ShasthoViewModel, initialTab: Int = 0, onNavigateBack:
                     Icon(
                         imageVector = Icons.Default.Save,
                         contentDescription = "Save Conversation",
-                        tint = Emerald600
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -120,24 +121,38 @@ fun ChatScreen(viewModel: ShasthoViewModel, initialTab: Int = 0, onNavigateBack:
             Button(
                 onClick = { selectedTab = 0; selectedSavedChat = null },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (selectedTab == 0) Emerald600 else MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = if (selectedTab == 0) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                    containerColor = if (selectedTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = if (selectedTab == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                 ),
                 modifier = Modifier.weight(1f).padding(end = 4.dp),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp)
             ) {
-                Text("Active Chat", color = if (selectedTab == 0) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Active Chat",
+                    color = if (selectedTab == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Clip
+                )
             }
             Button(
                 onClick = { selectedTab = 1 },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (selectedTab == 1) Emerald600 else MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = if (selectedTab == 1) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                    containerColor = if (selectedTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = if (selectedTab == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                 ),
                 modifier = Modifier.weight(1f).padding(start = 4.dp),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp)
             ) {
-                Text("Saved Chats (${savedChats.size})", color = if (selectedTab == 1) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Saved Chats (${savedChats.size})",
+                    color = if (selectedTab == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Clip
+                )
             }
         }
 
@@ -196,12 +211,12 @@ fun ChatScreen(viewModel: ShasthoViewModel, initialTab: Int = 0, onNavigateBack:
                                         bottomStart = if (message.isUser) 16.dp else 0.dp,
                                         bottomEnd = if (message.isUser) 0.dp else 16.dp
                                     ))
-                                    .background(if (message.isUser) Emerald600 else MaterialTheme.colorScheme.surfaceVariant)
+                                    .background(if (message.isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
                                     .padding(16.dp)
                                     .widthIn(max = 280.dp)
                             ) {
                                 if (message.isUser) {
-                                    Text(text = displayMsg, color = Color.White)
+                                    Text(text = displayMsg, color = MaterialTheme.colorScheme.onPrimary)
                                 } else {
                                     MarkdownText(text = displayMsg, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
@@ -234,7 +249,7 @@ fun ChatScreen(viewModel: ShasthoViewModel, initialTab: Int = 0, onNavigateBack:
                         ) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(24.dp),
-                                color = Emerald500
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -256,7 +271,7 @@ fun ChatScreen(viewModel: ShasthoViewModel, initialTab: Int = 0, onNavigateBack:
                     placeholder = { Text("Ask about recipes...") },
                     shape = RoundedCornerShape(24.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Emerald500,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                     )
                 )
@@ -270,9 +285,9 @@ fun ChatScreen(viewModel: ShasthoViewModel, initialTab: Int = 0, onNavigateBack:
                     },
                     modifier = Modifier
                         .size(48.dp)
-                        .background(Emerald600, RoundedCornerShape(24.dp))
+                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(24.dp))
                 ) {
-                    Icon(Icons.Default.Send, contentDescription = "Send", tint = Color.White)
+                    Icon(Icons.Default.Send, contentDescription = "Send", tint = MaterialTheme.colorScheme.onPrimary)
                 }
             }
         } else {
@@ -330,7 +345,7 @@ fun ChatScreen(viewModel: ShasthoViewModel, initialTab: Int = 0, onNavigateBack:
                                         )
                                     }
                                     IconButton(onClick = { viewModel.deleteChat(chat) }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Red500)
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                                     }
                                 }
                             }
@@ -424,12 +439,12 @@ fun SavedChatDetailView(chat: SavedChat, onBack: () -> Unit) {
                                 bottomStart = if (message.isUser) 16.dp else 0.dp,
                                 bottomEnd = if (message.isUser) 0.dp else 16.dp
                             ))
-                            .background(if (message.isUser) Emerald600 else MaterialTheme.colorScheme.surfaceVariant)
+                            .background(if (message.isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
                             .padding(16.dp)
                             .widthIn(max = 280.dp)
                     ) {
                         if (message.isUser) {
-                            Text(text = message.text, color = Color.White)
+                            Text(text = message.text, color = MaterialTheme.colorScheme.onPrimary)
                         } else {
                             MarkdownText(text = message.text, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
