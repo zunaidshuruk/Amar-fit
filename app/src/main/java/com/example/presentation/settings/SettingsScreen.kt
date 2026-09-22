@@ -60,7 +60,7 @@ fun SettingsScreen(
     onNavigateToHealthGoals: () -> Unit = {}
 ) {
     val profile by viewModel.userProfile.collectAsState()
-    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
 
     var name by remember { mutableStateOf("") }
     var age by remember { mutableStateOf("") }
@@ -521,7 +521,8 @@ fun SettingsScreen(
                 if (showSavedMessage) {
                     Text(
                         text = "Profile updated successfully!",
-                        color = if (isDark) Emerald300 else Emerald600,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Medium,
                         fontSize = 14.sp
                     )
                 }
