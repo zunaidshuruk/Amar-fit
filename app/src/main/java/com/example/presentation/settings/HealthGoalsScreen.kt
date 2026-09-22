@@ -295,7 +295,7 @@ fun HealthGoalsScreen(
                                     }
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Emerald600),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth().height(56.dp)
                         ) {
@@ -308,7 +308,7 @@ fun HealthGoalsScreen(
                                 .padding(24.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator(color = Emerald600)
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -364,7 +364,7 @@ private fun GoalRow(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(if (isAuto) Emerald600 else Color.Transparent)
+                        .background(if (isAuto) MaterialTheme.colorScheme.primary else Color.Transparent)
                         .clickable { onToggleAuto(true) }
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
@@ -373,13 +373,13 @@ private fun GoalRow(
                         text = "Auto",
                         fontSize = 13.sp,
                         fontWeight = if (isAuto) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isAuto) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (isAuto) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(if (!isAuto) Emerald600 else Color.Transparent)
+                        .background(if (!isAuto) MaterialTheme.colorScheme.primary else Color.Transparent)
                         .clickable { onToggleAuto(false) }
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
@@ -388,7 +388,7 @@ private fun GoalRow(
                         text = "Manual",
                         fontSize = 13.sp,
                         fontWeight = if (!isAuto) FontWeight.Bold else FontWeight.Normal,
-                        color = if (!isAuto) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (!isAuto) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -412,7 +412,7 @@ private fun GoalRow(
                 )
                 Button(
                     onClick = { onSaveManual(manualInput) },
-                    colors = ButtonDefaults.buttonColors(containerColor = Emerald600),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.height(56.dp)
                 ) {
