@@ -277,7 +277,7 @@ fun SettingsScreen(
                             .size(100.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .border(2.dp, Emerald500, CircleShape)
+                            .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
                             .clickable { launcher.launch("image/*") },
                         contentAlignment = Alignment.Center
                     ) {
@@ -508,11 +508,11 @@ fun SettingsScreen(
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Emerald600),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     enabled = !isSaving
                 ) {
                     if (isSaving) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
                     } else {
                         Text("Save Profile")
                     }
@@ -553,7 +553,7 @@ fun SettingsScreen(
                     Switch(
                         checked = useImperialUnits,
                         onCheckedChange = { useImperialUnits = it },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Emerald600, checkedTrackColor = Emerald200)
+                        colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary, checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                     )
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -567,7 +567,7 @@ fun SettingsScreen(
                     Switch(
                         checked = notificationsEnabled,
                         onCheckedChange = { notificationsEnabled = it },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Emerald600, checkedTrackColor = Emerald200)
+                        colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary, checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                     )
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -581,7 +581,7 @@ fun SettingsScreen(
                     Switch(
                         checked = remindersEnabled,
                         onCheckedChange = { remindersEnabled = it },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Emerald600, checkedTrackColor = Emerald200)
+                        colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary, checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                     )
                 }
             }
@@ -606,7 +606,7 @@ fun SettingsScreen(
                                 Toast.makeText(context, "Health Connect is not available on this device", Toast.LENGTH_SHORT).show()
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Emerald600)
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
                         Text("Connect")
                     }
@@ -644,11 +644,11 @@ fun SettingsScreen(
                             },
                             enabled = !isBackingUp && !isRestoring,
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = Emerald600)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
                             if (isBackingUp) {
                                 CircularProgressIndicator(
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onPrimary,
                                     modifier = Modifier.size(18.dp),
                                     strokeWidth = 2.dp
                                 )
@@ -684,11 +684,11 @@ fun SettingsScreen(
                             },
                             enabled = !isBackingUp && !isRestoring,
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Emerald600)
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
                         ) {
                             if (isRestoring) {
                                 CircularProgressIndicator(
-                                    color = Emerald600,
+                                    color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(18.dp),
                                     strokeWidth = 2.dp
                                 )
@@ -764,7 +764,7 @@ fun SettingsScreen(
         Button(
             onClick = { showLogoutDialog = true },
             modifier = Modifier.fillMaxWidth().height(50.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Slate500)
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
         ) {
             Text("Log Out")
         }
@@ -772,9 +772,9 @@ fun SettingsScreen(
         Button(
             onClick = { showDeleteDialog = true },
             modifier = Modifier.fillMaxWidth().height(50.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
         ) {
-            Text("Delete Account", color = Color.White)
+            Text("Delete Account", color = MaterialTheme.colorScheme.onError)
         }
         Spacer(modifier = Modifier.height(100.dp))
     }
@@ -804,7 +804,7 @@ fun SettingsScreen(
                             }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Emerald600)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text("Confirm")
                 }
@@ -899,7 +899,7 @@ fun SettingsScreen(
                         }
                     }
                 }) {
-                    Text("Delete", color = Color.Red)
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
@@ -1165,7 +1165,7 @@ fun SettingsScreen(
                             ) {
                                 missingPermissionCategories.forEach { category ->
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("• ", fontWeight = FontWeight.Bold, color = Emerald600)
+                                        Text("• ", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                         Text(
                                             category,
                                             fontSize = 14.sp,
@@ -1201,10 +1201,10 @@ fun SettingsScreen(
                         }
                         showMissingPermissionsDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Emerald600),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Open Health Connect Settings", color = Color.White)
+                    Text("Open Health Connect Settings", color = MaterialTheme.colorScheme.onPrimary)
                 }
             },
             dismissButton = {
