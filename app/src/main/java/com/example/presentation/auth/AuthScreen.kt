@@ -335,7 +335,7 @@ fun AuthScreen(
                     modifier = Modifier
                         .size(100.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(Color.White)
+                        .background(MaterialTheme.colorScheme.surface)
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
