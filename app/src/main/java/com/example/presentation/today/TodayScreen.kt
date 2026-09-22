@@ -1125,31 +1125,31 @@ private fun CalendarStripCard(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (selectedDate != today) {
-                        TextButton(onClick = { onDateSelected(today) }) {
+                        TextButton(onClick = { onDateSelected(today) }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) {
                             Text("Today", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                     IconButton(
                         onClick = { weekAnchor = weekAnchor.minusDays(7) },
                         modifier = Modifier
-                            .size(30.dp)
+                            .size(26.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.background)
                             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f), CircleShape)
                     ) {
-                        Icon(Icons.Default.ChevronLeft, contentDescription = "Previous week", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.ChevronLeft, contentDescription = "Previous week", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
                     }
                     IconButton(
                         onClick = { weekAnchor = weekAnchor.plusDays(7) },
                         modifier = Modifier
-                            .size(30.dp)
+                            .size(26.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.background)
                             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f), CircleShape)
                     ) {
-                        Icon(Icons.Default.ChevronRight, contentDescription = "Next week", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.ChevronRight, contentDescription = "Next week", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
                     }
                 }
             }
