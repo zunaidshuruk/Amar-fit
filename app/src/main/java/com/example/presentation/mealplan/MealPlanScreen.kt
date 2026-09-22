@@ -99,7 +99,7 @@ fun MealPlanScreen(
 ) {
     val vm: ShasthoViewModel? = viewModel ?: runCatching { androidx.lifecycle.viewmodel.compose.viewModel<ShasthoViewModel>() }.getOrNull()
     val profile by (vm?.userProfile ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
-    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
 
     Column(
         modifier = Modifier
@@ -224,7 +224,7 @@ fun DailyPlanCard(plan: DailyPlan) {
 }
 
 @Composable
-fun ShoppingListCard(isDark: Boolean = false) {
+fun ShoppingListCard(isDark: Boolean = true) {
     var expanded by remember { mutableStateOf(false) }
     val checkedState = remember { mutableStateMapOf<String, Boolean>() }
     val stepsAccent = AccentTokens.stepsAccent(isDark)

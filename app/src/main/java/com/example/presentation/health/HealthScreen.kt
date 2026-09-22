@@ -45,7 +45,7 @@ import java.text.NumberFormat
 @Composable
 fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val profile by viewModel.userProfile.collectAsState()
-    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
 
     val glucoseAccent = AccentTokens.glucoseAccent(isDark)
     val heartRateAccent = AccentTokens.heartRateAccent(isDark)

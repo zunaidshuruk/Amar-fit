@@ -42,7 +42,7 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
     val history30 by remember(viewModel) { viewModel.getMetricsHistoryFlow(30) }.collectAsState(initial = emptyList())
     val today by viewModel.todayMetrics.collectAsState()
     val profile by viewModel.userProfile.collectAsState()
-    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
     val glucoseAccent = AccentTokens.glucoseAccent(isDark)
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()

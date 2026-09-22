@@ -52,7 +52,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
     val frequentFoods by viewModel.frequentFoods.collectAsState()
     val context = LocalContext.current
     val profile by viewModel.userProfile.collectAsState()
-    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
     val foodLogAccent = AccentTokens.foodLogAccent(isDark)
     
     val calorieLimit = profile?.dailyCalorieLimit ?: 2000

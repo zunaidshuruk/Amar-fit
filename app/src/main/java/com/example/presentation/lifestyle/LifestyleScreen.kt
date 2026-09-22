@@ -62,7 +62,7 @@ val corePillars = listOf(
 @Composable
 fun LifestyleScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
     val profile by viewModel.userProfile.collectAsState()
-    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
     val pointsAccent = AccentTokens.pointsAccent(isDark)
 
     Column(

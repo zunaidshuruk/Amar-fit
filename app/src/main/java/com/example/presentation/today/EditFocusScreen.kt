@@ -36,7 +36,7 @@ fun EditFocusScreen(
     onNavigateBack: () -> Unit
 ) {
     val profile by viewModel.userProfile.collectAsState()
-    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
 
     val metrics by viewModel.todayMetrics.collectAsState()
     val last7Metrics by viewModel.getMetricsHistoryFlow(7).collectAsState(initial = emptyList())

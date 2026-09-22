@@ -36,7 +36,7 @@ import com.example.util.formatWeight
 fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
     val history by viewModel.metricsHistory.collectAsState()
     val profile by viewModel.userProfile.collectAsState()
-    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
     val weightAccent = AccentTokens.weightAccent(isDark)
     val context = LocalContext.current
     

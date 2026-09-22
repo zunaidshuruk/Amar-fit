@@ -31,7 +31,7 @@ import com.example.ui.theme.DefaultCardShape
 @Composable
 fun BadgeGalleryScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
     val profile by viewModel.userProfile.collectAsState()
-    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
     val badgesAccent = AccentTokens.badgesAccent(isDark = isDark)
     val earnedBadgeIds = profile?.badges?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
 

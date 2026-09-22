@@ -48,7 +48,7 @@ fun MindfulnessTimerScreen(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val userProfile by viewModel.userProfile.collectAsState()
-    val isDark = userProfile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
     val mindfulnessAccent = AccentTokens.mindfulnessAccent(isDark)
 
     val sessionTypes = remember {

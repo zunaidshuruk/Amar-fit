@@ -27,7 +27,7 @@ import com.example.ui.theme.*
 @Composable
 fun NutritionScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val profile by viewModel.userProfile.collectAsState()
-    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
 
     val foodLogAccent = AccentTokens.foodLogAccent(isDark)
     val mealPlanAccent = AccentTokens.mealPlanAccent(isDark)

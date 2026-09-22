@@ -60,7 +60,7 @@ fun WorkoutSessionScreen(
     viewModel: ShasthoViewModel,
     onExit: () -> Unit
 ) {
-    val isDark = userProfile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 

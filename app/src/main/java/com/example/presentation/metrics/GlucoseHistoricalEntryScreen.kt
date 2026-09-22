@@ -32,7 +32,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun GlucoseHistoricalEntryScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
     val profile by viewModel.userProfile.collectAsState()
-    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
     val glucoseAccent = AccentTokens.glucoseAccent(isDark)
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()

@@ -37,7 +37,7 @@ import java.util.*
 @Composable
 fun ChatScreen(viewModel: ShasthoViewModel, initialTab: Int = 0, onNavigateBack: () -> Unit = {}) {
     val profile by viewModel.userProfile.collectAsState()
-    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
     val chatHistory by viewModel.chatHistory.collectAsState()
     val isLoading by viewModel.isLoadingChat.collectAsState()
     val savedChats by viewModel.savedChats.collectAsState()
@@ -77,14 +77,14 @@ fun ChatScreen(viewModel: ShasthoViewModel, initialTab: Int = 0, onNavigateBack:
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     Text(
                         text = "AI Diet & Recipe Chat",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 

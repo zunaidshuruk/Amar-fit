@@ -27,7 +27,7 @@ import com.example.ui.theme.*
 @Composable
 fun SleepScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val profile by viewModel.userProfile.collectAsState()
-    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
 
     val sleepAccent = AccentTokens.sleepAccent(isDark)
     val coachAccent = AccentTokens.coachAccent(isDark)

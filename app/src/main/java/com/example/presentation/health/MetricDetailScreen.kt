@@ -64,7 +64,7 @@ fun MetricDetailScreen(
     onNavigateBack: () -> Unit = {}
 ) {
     val profile by viewModel.userProfile.collectAsState()
-    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
 
     var selectedRange by remember { mutableStateOf("W") }
     var periodOffset by remember(selectedRange) { mutableStateOf(0) }

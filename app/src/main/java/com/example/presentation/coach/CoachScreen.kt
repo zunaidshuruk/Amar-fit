@@ -33,7 +33,7 @@ import com.example.ui.components.MarkdownText
 @Composable
 fun CoachScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
     val profile by viewModel.userProfile.collectAsState()
-    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
     val waterAccent = AccentTokens.waterAccent(isDark)
 
     val coachAdvice by viewModel.coachAdvice.collectAsState()

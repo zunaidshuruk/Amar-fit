@@ -42,7 +42,7 @@ import java.util.Date
 fun WorkoutScreen(viewModel: ShasthoViewModel) {
     val navController = com.example.LocalNavController.current
     val profile by viewModel.userProfile.collectAsState()
-    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
 
     val structuredPlan by viewModel.structuredWorkoutPlan.collectAsState()
     val rawStructuredJson by viewModel.rawStructuredWorkoutJson.collectAsState()

@@ -40,7 +40,7 @@ import org.json.JSONObject
 @Composable
 fun DietChartScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
     val profile by viewModel.userProfile.collectAsState()
-    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
 
     val dietChart by viewModel.dietChart.collectAsState()
     val isGenerating by viewModel.isGeneratingDiet.collectAsState()
