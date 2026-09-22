@@ -21,8 +21,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.Emerald100
-import com.example.ui.theme.Emerald700
 
 private data class MealTypeItem(
     val type: String,
@@ -79,9 +77,9 @@ fun MealTypeSelector(
                             )
                         },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Emerald100,
-                            selectedLabelColor = Emerald700,
-                            selectedLeadingIconColor = Emerald700,
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
                             labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             iconColor = MaterialTheme.colorScheme.onSurfaceVariant
