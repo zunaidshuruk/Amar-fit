@@ -260,7 +260,7 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Indigo600)
+                    colors = ButtonDefaults.buttonColors(containerColor = glucoseAccent.onBg)
                 ) {
                     Text("Save Readings")
                 }
@@ -376,11 +376,11 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
                                 path.lineTo(x, y)
                             }
                             lastValidIndex = index
-                            drawCircle(color = Indigo600, radius = 6.dp.toPx(), center = Offset(x, y))
+                            drawCircle(color = glucoseAccent.onBg, radius = 6.dp.toPx(), center = Offset(x, y))
                         }
                     }
-                    
-                    drawPath(path, color = Indigo600, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
+
+                    drawPath(path, color = glucoseAccent.onBg, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
                 }
             }
 
@@ -409,7 +409,7 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.TipsAndUpdates, contentDescription = null, tint = Indigo600)
+                    Icon(Icons.Default.TipsAndUpdates, contentDescription = null, tint = glucoseAccent.onBg)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("AI Glucose Suggestions", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
                 }
@@ -426,7 +426,7 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
                     )
                 } else if (isLoadingGlucoseGuidance) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Indigo600, strokeWidth = 2.dp)
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = glucoseAccent.onBg, strokeWidth = 2.dp)
                         Spacer(modifier = Modifier.width(12.dp))
                         Text("Analyzing your recent data...", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                     }
@@ -435,7 +435,7 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
                         onClick = { viewModel.fetchGlucoseGuidance() },
-                        colors = ButtonDefaults.buttonColors(containerColor = Indigo600),
+                        colors = ButtonDefaults.buttonColors(containerColor = glucoseAccent.onBg),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
