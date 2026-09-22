@@ -49,6 +49,7 @@ fun MindfulnessTimerScreen(
     val coroutineScope = rememberCoroutineScope()
     val userProfile by viewModel.userProfile.collectAsState()
     val isDark = userProfile?.isDarkMode ?: isSystemInDarkTheme()
+    val mindfulnessAccent = AccentTokens.mindfulnessAccent(isDark)
 
     val sessionTypes = remember {
         listOf(
@@ -139,7 +140,7 @@ fun MindfulnessTimerScreen(
                         onNavigateBack()
                     }
                 ) {
-                    Text("Save & Exit", fontWeight = FontWeight.Bold, color = Emerald600)
+                    Text("Save & Exit", fontWeight = FontWeight.Bold, color = mindfulnessAccent.onBg)
                 }
             },
             dismissButton = {
@@ -196,13 +197,13 @@ fun MindfulnessTimerScreen(
                     modifier = Modifier
                         .size(96.dp)
                         .clip(CircleShape)
-                        .background(Emerald500.copy(alpha = 0.15f)),
+                        .background(mindfulnessAccent.bg),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = "Completed",
-                        tint = Emerald500,
+                        tint = mindfulnessAccent.onBg,
                         modifier = Modifier.size(56.dp)
                     )
                 }
@@ -239,7 +240,7 @@ fun MindfulnessTimerScreen(
                         Icon(
                             imageVector = Icons.Default.Sync,
                             contentDescription = null,
-                            tint = Emerald500,
+                            tint = mindfulnessAccent.onBg,
                             modifier = Modifier.size(28.dp)
                         )
                         Column {
@@ -265,7 +266,7 @@ fun MindfulnessTimerScreen(
                         .fillMaxWidth()
                         .height(52.dp)
                         .testTag("mindfulness_done_button"),
-                    colors = ButtonDefaults.buttonColors(containerColor = Emerald600),
+                    colors = ButtonDefaults.buttonColors(containerColor = mindfulnessAccent.onBg),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Text("Done", fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -296,10 +297,10 @@ fun MindfulnessTimerScreen(
                                 .testTag("type_${option.title.lowercase()}"),
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) Emerald500.copy(alpha = 0.15f)
+                                containerColor = if (isSelected) mindfulnessAccent.bg
                                 else MaterialTheme.colorScheme.surface
                             ),
-                            border = if (isSelected) androidx.compose.foundation.BorderStroke(2.dp, Emerald500)
+                            border = if (isSelected) androidx.compose.foundation.BorderStroke(2.dp, mindfulnessAccent.onBg)
                             else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                         ) {
                             Column(
@@ -311,7 +312,7 @@ fun MindfulnessTimerScreen(
                                 Icon(
                                     imageVector = option.icon,
                                     contentDescription = option.title,
-                                    tint = if (isSelected) Emerald500 else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = if (isSelected) mindfulnessAccent.onBg else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(32.dp)
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -319,7 +320,7 @@ fun MindfulnessTimerScreen(
                                     text = option.title,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isSelected) Emerald500 else MaterialTheme.colorScheme.onSurface
+                                    color = if (isSelected) mindfulnessAccent.onBg else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -347,7 +348,7 @@ fun MindfulnessTimerScreen(
                                 .weight(1f)
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(
-                                    if (isSelected) Emerald600
+                                    if (isSelected) mindfulnessAccent.onBg
                                     else MaterialTheme.colorScheme.surfaceVariant
                                 )
                                 .clickable {
@@ -360,7 +361,7 @@ fun MindfulnessTimerScreen(
                         ) {
                             Text(
                                 text = "${minutes}m",
-                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
                             )
@@ -422,7 +423,7 @@ fun MindfulnessTimerScreen(
                         .fillMaxWidth()
                         .height(54.dp)
                         .testTag("start_mindfulness_button"),
-                    colors = ButtonDefaults.buttonColors(containerColor = Emerald600),
+                    colors = ButtonDefaults.buttonColors(containerColor = mindfulnessAccent.onBg),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null)
@@ -453,14 +454,14 @@ fun MindfulnessTimerScreen(
                         .size(240.dp)
                         .scale(if (!isPaused) pulseScale else 1.0f)
                         .clip(CircleShape)
-                        .background(Emerald500.copy(alpha = 0.12f)),
+                        .background(mindfulnessAccent.onBg.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
                         modifier = Modifier
                             .size(190.dp)
                             .clip(CircleShape)
-                            .background(Emerald500.copy(alpha = 0.2f)),
+                            .background(mindfulnessAccent.onBg.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -479,7 +480,7 @@ fun MindfulnessTimerScreen(
                                 text = if (isPaused) "Paused" else currentTypeOption.title,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = if (isPaused) Orange500 else Emerald600
+                                color = if (isPaused) MaterialTheme.colorScheme.tertiary else mindfulnessAccent.onBg
                             )
                         }
                     }
@@ -524,20 +525,20 @@ fun MindfulnessTimerScreen(
                             .height(52.dp)
                             .testTag("pause_resume_mindfulness_button"),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isPaused) Emerald600 else MaterialTheme.colorScheme.surfaceVariant
+                            containerColor = if (isPaused) mindfulnessAccent.onBg else MaterialTheme.colorScheme.surfaceVariant
                         ),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Icon(
                             imageVector = if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
                             contentDescription = if (isPaused) "Resume" else "Pause",
-                            tint = if (isPaused) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (isPaused) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = if (isPaused) "Resume" else "Pause",
                             fontWeight = FontWeight.Bold,
-                            color = if (isPaused) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (isPaused) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
