@@ -219,14 +219,14 @@ fun AuthScreen(
                     modifier = Modifier
                         .size(80.dp)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Emerald50)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.MarkEmailRead,
                         contentDescription = "Verify Email",
-                        tint = Emerald600,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(48.dp)
                     )
                 }
@@ -257,17 +257,17 @@ fun AuthScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(16.dp),
                     enabled = !isLoading
                 ) {
                     if (isLoading) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
                     } else {
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -275,7 +275,7 @@ fun AuthScreen(
                             text = "I've verified",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 }
@@ -301,7 +301,7 @@ fun AuthScreen(
                         } else {
                             "Resend email"
                         },
-                        color = if (resendCooldownSeconds == 0 && !isLoading) Primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (resendCooldownSeconds == 0 && !isLoading) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -311,7 +311,7 @@ fun AuthScreen(
 
                 Text(
                     text = "Use a different account",
-                    color = Emerald600,
+                    color = MaterialTheme.colorScheme.primary,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.clickable {
@@ -352,7 +352,7 @@ fun AuthScreen(
                     text = "আমার Fit",
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Emerald600
+                    color = MaterialTheme.colorScheme.primary
                 )
                 
                 Text(
@@ -397,7 +397,7 @@ fun AuthScreen(
                         },
                         modifier = Modifier.align(Alignment.End)
                     ) {
-                        Text("Forgot Password?", fontSize = 13.sp, color = Emerald600)
+                        Text("Forgot Password?", fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
                     }
                 }
                 
@@ -412,12 +412,12 @@ fun AuthScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Emerald600),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(12.dp),
                     enabled = !isLoading
                 ) {
                     if (isLoading) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
                     } else {
                         Text(
                             text = txtBtn,
@@ -491,7 +491,7 @@ fun AuthScreen(
                     )
                     Text(
                         text = txtToggle,
-                        color = Emerald600,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.clickable { isLogin = !isLogin }
                     )
