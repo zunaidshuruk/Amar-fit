@@ -9,6 +9,7 @@ import com.example.data.local.UserProfile
 import com.example.data.repository.AppRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -58,8 +59,20 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     fun syncDataOnLogin(onComplete: (Boolean) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.syncDataOnLogin()
-            val profile = repository.userProfile.firstOrNull()
+            try {
+                withTimeoutOrNull(4000L) {
+                    repository.syncDataOnLogin()
+                }
+            } catch (e: Exception) {
+                // Ignore sync timeout or network errors during startup
+            }
+            val profile = try {
+                withTimeoutOrNull(1000L) {
+                    repository.userProfile.firstOrNull()
+                }
+            } catch (e: Exception) {
+                null
+            }
             val hasValidProfile = profile != null && profile.onboardingCompleted
             withContext(Dispatchers.Main) {
                 onComplete(hasValidProfile)
