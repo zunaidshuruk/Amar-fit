@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -149,16 +150,21 @@ fun SleepScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     )
                   ) {
                     Box(
-                      modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
+                      modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp, horizontal = 2.dp),
                       contentAlignment = Alignment.Center
                     ) {
                       Text(
                         text = "$hours Hours",
                         fontSize = 13.sp,
+                        letterSpacing = 0.sp,
                         fontWeight = FontWeight.Bold,
                         color = sleepAccent.onBg,
                         textAlign = TextAlign.Center,
-                        maxLines = 1
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
                       )
                     }
                   }
