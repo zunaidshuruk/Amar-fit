@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -314,11 +315,14 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                               Text(
                                   text = tab.label,
                                   fontSize = 10.sp,
+                                  letterSpacing = 0.sp,
                                   fontWeight = FontWeight.Bold,
                                   color = color,
+                                  textAlign = TextAlign.Center,
                                   maxLines = 1,
                                   softWrap = false,
-                                  overflow = TextOverflow.Clip
+                                  overflow = TextOverflow.Ellipsis,
+                                  modifier = Modifier.fillMaxWidth()
                               )
                           }
                       }
