@@ -258,21 +258,130 @@ class AppRepository(
             }
         }
         
-        if (metric.waterLiters >= profile.dailyWaterLimitLiters && !currentBadges.contains("Hydration Hero")) {
-            currentBadges.add("Hydration Hero")
-            pointsToAdd += 50
-        }
-        
-        if (metric.steps >= 10000 && !currentBadges.contains("10k Steps Master")) {
-            currentBadges.add("10k Steps Master")
-            pointsToAdd += 100
+        // award(): grants a badge exactly once and adds its points, keyed off com.example.data.model.ALL_BADGES.
+        fun award(id: String, points: Int) {
+            if (!currentBadges.contains(id)) {
+                currentBadges.add(id)
+                pointsToAdd += points
+            }
         }
 
-        if (newStreak >= 3 && !currentBadges.contains("Consistency Starter")) {
-            currentBadges.add("Consistency Starter")
-            pointsToAdd += 20
+        if (metric.waterLiters >= profile.dailyWaterLimitLiters) award("Hydration Hero", 50)
+        if (metric.steps >= 10000) award("10k Steps Master", 100)
+        if (newStreak >= 3) award("Consistency Starter", 20)
+
+        // --- Steps & distance ---
+        if (metric.steps > 0) award("First Steps", 10)
+        if (metric.steps >= 5000) award("5K Strider", 30)
+        if (metric.steps >= 15000) award("15K Steps Champion", 150)
+        if (metric.steps >= 20000) award("20K Steps Legend", 250)
+        if (metric.distanceMeters >= 5000f) award("Distance Walker", 60)
+        if (metric.distanceMeters >= 10000f) award("Marathon Mover", 150)
+        if (metric.distanceMeters >= 21000f) award("Half Marathon Hero", 300)
+
+        // --- Hydration ---
+        if (metric.waterLiters >= 1.0f) award("Water Sipper", 15)
+        if (profile.dailyWaterLimitLiters > 0f && metric.waterLiters >= profile.dailyWaterLimitLiters / 2f) award("Halfway Hydrated", 25)
+        if (profile.dailyWaterLimitLiters > 0f && metric.waterLiters >= profile.dailyWaterLimitLiters * 2f) award("Double Hydration", 70)
+
+        // --- Sleep ---
+        if (metric.sleepHours >= 7f) award("Power Rest", 40)
+        if (metric.sleepHours >= 8f) award("Well Rested", 60)
+        if (metric.sleepHours >= 9f) award("Deep Sleeper", 90)
+
+        // --- Heart & vitals ---
+        if (metric.restingHeartRate > 0) award("Heart Check-In", 15)
+        if (metric.restingHeartRate in 40..70) award("Steady Heart", 80)
+        if (metric.heartRate >= 140 || metric.heartRateMax >= 140) award("Cardio Zone", 70)
+        if (metric.heartRateVariability > 0f) award("HRV Tracker", 20)
+        if (metric.oxygenSaturation >= 95f) award("Oxygen Ace", 50)
+        if (metric.respiratoryRate > 0f) award("Breath Aware", 15)
+        if (metric.skinTemperatureCelsius > 0f) award("Temperature Check", 10)
+
+        // --- Workouts ---
+        if (metric.exerciseMinutes >= 30) award("Workout Warrior", 60)
+        if (metric.exerciseMinutes >= 60) award("Iron Will", 100)
+        if (metric.exerciseMinutes >= 90) award("Endurance Elite", 180)
+        if (metric.activeCaloriesBurned >= 500) award("Calorie Crusher", 100)
+        if (metric.activeCaloriesBurned >= 300) award("Fat Burner", 60)
+
+        // --- Mindfulness ---
+        if (metric.mindfulnessMinutes >= 1) award("Mindful Minute", 10)
+        if (metric.mindfulnessMinutes >= 10) award("Calm Mind", 50)
+        if (metric.mindfulnessMinutes >= 20) award("Zen Master", 90)
+
+        // --- Nutrition ---
+        if (metric.proteinG >= 100f) award("Protein Powerhouse", 60)
+        if (metric.carbsG > 0f && metric.proteinG > 0f && metric.fatG > 0f) award("Balanced Plate", 50)
+        if (metric.proteinG >= 120f && metric.carbsG >= 150f && metric.fatG >= 50f) award("Macro Master", 150)
+        if (metric.caloriesConsumed > 0 && profile.dailyCalorieLimit > 0 && metric.caloriesConsumed <= profile.dailyCalorieLimit) award("Calorie Conscious", 80)
+        if (metric.externalNutritionCalories > 0) award("Mindful Eater", 20)
+
+        // --- Body & metrics logging ---
+        if (metric.weightKg > 0f) award("Weigh-In Warrior", 15)
+        val glucoseReadings = listOf(
+            metric.bloodGlucoseMorning, metric.bloodGlucoseNight,
+            metric.bloodGlucoseBeforeBreakfast, metric.bloodGlucoseAfterBreakfast,
+            metric.bloodGlucoseBeforeLunch, metric.bloodGlucoseAfterLunch,
+            metric.bloodGlucoseBeforeDinner, metric.bloodGlucoseAfterDinner
+        )
+        if (glucoseReadings.any { it > 0f }) award("Glucose Guardian", 20)
+        if (profile.bloodGlucoseTargetMax > 0f) {
+            val inRange = glucoseReadings.any { it > 0f && it in profile.bloodGlucoseTargetMin..profile.bloodGlucoseTargetMax }
+            if (inRange) award("In-Range Champion", 90)
         }
-        
+        if (metric.bloodPressure.isNotBlank()) {
+            award("BP Tracker", 20)
+            try {
+                val parts = metric.bloodPressure.split("/")
+                val systolic = parts.getOrNull(0)?.trim()?.toIntOrNull()
+                val diastolic = parts.getOrNull(1)?.trim()?.toIntOrNull()
+                if (systolic != null && diastolic != null && systolic <= 120 && diastolic <= 80) {
+                    award("Healthy Pressure", 90)
+                }
+            } catch (e: Exception) {
+                // Unparsable blood pressure format; skip the "Healthy Pressure" check for this entry.
+            }
+        }
+
+        // --- Streaks ---
+        if (newStreak >= 7) award("Week Warrior", 100)
+        if (newStreak >= 14) award("Fortnight Fighter", 150)
+        if (newStreak >= 30) award("Monthly Master", 300)
+        if (newStreak >= 90) award("Quarter Champion", 500)
+        if (newStreak >= 100) award("Century Streak", 600)
+        if (newStreak >= 180) award("Half-Year Hero", 800)
+        if (newStreak >= 365) award("Year-Long Legend", 1000)
+
+        // --- Combo / all-rounder ---
+        if (profile.stepGoal > 0 && metric.steps >= profile.stepGoal &&
+            profile.dailyWaterLimitLiters > 0f && metric.waterLiters >= profile.dailyWaterLimitLiters &&
+            profile.sleepGoalHours > 0f && metric.sleepHours >= profile.sleepGoalHours
+        ) {
+            award("Triple Threat", 200)
+        }
+        if (metric.steps > 0 && metric.waterLiters > 0f && metric.sleepHours > 0f &&
+            metric.weightKg > 0f && metric.exerciseMinutes > 0
+        ) {
+            award("Full Log Day", 120)
+        }
+        val loggedMetricCount = listOf(
+            metric.steps > 0, metric.waterLiters > 0f, metric.sleepHours > 0f,
+            metric.weightKg > 0f, metric.exerciseMinutes > 0, metric.mindfulnessMinutes > 0,
+            metric.heartRate > 0, metric.bloodPressure.isNotBlank()
+        ).count { it }
+        if (loggedMetricCount >= 5) award("Data Devotee", 100)
+        if (metric.exerciseMinutes >= 30 && metric.mindfulnessMinutes >= 10) award("Two Birds", 100)
+        if (metric.bloodPressure.isNotBlank() && metric.respiratoryRate > 0f && metric.oxygenSaturation > 0f) {
+            award("Vitals Check", 90)
+        }
+
+        // --- Points milestones (checked against the running total including everything awarded above) ---
+        val runningPoints = profile.points + pointsToAdd
+        if (runningPoints >= 500) award("Point Collector", 0)
+        if (runningPoints >= 1000) award("Point Master", 0)
+        if (runningPoints >= 2500) award("Point Legend", 0)
+
         if (pointsToAdd > 0 || isNewDay) {
             val updatedProfile = profile.copy(
                 points = profile.points + pointsToAdd,
