@@ -34,6 +34,8 @@ import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.cos
+import kotlin.math.sin
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -125,7 +127,8 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     if (resolved != null) {
                         LargeRingTileCard(
                             tile = resolved,
-                            isDark = isDark
+                            isDark = isDark,
+                            heroStyle = (largeId == "large_steps")
                         )
                     }
                 }
@@ -421,21 +424,34 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 )
             }
 
-            IconButton(
+            Surface(
                 onClick = { navController.navigate("edit_focus") },
                 modifier = Modifier
-                    .size(56.dp)
-                    .shadow(2.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface)
-                    .testTag("today_edit_tiles_button")
+                    .height(56.dp)
+                    .testTag("today_edit_tiles_button"),
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
+                shadowElevation = 2.dp
             ) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Edit Focus",
-                    tint = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
-                    modifier = Modifier.size(22.dp)
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit Focus",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Edit tiles",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
 
@@ -1160,6 +1176,7 @@ private fun CalendarStripCard(
 private fun LargeRingTileCard(
     tile: ResolvedLargeTile,
     isDark: Boolean,
+    heroStyle: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -1167,46 +1184,53 @@ private fun LargeRingTileCard(
             .fillMaxWidth()
             .shadow(2.dp, RoundedCornerShape(20.dp))
             .clip(RoundedCornerShape(20.dp))
-            .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface)
+            .background(if (heroStyle) MaterialTheme.colorScheme.primary else (if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface))
             .clickable { tile.onClick() }
             .padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
+        val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
         Box(
             modifier = Modifier
-                .size(136.dp)
+                .size(if (heroStyle) 148.dp else 136.dp)
                 .padding(vertical = 4.dp),
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val strokeWidth = 11.dp.toPx()
-                val diameter = size.minDimension - strokeWidth
-                val topLeftOffset = androidx.compose.ui.geometry.Offset(
-                    (size.width - diameter) / 2f,
-                    (size.height - diameter) / 2f
-                )
-                val arcSize = androidx.compose.ui.geometry.Size(diameter, diameter)
-
-                // Background Track (Open gauge 270 degrees, gap centered at the top so it doesn't collide with the title text)
-                drawArc(
-                    color = tile.accent.onBg.copy(alpha = 0.15f),
-                    startAngle = 315f,
-                    sweepAngle = 270f,
-                    useCenter = false,
-                    topLeft = topLeftOffset,
-                    size = arcSize,
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(
-                        width = strokeWidth,
-                        cap = StrokeCap.Round
+                if (heroStyle) {
+                    val radius = (size.minDimension - strokeWidth) / 2f
+                    val centerOffset = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
+                    val filledDots = (32 * tile.progress).toInt().coerceIn(0, 32)
+                    for (i in 0 until 32) {
+                        val angleDeg = -90f + i * (360f / 32f)
+                        val angleRad = Math.toRadians(angleDeg.toDouble())
+                        val dotCenter = androidx.compose.ui.geometry.Offset(
+                            x = (centerOffset.x + radius * cos(angleRad)).toFloat(),
+                            y = (centerOffset.y + radius * sin(angleRad)).toFloat()
+                        )
+                        val isFilled = i < filledDots
+                        val dotColor = if (isFilled) onPrimaryColor else onPrimaryColor.copy(alpha = 0.22f)
+                        val dotRadius = if (isFilled) strokeWidth / 2.8f else strokeWidth / 3.2f
+                        drawCircle(
+                            color = dotColor,
+                            radius = dotRadius,
+                            center = dotCenter
+                        )
+                    }
+                } else {
+                    val diameter = size.minDimension - strokeWidth
+                    val topLeftOffset = androidx.compose.ui.geometry.Offset(
+                        (size.width - diameter) / 2f,
+                        (size.height - diameter) / 2f
                     )
-                )
+                    val arcSize = androidx.compose.ui.geometry.Size(diameter, diameter)
 
-                // Progress Arc
-                if (tile.progress > 0f) {
+                    // Background Track (Open gauge 270 degrees, gap centered at the top so it doesn't collide with the title text)
                     drawArc(
-                        color = tile.accent.onBg,
+                        color = tile.accent.onBg.copy(alpha = 0.15f),
                         startAngle = 315f,
-                        sweepAngle = 270f * tile.progress,
+                        sweepAngle = 270f,
                         useCenter = false,
                         topLeft = topLeftOffset,
                         size = arcSize,
@@ -1215,37 +1239,47 @@ private fun LargeRingTileCard(
                             cap = StrokeCap.Round
                         )
                     )
+
+                    // Progress Arc
+                    if (tile.progress > 0f) {
+                        drawArc(
+                            color = tile.accent.onBg,
+                            startAngle = 315f,
+                            sweepAngle = 270f * tile.progress,
+                            useCenter = false,
+                            topLeft = topLeftOffset,
+                            size = arcSize,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                width = strokeWidth,
+                                cap = StrokeCap.Round
+                            )
+                        )
+                    }
                 }
             }
 
-            // Title inside the ring near top
-            Text(
-                text = tile.title,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = tile.accent.onBg,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 18.dp)
-            )
-
-            // Center raw count and "of [goal]" text
             Column(
-                modifier = Modifier.padding(top = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
+                    text = tile.title,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (heroStyle) MaterialTheme.colorScheme.onPrimary else tile.accent.onBg
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
                     text = tile.insideValue,
-                    fontSize = 22.sp,
+                    fontSize = if (heroStyle) 30.sp else 22.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
+                    color = if (heroStyle) MaterialTheme.colorScheme.onPrimary else (if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary)
                 )
                 Text(
                     text = tile.insideSubtext,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = tile.accent.onBg
+                    color = if (heroStyle) MaterialTheme.colorScheme.onPrimary else tile.accent.onBg
                 )
             }
         }
