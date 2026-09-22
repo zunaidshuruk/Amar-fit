@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -121,10 +122,14 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 ) {
                     Text(
                         "AI Workouts",
+                        fontSize = 13.sp,
+                        letterSpacing = 0.sp,
                         color = if (selectedTab == 0) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
                         maxLines = 1,
                         softWrap = false,
-                        overflow = TextOverflow.Clip
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
                 Button(
@@ -139,10 +144,14 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 ) {
                     Text(
                         "Saved",
+                        fontSize = 13.sp,
+                        letterSpacing = 0.sp,
                         color = if (selectedTab == 1) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
                         maxLines = 1,
                         softWrap = false,
-                        overflow = TextOverflow.Clip
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
                 Button(
@@ -157,10 +166,14 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 ) {
                     Text(
                         "History",
+                        fontSize = 13.sp,
+                        letterSpacing = 0.sp,
                         color = if (selectedTab == 2) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
                         maxLines = 1,
                         softWrap = false,
-                        overflow = TextOverflow.Clip
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -265,40 +278,70 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                             onClick = { activeSessionPlan = plan },
                             modifier = Modifier
                                 .weight(1f)
-                                .height(52.dp),
+                                .height(60.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             shape = RoundedCornerShape(14.dp),
-                            contentPadding = PaddingValues(horizontal = 4.dp)
+                            contentPadding = PaddingValues(horizontal = 2.dp, vertical = 6.dp)
                         ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Start Workout", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    "Start Workout",
+                                    fontSize = 10.sp,
+                                    lineHeight = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
 
                         OutlinedButton(
                             onClick = { showSaveDialog = true },
                             modifier = Modifier
                                 .weight(1f)
-                                .height(52.dp),
+                                .height(60.dp),
                             shape = RoundedCornerShape(14.dp),
-                            contentPadding = PaddingValues(horizontal = 4.dp)
+                            contentPadding = PaddingValues(horizontal = 2.dp, vertical = 6.dp)
                         ) {
-                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Save Workout", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    "Save Workout",
+                                    fontSize = 10.sp,
+                                    lineHeight = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
 
                         OutlinedButton(
                             onClick = { navController?.navigate("exercise_library") },
                             modifier = Modifier
-                                .weight(1.1f)
-                                .height(52.dp),
+                                .weight(1f)
+                                .height(60.dp),
                             shape = RoundedCornerShape(14.dp),
-                            contentPadding = PaddingValues(horizontal = 4.dp)
+                            contentPadding = PaddingValues(horizontal = 2.dp, vertical = 6.dp)
                         ) {
-                            Icon(Icons.Default.FitnessCenter, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Browse Exercises", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.FitnessCenter, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    "Browse Exercises",
+                                    fontSize = 10.sp,
+                                    lineHeight = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     }
                     
