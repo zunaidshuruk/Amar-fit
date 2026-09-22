@@ -39,14 +39,8 @@ import androidx.core.content.ContextCompat
 import com.example.ui.components.MarkdownText
 import com.example.ui.components.MealTypeSelector
 import com.example.presentation.viewmodel.ShasthoViewModel
-import com.example.ui.theme.Background
-import com.example.ui.theme.Emerald50
 import com.example.ui.theme.Emerald500
-import com.example.ui.theme.Emerald600
-import com.example.ui.theme.Emerald900
-import com.example.ui.theme.Slate100
 import com.example.ui.theme.Slate900
-import com.example.ui.theme.TextPrimary
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -231,7 +225,7 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(24.dp))
-                            .background(Color.White)
+                            .background(MaterialTheme.colorScheme.surface)
                             .padding(24.dp)
                     ) {
                         Row(
@@ -239,7 +233,7 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Scan Result", fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = Emerald900)
+                            Text("Scan Result", fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             IconButton(onClick = { 
                                 viewModel.clearScanResult() 
                                 selectedMealType = "Snack"
@@ -249,11 +243,11 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                             }
                         }
                         
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Slate100)
-                        
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
+
                         MarkdownText(
                             text = "$parsedName ($adjustedCalories kcal)\n\nCategory: $parsedCategory\n\n$parsedDescription",
-                            color = TextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.verticalScroll(rememberScrollState()).weight(1f, fill = false)
                         )
                         
@@ -263,7 +257,7 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Emerald50)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
                                     .padding(horizontal = 8.dp, vertical = 4.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
@@ -278,7 +272,7 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                                         "−",
                                         fontSize = 22.sp,
                                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                        color = if (portionMultiplier > 0.25f) Emerald900 else Emerald900.copy(alpha = 0.38f)
+                                        color = if (portionMultiplier > 0.25f) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
                                     )
                                 }
 
@@ -286,7 +280,7 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                                     text = String.format(java.util.Locale.US, "%.1fx • %d kcal", portionMultiplier, adjustedCalories),
                                     fontSize = 15.sp,
                                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                    color = Emerald900
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
 
                                 IconButton(
@@ -299,7 +293,7 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                                         "+",
                                         fontSize = 22.sp,
                                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                        color = if (portionMultiplier < 5.0f) Emerald900 else Emerald900.copy(alpha = 0.38f)
+                                        color = if (portionMultiplier < 5.0f) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
                                     )
                                 }
                             }
@@ -342,7 +336,7 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                             },
                             modifier = Modifier.fillMaxWidth().height(50.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (parsedCalories > 0) Emerald600 else MaterialTheme.colorScheme.outline
+                                containerColor = if (parsedCalories > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                             )
                         ) {
                             Text(if (parsedCalories > 0) "Awesome! Log this meal" else "Dismiss")
@@ -354,7 +348,7 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
     } else {
         // Permission Denied View
         Column(
-            modifier = Modifier.fillMaxSize().background(Background).padding(24.dp),
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
