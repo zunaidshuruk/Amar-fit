@@ -144,12 +144,12 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                         showEditDialog = false
                     }
                 ) {
-                    Text("Save", color = Emerald600)
+                    Text("Save", color = MaterialTheme.colorScheme.primary)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showEditDialog = false }) {
-                    Text("Cancel", color = Slate500)
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         )
@@ -189,8 +189,8 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                             onClick = { manualEntryMode = "Describe" },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(20.dp),
-                            color = if (manualEntryMode == "Describe") Emerald500 else Color.Transparent,
-                            contentColor = if (manualEntryMode == "Describe") Color.White else (if (isDark) Slate300 else Slate700)
+                            color = if (manualEntryMode == "Describe") MaterialTheme.colorScheme.primary else Color.Transparent,
+                            contentColor = if (manualEntryMode == "Describe") MaterialTheme.colorScheme.onPrimary else (if (isDark) Slate300 else Slate700)
                         ) {
                             Text(
                                 text = "Describe",
@@ -204,8 +204,8 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                             onClick = { manualEntryMode = "Enter Values" },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(20.dp),
-                            color = if (manualEntryMode == "Enter Values") Emerald500 else Color.Transparent,
-                            contentColor = if (manualEntryMode == "Enter Values") Color.White else (if (isDark) Slate300 else Slate700)
+                            color = if (manualEntryMode == "Enter Values") MaterialTheme.colorScheme.primary else Color.Transparent,
+                            contentColor = if (manualEntryMode == "Enter Values") MaterialTheme.colorScheme.onPrimary else (if (isDark) Slate300 else Slate700)
                         ) {
                             Text(
                                 text = "Enter Values",
@@ -220,7 +220,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                     Spacer(modifier = Modifier.height(16.dp))
 
                     if (manualEntryMode == "Describe") {
-                        Text("What did you eat?", color = Slate500, fontSize = 14.sp)
+                        Text("What did you eat?", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
                             value = manualText,
@@ -230,7 +230,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                             enabled = !isScanning
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text("Meal Type", color = Slate500, fontSize = 14.sp)
+                        Text("Meal Type", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                         Spacer(modifier = Modifier.height(8.dp))
                         MealTypeSelector(
                             selectedMealType = manualMealType,
@@ -239,9 +239,9 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                         if (isScanning) {
                             Spacer(modifier = Modifier.height(16.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Emerald500)
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.primary)
                                 Spacer(modifier = Modifier.width(16.dp))
-                                Text("Analyzing...", color = Slate500)
+                                Text("Analyzing...", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     } else {
@@ -298,7 +298,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                             )
                         }
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text("Meal Type", color = Slate500, fontSize = 14.sp)
+                        Text("Meal Type", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                         Spacer(modifier = Modifier.height(8.dp))
                         MealTypeSelector(
                             selectedMealType = manualMealType,
@@ -351,7 +351,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                     },
                     enabled = isSaveEnabled
                 ) {
-                    Text("Save", color = if (isSaveEnabled) Emerald600 else Slate500)
+                    Text("Save", color = if (isSaveEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             dismissButton = {
@@ -369,7 +369,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                     },
                     enabled = !isScanning
                 ) {
-                    Text("Cancel", color = Slate500)
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         )
@@ -380,15 +380,15 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 ExtendedFloatingActionButton(
                     onClick = { showManualEntry = true },
-                    containerColor = Emerald500,
-                    contentColor = Color.White,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                     icon = { Icon(Icons.Default.Edit, contentDescription = "Type Food") },
                     text = { Text("Manual Entry") }
                 )
                 ExtendedFloatingActionButton(
                     onClick = onNavigateToScanner,
-                    containerColor = Emerald600,
-                    contentColor = Color.White,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                     icon = { Icon(Icons.Default.AddAPhoto, contentDescription = "Scan Photo") },
                     text = { Text("Scan Photo") }
                 )
@@ -448,7 +448,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                         CircularProgressIndicator(
                             progress = { animatedProgress },
                             modifier = Modifier.fillMaxSize(),
-                            color = if (totalCalories > calorieLimit) Orange700 else Emerald500,
+                            color = if (totalCalories > calorieLimit) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
                             strokeWidth = 14.dp,
                             strokeCap = StrokeCap.Round
                         )
@@ -469,7 +469,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                             Text(
                                 text = if (totalCalories > calorieLimit) "Over Limit" else "${calorieLimit - totalCalories} left",
                                 fontSize = 12.sp,
-                                color = if (totalCalories > calorieLimit) Orange700 else Emerald600,
+                                color = if (totalCalories > calorieLimit) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -489,7 +489,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Analytics, contentDescription = null, tint = Emerald600)
+                            Icon(Icons.Default.Analytics, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Weekly Nutritional Trends", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
                         }
@@ -499,7 +499,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                             MarkdownText(text = weeklyInsights!!, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                         } else if (isLoadingInsights) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Emerald500, strokeWidth = 2.dp)
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text("Analyzing 7-day logs...", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                             }
@@ -508,7 +508,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                             Spacer(modifier = Modifier.height(12.dp))
                             Button(
                                 onClick = { viewModel.fetchWeeklyInsights() },
-                                colors = ButtonDefaults.buttonColors(containerColor = Emerald100, contentColor = Emerald700),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.primary),
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -610,14 +610,14 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                             Spacer(modifier = Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(text = log.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
-                                Text(text = "${log.mealType} • ${log.time}", fontSize = 12.sp, color = Emerald600, fontWeight = FontWeight.Medium)
+                                Text(text = "${log.mealType} • ${log.time}", fontSize = 12.sp, color = foodLogAccent.onBg, fontWeight = FontWeight.Medium)
                                 Text(text = log.category, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
                                     text = "${log.calories} kcal",
                                     fontWeight = FontWeight.Bold,
-                                    color = Emerald600
+                                    color = foodLogAccent.onBg
                                 )
                                 Row {
                                     IconButton(onClick = {
@@ -629,10 +629,10 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                                         editMealType = log.mealType
                                         showEditDialog = true
                                     }) {
-                                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Emerald600.copy(alpha = 0.8f))
+                                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = foodLogAccent.onBg.copy(alpha = 0.8f))
                                     }
                                     IconButton(onClick = { viewModel.deleteFoodLog(log) }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red.copy(alpha = 0.6f))
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
                                     }
                                 }
                             }
