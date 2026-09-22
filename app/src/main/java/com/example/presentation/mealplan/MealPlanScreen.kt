@@ -195,7 +195,7 @@ fun DailyPlanCard(plan: DailyPlan) {
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .padding(12.dp)
                     ) {
-                        Text(meal.type, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Emerald600)
+                        Text(meal.type, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(meal.title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                         Spacer(modifier = Modifier.height(8.dp))
@@ -269,7 +269,7 @@ fun ShoppingListCard(isDark: Boolean = false) {
                         Checkbox(
                             checked = isChecked,
                             onCheckedChange = { checkedState[item.name] = it },
-                            colors = CheckboxDefaults.colors(checkedColor = Emerald600)
+                            colors = CheckboxDefaults.colors(checkedColor = stepsAccent.onBg)
                         )
                         Column(modifier = Modifier.padding(start = 8.dp)) {
                             Text(
