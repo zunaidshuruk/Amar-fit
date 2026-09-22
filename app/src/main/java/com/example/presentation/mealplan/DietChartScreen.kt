@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.SavedDietChart
@@ -95,17 +96,31 @@ fun DietChartScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
                 Button(
                     onClick = { selectedTab = 0 },
-                    colors = ButtonDefaults.buttonColors(containerColor = if (selectedTab == 0) Emerald600 else MaterialTheme.colorScheme.surfaceVariant),
-                    modifier = Modifier.weight(1f).padding(end = 4.dp)
+                    colors = ButtonDefaults.buttonColors(containerColor = if (selectedTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.weight(1f).padding(end = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    Text("Generate New", color = if (selectedTab == 0) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "Generate New",
+                        color = if (selectedTab == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip
+                    )
                 }
                 Button(
                     onClick = { selectedTab = 1 },
-                    colors = ButtonDefaults.buttonColors(containerColor = if (selectedTab == 1) Emerald600 else MaterialTheme.colorScheme.surfaceVariant),
-                    modifier = Modifier.weight(1f).padding(start = 4.dp)
+                    colors = ButtonDefaults.buttonColors(containerColor = if (selectedTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.weight(1f).padding(start = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    Text("Saved Plans", color = if (selectedTab == 1) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "Saved Plans",
+                        color = if (selectedTab == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip
+                    )
                 }
             }
 
@@ -158,11 +173,11 @@ fun GenerateNewDietView(
                     isEditing = false
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Emerald600),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 enabled = !isGenerating
             ) {
                 if (isGenerating) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
                 } else {
                     Text("Generate AI Diet Chart")
                 }
@@ -174,7 +189,7 @@ fun GenerateNewDietView(
 
     if (isGenerating && dietChart.isNullOrEmpty()) {
         Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Emerald600)
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
     } else if (!dietChart.isNullOrEmpty()) {
         if (showShoppingList && !shoppingList.isNullOrEmpty()) {
@@ -191,14 +206,17 @@ fun GenerateNewDietView(
                         Button(
                             onClick = { showShoppingList = false },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = Slate500)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         ) {
                             Text("Back")
                         }
                         Button(
                             onClick = { showSaveDialog = true },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = Emerald600)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
                             Text("Save Plan")
                         }
@@ -222,7 +240,7 @@ fun GenerateNewDietView(
                                 isEditing = false 
                                 viewModel.updateDietChart(editedChart)
                             }) {
-                                Icon(Icons.Default.Save, contentDescription = "Save", tint = Emerald600)
+                                Icon(Icons.Default.Save, contentDescription = "Save", tint = MaterialTheme.colorScheme.primary)
                             }
                         } else {
                             IconButton(onClick = { isEditing = true }) {
@@ -251,17 +269,17 @@ fun GenerateNewDietView(
                                 showShoppingList = true
                             },
                             modifier = Modifier.fillMaxWidth().height(50.dp).padding(bottom = 8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Emerald500)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
                             Icon(Icons.Default.ShoppingCart, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Generate Shopping List")
                         }
-                        
+
                         Button(
                             onClick = { showSaveDialog = true },
                             modifier = Modifier.fillMaxWidth().height(50.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Emerald700)
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
                             Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
@@ -357,7 +375,7 @@ fun SavedChartsListView(
                         )
                     }
                     IconButton(onClick = { onDelete(chart) }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Red500)
+                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                     }
                 }
             }
@@ -419,7 +437,7 @@ fun SavedChartDetailView(
                 }
                 
                 if (items.isEmpty()) {
-                    Text("Could not parse checklist.", color = Red500)
+                    Text("Could not parse checklist.", color = MaterialTheme.colorScheme.error)
                 } else {
                     items.forEachIndexed { i, (text, isChecked) ->
                         Row(
@@ -445,7 +463,7 @@ fun SavedChartDetailView(
                                         onUpdate(chart.copy(shoppingList = jsonArray.toString()))
                                     } catch (e: Exception) {}
                                 },
-                                colors = CheckboxDefaults.colors(checkedColor = Emerald600)
+                                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
                             )
                             Text(
                                 text = text, 
