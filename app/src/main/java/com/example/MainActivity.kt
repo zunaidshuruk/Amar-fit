@@ -276,7 +276,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                     modifier = Modifier
                       .fillMaxWidth()
                       .background(MaterialTheme.colorScheme.background)
-                      .padding(horizontal = 20.dp, vertical = 14.dp)
+                      .padding(horizontal = 16.dp, vertical = 12.dp)
                   ) {
                     Row(
                       modifier = Modifier
@@ -284,8 +284,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                         .shadow(elevation = 16.dp, shape = RoundedCornerShape(28.dp), clip = false)
                         .clip(RoundedCornerShape(28.dp))
                         .background(MaterialTheme.colorScheme.surface)
-                        .padding(horizontal = 8.dp, vertical = 10.dp),
-                      horizontalArrangement = Arrangement.SpaceAround,
+                        .padding(horizontal = 4.dp, vertical = 8.dp),
+                      horizontalArrangement = Arrangement.SpaceBetween,
                       verticalAlignment = Alignment.CenterVertically
                     ) {
                       bottomTabs.forEach { tab ->
@@ -294,9 +294,10 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                           val pillColor = if (isSelected) (if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Emerald50) else Color.Transparent
                           Column(
                               horizontalAlignment = Alignment.CenterHorizontally,
-                              verticalArrangement = Arrangement.spacedBy(3.dp),
+                              verticalArrangement = Arrangement.spacedBy(2.dp),
                               modifier = Modifier
-                                  .clip(RoundedCornerShape(18.dp))
+                                  .weight(1f)
+                                  .clip(RoundedCornerShape(16.dp))
                                   .clickable {
                                       navController.navigate(tab.route) {
                                           popUpTo(navController.graph.findStartDestination().id) {
@@ -307,10 +308,18 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                                       }
                                   }
                                   .background(pillColor)
-                                  .padding(horizontal = 14.dp, vertical = 8.dp)
+                                  .padding(vertical = 8.dp)
                           ) {
-                              Icon(imageVector = tab.icon, contentDescription = tab.label, tint = color, modifier = Modifier.size(22.dp))
-                              Text(text = tab.label, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = color)
+                              Icon(imageVector = tab.icon, contentDescription = tab.label, tint = color, modifier = Modifier.size(20.dp))
+                              Text(
+                                  text = tab.label,
+                                  fontSize = 10.sp,
+                                  fontWeight = FontWeight.Bold,
+                                  color = color,
+                                  maxLines = 1,
+                                  softWrap = false,
+                                  overflow = TextOverflow.Clip
+                              )
                           }
                       }
                     }
