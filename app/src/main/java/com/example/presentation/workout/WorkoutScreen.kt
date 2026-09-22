@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -113,8 +114,8 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 Button(
                     onClick = { selectedTab = 0 },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (selectedTab == 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = if (selectedTab == 0) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurfaceVariant
+                        containerColor = if (selectedTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (selectedTab == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                     ),
                     modifier = Modifier.weight(1f).padding(end = 4.dp),
                     shape = RoundedCornerShape(16.dp),
@@ -124,7 +125,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                         "AI Workouts",
                         fontSize = 13.sp,
                         letterSpacing = 0.sp,
-                        color = if (selectedTab == 0) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (selectedTab == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
                         softWrap = false,
@@ -135,8 +136,8 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 Button(
                     onClick = { selectedTab = 1 },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (selectedTab == 1) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = if (selectedTab == 1) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurfaceVariant
+                        containerColor = if (selectedTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (selectedTab == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                     ),
                     modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
                     shape = RoundedCornerShape(16.dp),
@@ -146,7 +147,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                         "Saved",
                         fontSize = 13.sp,
                         letterSpacing = 0.sp,
-                        color = if (selectedTab == 1) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (selectedTab == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
                         softWrap = false,
@@ -157,8 +158,8 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 Button(
                     onClick = { selectedTab = 2 },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (selectedTab == 2) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = if (selectedTab == 2) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurfaceVariant
+                        containerColor = if (selectedTab == 2) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (selectedTab == 2) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                     ),
                     modifier = Modifier.weight(1f).padding(start = 4.dp),
                     shape = RoundedCornerShape(16.dp),
@@ -168,7 +169,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                         "History",
                         fontSize = 13.sp,
                         letterSpacing = 0.sp,
-                        color = if (selectedTab == 2) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (selectedTab == 2) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
                         softWrap = false,
@@ -190,7 +191,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 Button(
                     onClick = { viewModel.generateAIStructuredWorkout() },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(16.dp),
                     enabled = !isLoadingStructured
                 ) {
@@ -203,7 +204,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 
                 if (isLoadingStructured) {
                     Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.tertiary)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 } else if (structuredError != null) {
                     Card(
@@ -715,7 +716,7 @@ fun ProtocolPracticeCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(accent.bg)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -724,16 +725,22 @@ fun ProtocolPracticeCard(
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surface),
+                    .clip(CircleShape)
+                    .background(accent.onBg.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(icon, contentDescription = null, tint = accent.onBg)
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(text = title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = accent.onBg)
-                Text(text = description, fontSize = 12.sp, color = accent.onBg, lineHeight = 16.sp, modifier = Modifier.padding(top = 4.dp))
+                Text(text = title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    text = description,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 16.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
             }
         }
         Spacer(modifier = Modifier.width(12.dp))
