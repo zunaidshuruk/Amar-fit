@@ -17,8 +17,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -69,11 +71,11 @@ import kotlinx.coroutines.launch
 val LocalNavController = androidx.compose.runtime.staticCompositionLocalOf<NavHostController?> { null }
 
 sealed class TabScreen(val route: String, val label: String, val icon: ImageVector) {
-    object Today : TabScreen("today", "Today", Icons.Default.Home)
-    object Fitness : TabScreen("fitness", "Fitness", Icons.Default.FitnessCenter)
-    object Nutrition : TabScreen("nutrition", "Nutrition", Icons.Default.RestaurantMenu)
-    object Sleep : TabScreen("sleep", "Sleep", Icons.Default.Bedtime)
-    object Health : TabScreen("health", "Health", Icons.Default.Favorite)
+    object Today : TabScreen("today", "Today", Icons.Rounded.Home)
+    object Fitness : TabScreen("fitness", "Fitness", Icons.Rounded.FitnessCenter)
+    object Nutrition : TabScreen("nutrition", "Nutrition", Icons.Rounded.RestaurantMenu)
+    object Sleep : TabScreen("sleep", "Sleep", Icons.Rounded.Bedtime)
+    object Health : TabScreen("health", "Health", Icons.Rounded.Favorite)
 }
 
 val bottomTabs = listOf(
@@ -268,36 +270,49 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                       )
                   }
               },
-              bottomBar = { 
+              bottomBar = {
                 if (isMainTab) {
-                  Row(
+                  Box(
                     modifier = Modifier
                       .fillMaxWidth()
-                      .background(MaterialTheme.colorScheme.surface)
-                      .border(1.dp, MaterialTheme.colorScheme.outline)
-                      .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceAround,
-                    verticalAlignment = Alignment.CenterVertically
+                      .background(MaterialTheme.colorScheme.background)
+                      .padding(horizontal = 20.dp, vertical = 14.dp)
                   ) {
-                    bottomTabs.forEach { tab ->
-                        val isSelected = currentRoute == tab.route
-                        val color = if (isSelected) (if (isDark) MaterialTheme.colorScheme.primary else Emerald600) else Slate400
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.clickable { 
-                                navController.navigate(tab.route) { 
-                                    popUpTo(navController.graph.findStartDestination().id) { 
-                                        saveState = true 
-                                    }
-                                    launchSingleTop = true 
-                                    restoreState = true
-                                } 
-                            }
-                        ) {
-                            Icon(imageVector = tab.icon, contentDescription = tab.label, tint = color, modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = tab.label, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = color)
-                        }
+                    Row(
+                      modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(elevation = 16.dp, shape = RoundedCornerShape(28.dp), clip = false)
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(horizontal = 8.dp, vertical = 10.dp),
+                      horizontalArrangement = Arrangement.SpaceAround,
+                      verticalAlignment = Alignment.CenterVertically
+                    ) {
+                      bottomTabs.forEach { tab ->
+                          val isSelected = currentRoute == tab.route
+                          val color = if (isSelected) (if (isDark) MaterialTheme.colorScheme.primary else Emerald600) else Slate400
+                          val pillColor = if (isSelected) (if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Emerald50) else Color.Transparent
+                          Column(
+                              horizontalAlignment = Alignment.CenterHorizontally,
+                              verticalArrangement = Arrangement.spacedBy(3.dp),
+                              modifier = Modifier
+                                  .clip(RoundedCornerShape(18.dp))
+                                  .clickable {
+                                      navController.navigate(tab.route) {
+                                          popUpTo(navController.graph.findStartDestination().id) {
+                                              saveState = true
+                                          }
+                                          launchSingleTop = true
+                                          restoreState = true
+                                      }
+                                  }
+                                  .background(pillColor)
+                                  .padding(horizontal = 14.dp, vertical = 8.dp)
+                          ) {
+                              Icon(imageVector = tab.icon, contentDescription = tab.label, tint = color, modifier = Modifier.size(22.dp))
+                              Text(text = tab.label, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = color)
+                          }
+                      }
                     }
                   }
                 }
