@@ -205,6 +205,27 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     fun getMetricsForDateFlow(date: String): kotlinx.coroutines.flow.Flow<com.example.data.local.DailyMetric?> {
         return repository.getMetricsForDate(date)
     }
+
+    fun getFoodLogsForDateFlow(date: String): kotlinx.coroutines.flow.Flow<List<com.example.data.local.FoodLog>> {
+        return repository.getFoodLogsForDate(date)
+    }
+
+    fun getActivityEventsForDateFlow(date: String): kotlinx.coroutines.flow.Flow<List<com.example.data.local.ActivityEvent>> {
+        val cal = java.util.Calendar.getInstance()
+        val parsed = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(date)
+        if (parsed != null) cal.time = parsed
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        cal.set(java.util.Calendar.MINUTE, 0)
+        cal.set(java.util.Calendar.SECOND, 0)
+        cal.set(java.util.Calendar.MILLISECOND, 0)
+        val startMillis = cal.timeInMillis
+        cal.set(java.util.Calendar.HOUR_OF_DAY, 23)
+        cal.set(java.util.Calendar.MINUTE, 59)
+        cal.set(java.util.Calendar.SECOND, 59)
+        cal.set(java.util.Calendar.MILLISECOND, 999)
+        val endMillis = cal.timeInMillis
+        return repository.getTodayActivityEvents(startMillis, endMillis)
+    }
     
     val recentFoodLogs = repository.getRecentFoodLogs().stateIn(
         scope = viewModelScope,

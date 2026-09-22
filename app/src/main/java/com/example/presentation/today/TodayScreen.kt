@@ -42,7 +42,7 @@ import java.util.Locale
 @Composable
 fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val profile by viewModel.userProfile.collectAsState()
-    val isDark = profile?.isDarkMode ?: isSystemInDarkTheme()
+    val isDark = true
 
     val streakAccent = AccentTokens.streakAccent(isDark = isDark)
     val pointsAccent = AccentTokens.pointsAccent(isDark = isDark)
@@ -68,16 +68,19 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
         viewModel.checkAndGenerateHealthInsight(navController.context)
     }
 
-    val metrics by viewModel.todayMetrics.collectAsState()
-    val last7Metrics by viewModel.getMetricsHistoryFlow(7).collectAsState(initial = emptyList())
-    val healthInsight by viewModel.healthInsight.collectAsState()
-    val todayFoodLogs by viewModel.todayFoodLogs.collectAsState()
-    val todayActivityEvents by viewModel.todayActivityEvents.collectAsState()
-    
     var showStepsDialog by remember { mutableStateOf(false) }
     var showStepsOptionDialog by remember { mutableStateOf(false) }
     var showWaterDialog by remember { mutableStateOf(false) }
     var showLogBottomSheet by remember { mutableStateOf(false) }
+
+    var selectedDate by remember { mutableStateOf(java.time.LocalDate.now()) }
+    val selectedDateString = remember(selectedDate) { selectedDate.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE) }
+
+    val metrics by viewModel.getMetricsForDateFlow(selectedDateString).collectAsState(initial = null)
+    val last7Metrics by viewModel.getMetricsHistoryFlow(7).collectAsState(initial = emptyList())
+    val healthInsight by viewModel.healthInsight.collectAsState()
+    val todayFoodLogs by viewModel.getFoodLogsForDateFlow(selectedDateString).collectAsState(initial = emptyList())
+    val todayActivityEvents by viewModel.getActivityEventsForDateFlow(selectedDateString).collectAsState(initial = emptyList())
 
     val calorieLimit = profile?.dailyCalorieLimit ?: 2000
     val totalCalories = todayFoodLogs.sumOf { it.calories }
@@ -176,6 +179,11 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 }
             }
         }
+
+        CalendarStripCard(
+            selectedDate = selectedDate,
+            onDateSelected = { selectedDate = it }
+        )
 
         // Streak, Points & Badges Card
         Card(
@@ -1051,6 +1059,98 @@ private fun TodayPillCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CalendarStripCard(
+    selectedDate: java.time.LocalDate,
+    onDateSelected: (java.time.LocalDate) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var weekAnchor by remember(selectedDate) { mutableStateOf(selectedDate) }
+    val weekStart = remember(weekAnchor) { weekAnchor.minusDays(weekAnchor.dayOfWeek.value % 7L) }
+    val today = remember { java.time.LocalDate.now() }
+    val monthFormatter = remember { java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", Locale.US) }
+    val dayLetterFormatter = remember { java.time.format.DateTimeFormatter.ofPattern("EEEEE", Locale.US) }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = weekStart.format(monthFormatter),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (selectedDate != today) {
+                        TextButton(onClick = { onDateSelected(today) }) {
+                            Text("Today", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                    IconButton(
+                        onClick = { weekAnchor = weekAnchor.minusDays(7) },
+                        modifier = Modifier.size(26.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Icon(Icons.Default.ChevronLeft, contentDescription = "Previous week", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                    }
+                    IconButton(
+                        onClick = { weekAnchor = weekAnchor.plusDays(7) },
+                        modifier = Modifier.size(26.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Icon(Icons.Default.ChevronRight, contentDescription = "Next week", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                for (i in 0..6) {
+                    val day = weekStart.plusDays(i.toLong())
+                    val isSelected = day == selectedDate
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onDateSelected(day) }
+                            .padding(vertical = 4.dp, horizontal = 2.dp)
+                    ) {
+                        Text(
+                            text = day.format(dayLetterFormatter),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(26.dp)
+                                .clip(CircleShape)
+                                .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = day.dayOfMonth.toString(),
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
             }
         }
     }
