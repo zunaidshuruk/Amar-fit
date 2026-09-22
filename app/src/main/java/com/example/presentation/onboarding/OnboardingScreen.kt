@@ -414,13 +414,13 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
             },
             enabled = !isSaving,
             modifier = Modifier.fillMaxWidth().height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B4528)),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             shape = RoundedCornerShape(16.dp)
         ) {
             if (isSaving) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
             } else {
-                Text("Complete Setup", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Complete Setup", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
             }
         }
         Spacer(modifier = Modifier.height(32.dp))
