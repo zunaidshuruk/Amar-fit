@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.Emerald600
 import kotlin.math.abs
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -92,7 +91,7 @@ fun NumberWheelPicker(
                     val alpha = if (isSelected) 1f else 0.5f
                     val fontSize = if (isSelected) 20.sp else 16.sp
                     val fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                    val color = if (isSelected) Emerald600 else MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
+                    val color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
 
                     Text(
                         text = value.toString(),
