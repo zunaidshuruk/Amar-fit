@@ -55,8 +55,8 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val stepsAccent = AccentTokens.stepsAccent(isDark)
     val resilienceAccent = AccentTokens.resilienceAccent(isDark)
 
-    val bmiTrackColor = if (isDark) Emerald800 else Emerald200
-    val bmiFillColor = if (isDark) Emerald300 else Emerald600
+    val bmiTrackColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Emerald200
+    val bmiFillColor = if (isDark) MaterialTheme.colorScheme.primary else Emerald600
     val resilienceTrackColor = resilienceAccent.onBg.copy(alpha = 0.2f)
     val resilienceFillColor = resilienceAccent.onBg
 
@@ -95,7 +95,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Health Vitals", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+        Text("Health Vitals", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         
         // Row 1: Glucose & Heart Rate
         Row(
@@ -310,8 +310,8 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color.White)
-                .border(1.dp, Slate200, RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
                 .clickable { navController.navigate("lifestyle") }
                 .padding(20.dp)
         ) {
@@ -325,18 +325,18 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                         modifier = Modifier
                             .size(48.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Emerald50),
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(imageVector = Icons.Default.MenuBook, contentDescription = "Protocol", tint = Emerald700)
+                        Icon(imageVector = Icons.Default.MenuBook, contentDescription = "Protocol", tint = MaterialTheme.colorScheme.primary)
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "Lifestyle Protocol", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text(text = "Read the health guidelines", color = Slate500, fontSize = 14.sp)
+                        Text(text = "Lifestyle Protocol", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text(text = "Read the health guidelines", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
-                Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Go", tint = Slate400)
+                Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Go", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
@@ -1150,7 +1150,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                         Box(modifier = Modifier.matchParentSize().clickable { showHeightDialog = true })
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = "BMI: ${String.format("%.1f", calcBmi)}", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Emerald700)
+                    Text(text = "BMI: ${String.format("%.1f", calcBmi)}", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     val status = when {
                         calcBmi == 0f -> ""
                         calcBmi < 18.5f -> "Underweight"
@@ -1158,7 +1158,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                         calcBmi < 30f -> "Overweight"
                         else -> "Obese"
                     }
-                    Text(text = status, fontSize = 16.sp, color = Slate600)
+                    Text(text = status, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             confirmButton = {

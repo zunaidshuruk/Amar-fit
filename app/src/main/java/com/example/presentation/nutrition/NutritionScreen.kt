@@ -106,7 +106,7 @@ fun NutritionCard(
                 Text(text = title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = accent.onBg)
                 Text(text = subtitle, fontSize = 14.sp, color = accent.onBg)
             }
-            Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Go", tint = Slate400)
+            Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Go", tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

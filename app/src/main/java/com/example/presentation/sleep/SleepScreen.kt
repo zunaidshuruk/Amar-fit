@@ -99,7 +99,7 @@ fun SleepScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 Text(text = "Optimize your lifestyle", color = coachAccent.onBg, fontSize = 14.sp)
               }
             }
-            Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Go", tint = Slate400)
+            Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Go", tint = MaterialTheme.colorScheme.onSurfaceVariant)
           }
         }
     }
