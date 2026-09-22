@@ -288,7 +288,7 @@ fun GlucoseHistoricalEntryScreen(viewModel: ShasthoViewModel, onNavigateBack: ()
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Indigo600)
+                    colors = ButtonDefaults.buttonColors(containerColor = glucoseAccent.onBg)
                 ) {
                     Text("Save Historical Entry")
                 }
