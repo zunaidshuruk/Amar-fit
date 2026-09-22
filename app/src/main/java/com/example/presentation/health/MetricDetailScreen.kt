@@ -749,14 +749,16 @@ fun MetricDetailScreen(
                                     ZoneBarChart(
                                         data = chronologicalData,
                                         metricKey = metricKey,
-                                        age = profile?.age ?: 0
+                                        age = profile?.age ?: 0,
+                                        isDark = isDark
                                     )
                                 }
                             }
                             "heartRateVariability", "skinTemperatureCelsius", "respiratoryRate" -> {
                                 LineChartMetric(
                                     data = chronologicalData,
-                                    metricKey = metricKey
+                                    metricKey = metricKey,
+                                    isDark = isDark
                                 )
                             }
                         }
@@ -781,7 +783,7 @@ fun MetricDetailScreen(
                         Icon(
                             imageVector = Icons.Default.Warning,
                             contentDescription = "Warning",
-                            tint = Orange500,
+                            tint = if (isDark) Orange100 else Orange500,
                             modifier = Modifier
                                 .size(24.dp)
                                 .padding(top = 2.dp)
@@ -1037,7 +1039,7 @@ fun MetricDetailScreen(
                                         Icon(
                                             imageVector = Icons.Default.CheckCircle,
                                             contentDescription = "Goal met",
-                                            tint = Emerald500,
+                                            tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
@@ -1111,14 +1113,14 @@ private fun StepsCaloriesBarChart(
                 val maxVal = if (goalValue != null) maxOf(dataMax, goalValue) else dataMax
 
                 val barColor = when (metricKey) {
-                    "steps" -> Emerald500
-                    "activeCaloriesBurned" -> Orange500
+                    "steps" -> AccentTokens.stepsAccent(isDark).onBg
+                    "activeCaloriesBurned" -> AccentTokens.caloriesAccent(isDark).onBg
                     "caloriesConsumed" -> if (isDark) Color(0xFFFFB27D) else Orange700
                     "carbsG" -> if (isDark) Color(0xFFFCD34D) else Color(0xFFD97706)
                     "proteinG" -> if (isDark) Color(0xFF6EE7B7) else Emerald700
                     "fatG" -> if (isDark) Color(0xFFC4B5FD) else Color(0xFF7C3AED)
                     "waterLiters" -> AccentTokens.waterAccent(isDark).onBg
-                    else -> Emerald500
+                    else -> AccentTokens.stepsAccent(isDark).onBg
                 }
 
                 val count = data.size
@@ -1153,7 +1155,7 @@ private fun StepsCaloriesBarChart(
                     } else {
                         val x = if (count > 1) index * (barWidth + spacing) else (width - barWidth) / 2f
                         drawRoundRect(
-                            color = Slate500.copy(alpha = 0.35f),
+                            color = (if (isDark) Slate400 else Slate600).copy(alpha = 0.35f),
                             topLeft = Offset(x, height - 8.dp.toPx()),
                             size = Size(barWidth, 8.dp.toPx()),
                             cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
@@ -1229,7 +1231,7 @@ private fun ExerciseStreakStrip(
                     val isMoved = metric.exerciseMinutes > 0
 
                     drawRoundRect(
-                        color = if (isMoved) Emerald500 else Emerald500.copy(alpha = 0.38f),
+                        color = if (isMoved) AccentTokens.stepsAccent(isDark).onBg else AccentTokens.stepsAccent(isDark).onBg.copy(alpha = 0.38f),
                         topLeft = Offset(x, y),
                         size = Size(pillWidth, pillHeight),
                         cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
@@ -1244,7 +1246,8 @@ private fun ExerciseStreakStrip(
 private fun ZoneBarChart(
     data: List<DailyMetric>,
     metricKey: String,
-    age: Int = 0
+    age: Int = 0,
+    isDark: Boolean
 ) {
     val goalLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
     val goalValue = if (metricKey == "heartRate") {
@@ -1291,7 +1294,7 @@ private fun ZoneBarChart(
                         return height - 8.dp.toPx() - ratio * (height - 16.dp.toPx())
                     }
 
-                    val barColor = Red500
+                    val barColor = if (isDark) Color(0xFFFF6B6B) else Red500
 
                     data.forEachIndexed { index, metric ->
                         val x = if (count > 1) index * (barWidth + spacing) else (chartWidth - barWidth) / 2f
@@ -1306,7 +1309,7 @@ private fun ZoneBarChart(
                             )
                         } else {
                             drawRoundRect(
-                                color = Slate500.copy(alpha = 0.35f),
+                                color = (if (isDark) Slate400 else Slate600).copy(alpha = 0.35f),
                                 topLeft = Offset(x, height - 16.dp.toPx()),
                                 size = Size(barWidth, 8.dp.toPx()),
                                 cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
@@ -1315,9 +1318,9 @@ private fun ZoneBarChart(
                     }
 
                     val dashEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-                    val gridColor = Slate500.copy(alpha = 0.3f)
+                    val gridColor = (if (isDark) Slate400 else Slate600).copy(alpha = 0.3f)
                     val gridTextPaint = Paint().apply {
-                        this.color = Slate500.toArgb()
+                        this.color = (if (isDark) Slate400 else Slate600).toArgb()
                         this.textSize = 10.sp.toPx()
                         this.isAntiAlias = true
                     }
@@ -1372,9 +1375,9 @@ private fun ZoneBarChart(
                         val value = metric.oxygenSaturation
                         if (value > 0) {
                             val color = when {
-                                value < 90f -> Red500
-                                value < 95f -> Orange500
-                                else -> Emerald500
+                                value < 90f -> if (isDark) Color(0xFFFF6B6B) else Red500
+                                value < 95f -> if (isDark) Color(0xFFFFB074) else Orange500
+                                else -> if (isDark) Color(0xFF6EE7B7) else Emerald500
                             }
                             val x = if (count > 1) index * (barWidth + spacing) else (width - barWidth) / 2f
                             val ratio = (value / effectiveMax).coerceIn(0f, 1f)
@@ -1389,7 +1392,7 @@ private fun ZoneBarChart(
                         } else {
                             val x = if (count > 1) index * (barWidth + spacing) else (width - barWidth) / 2f
                             drawRoundRect(
-                                color = Slate500.copy(alpha = 0.35f),
+                                color = (if (isDark) Slate400 else Slate600).copy(alpha = 0.35f),
                                 topLeft = Offset(x, height - 8.dp.toPx()),
                                 size = Size(barWidth, 8.dp.toPx()),
                                 cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
@@ -1405,7 +1408,8 @@ private fun ZoneBarChart(
 @Composable
 private fun LineChartMetric(
     data: List<DailyMetric>,
-    metricKey: String
+    metricKey: String,
+    isDark: Boolean
 ) {
     val validValues = remember(data, metricKey) {
         data.mapNotNull {
@@ -1477,10 +1481,10 @@ private fun LineChartMetric(
                             path.lineTo(x, y)
                         }
                         lastValidIndex = index
-                        drawCircle(color = Emerald500, radius = 6.dp.toPx(), center = Offset(x, y))
+                        drawCircle(color = if (isDark) Emerald500 else Emerald600, radius = 6.dp.toPx(), center = Offset(x, y))
                     }
                 }
-                drawPath(path, color = Emerald500, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
+                drawPath(path, color = if (isDark) Emerald500 else Emerald600, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
             }
         }
     }
@@ -1661,7 +1665,7 @@ private fun IntradayHeartRateChart(
                             HealthGoalCalculator.HeartRateZone.PEAK -> if (isDark) Color(0xFFFF6B6B) else Red500
                             HealthGoalCalculator.HeartRateZone.VIGOROUS -> if (isDark) Color(0xFFFFB074) else Orange500
                             HealthGoalCalculator.HeartRateZone.MODERATE -> if (isDark) Color(0xFF6EE7B7) else Emerald600
-                            else -> Slate500
+                            else -> if (isDark) Slate400 else Slate600
                         }
 
                         drawCircle(
@@ -2012,7 +2016,7 @@ private fun IntradayActiveCaloriesChart(
                     val barWidth = slotWidth * (1f - totalSpacingRatio)
                     val spacing = slotWidth * totalSpacingRatio
 
-                    val barColor = Orange500
+                    val barColor = AccentTokens.caloriesAccent(isDark).onBg
 
                     for (hour in 0 until 24) {
                         val calories = hourlyCounts[hour]
@@ -2229,7 +2233,7 @@ private fun HeartRateZonesCard(
                 Triple(HealthGoalCalculator.HeartRateZone.PEAK, "Peak (≥85%)", if (isDark) Color(0xFFFF6B6B) else Red500),
                 Triple(HealthGoalCalculator.HeartRateZone.VIGOROUS, "Vigorous (70-84%)", if (isDark) Color(0xFFFFB074) else Orange500),
                 Triple(HealthGoalCalculator.HeartRateZone.MODERATE, "Moderate (50-69%)", if (isDark) Color(0xFF6EE7B7) else Emerald600),
-                Triple(HealthGoalCalculator.HeartRateZone.LIGHT, "Light (<50%)", Slate500)
+                Triple(HealthGoalCalculator.HeartRateZone.LIGHT, "Light (<50%)", if (isDark) Slate400 else Slate600)
             )
 
             val activeZones = zoneDefs.mapNotNull { (zone, label, color) ->
