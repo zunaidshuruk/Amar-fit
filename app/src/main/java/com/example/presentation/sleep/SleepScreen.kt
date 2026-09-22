@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.presentation.viewmodel.ShasthoViewModel
+import com.example.ui.components.HeroStatCard
+import com.example.ui.components.NavListCard
 import com.example.ui.theme.*
 
 @Composable
@@ -45,64 +47,28 @@ fun SleepScreen(viewModel: ShasthoViewModel, navController: NavController) {
         Text("Sleep & Wellness", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
 
         // Sleep Tracking Card
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(sleepAccent.bg)
-            .clickable { showSleepDialog = true }
-            .padding(24.dp)
+        HeroStatCard(
+            label = "SLEEP TRACKING",
+            value = String.format("%.1f Hours", sleepHours),
+            caption = profile?.sleepGoalHours?.let { goal -> String.format("of %.1f hrs goal", goal) },
+            onClick = { showSleepDialog = true }
         ) {
-          Column {
-            Text(text = "SLEEP TRACKING", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = sleepAccent.onBg)
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(text = String.format("%.1f Hours", sleepHours), fontSize = 32.sp, fontWeight = FontWeight.Bold, color = sleepAccent.onBg)
-            profile?.sleepGoalHours?.let { goal ->
-              Text(
-                text = String.format("of %.1f hrs goal", goal),
-                fontSize = 14.sp,
+            Text(
+                text = "(+ Tap to log manually)",
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
-                color = sleepAccent.onBg
-              )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "(+ Tap to log manually)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = sleepAccent.onBg)
-          }
+                color = MaterialTheme.colorScheme.onPrimary
+            )
         }
 
         // Coach Module
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(coachAccent.bg)
-            .clickable { navController.navigate("coach") }
-            .padding(20.dp)
-        ) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-              Box(
-                modifier = Modifier
-                  .size(48.dp)
-                  .clip(RoundedCornerShape(12.dp))
-                  .background(MaterialTheme.colorScheme.surface),
-                contentAlignment = Alignment.Center
-              ) {
-                Icon(imageVector = Icons.Default.MonitorHeart, contentDescription = "Coach", tint = coachAccent.onBg)
-              }
-              Spacer(modifier = Modifier.width(16.dp))
-              Column(modifier = Modifier.weight(1f)) {
-                Text(text = "AI Wellness Coach", color = coachAccent.onBg, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text(text = "Optimize your lifestyle", color = coachAccent.onBg, fontSize = 14.sp)
-              }
-            }
-            Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Go", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-          }
-        }
+        NavListCard(
+            icon = Icons.Default.MonitorHeart,
+            title = "AI Wellness Coach",
+            subtitle = "Optimize your lifestyle",
+            accent = coachAccent,
+            onClick = { navController.navigate("coach") }
+        )
     }
 
     if (showSleepDialog) {
