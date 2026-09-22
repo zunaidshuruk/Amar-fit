@@ -12,8 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,6 +34,7 @@ import androidx.navigation.NavController
 import com.example.data.health.HealthGoalCalculator
 import com.example.presentation.navigation.navigateToTab
 import com.example.presentation.viewmodel.ShasthoViewModel
+import com.example.ui.components.StatTileCard
 import com.example.ui.theme.*
 import com.example.util.formatHeight
 import com.example.util.formatWeight
@@ -103,36 +103,24 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(glucoseAccent.bg)
-                    .clickable { navController.navigate("glucoselog") }
-                    .padding(16.dp)
-            ) {
-                Column {
-                    Text(text = "BLOOD GLUCOSE", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = glucoseAccent.onBg)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = if(glucose > 0) "$glucose" else "--", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = glucoseAccent.onBg)
-                    Text(text = "mmol/L (+ Tap to log)", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = glucoseAccent.onBg)
-                }
-            }
+            StatTileCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.WaterDrop,
+                label = "BLOOD GLUCOSE",
+                value = if (glucose > 0) "$glucose" else "--",
+                caption = "mmol/L (+ Tap to log)",
+                accent = glucoseAccent,
+                onClick = { navController.navigate("glucoselog") }
+            )
 
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(heartRateAccent.bg)
-                    .padding(16.dp)
-            ) {
-                Column {
-                    Text(text = "HEART RATE", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = heartRateAccent.onBg)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = if(heartRate > 0) "$heartRate bpm" else "--", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = heartRateAccent.onBg)
-                    Text(text = "(Synced automatically)", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = heartRateAccent.onBg)
-                }
-            }
+            StatTileCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.MonitorHeart,
+                label = "HEART RATE",
+                value = if (heartRate > 0) "$heartRate bpm" else "--",
+                caption = "(Synced automatically)",
+                accent = heartRateAccent
+            )
         }
 
         // Row 2: Weight & Blood Pressure
@@ -140,38 +128,25 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(weightAccent.bg)
-                    .clickable { navController.navigate("weightlog") }
-                    .padding(16.dp)
-            ) {
-                Column {
-                    Text(text = "WEIGHT", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = weightAccent.onBg)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = formatWeight(weight, profile?.useImperialUnits ?: false), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = weightAccent.onBg)
-                    Text(text = "(+ Tap to log)", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = weightAccent.onBg)
-                }
-            }
+            StatTileCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.MonitorWeight,
+                label = "WEIGHT",
+                value = formatWeight(weight, profile?.useImperialUnits ?: false),
+                caption = "(+ Tap to log)",
+                accent = weightAccent,
+                onClick = { navController.navigate("weightlog") }
+            )
 
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(bloodPressureAccent.bg)
-                    .clickable { showBpDialog = true }
-                    .padding(16.dp)
-            ) {
-                Column {
-                    Text(text = "BLOOD PRESSURE", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = bloodPressureAccent.onBg)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    val bp = metrics?.bloodPressure?.takeIf { it.isNotBlank() } ?: "--"
-                    Text(text = bp, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = bloodPressureAccent.onBg)
-                    Text(text = "mmHg (+ Tap to log)", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = bloodPressureAccent.onBg)
-                }
-            }
+            StatTileCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.Timeline,
+                label = "BLOOD PRESSURE",
+                value = metrics?.bloodPressure?.takeIf { it.isNotBlank() } ?: "--",
+                caption = "mmHg (+ Tap to log)",
+                accent = bloodPressureAccent,
+                onClick = { showBpDialog = true }
+            )
         }
 
         // BMI Card
@@ -179,12 +154,12 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .background(bmiAccent.bg)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .clickable { showBmiDialog = true }
                 .padding(16.dp)
         ) {
             Column {
-                Text(text = "BMI", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = bmiAccent.onBg)
+                Text(text = "BMI", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(text = String.format("%.1f", bmi), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = bmiAccent.onBg)
                 Spacer(modifier = Modifier.height(6.dp))
@@ -213,11 +188,11 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .background(weightAccent.bg)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .padding(16.dp)
         ) {
             Column {
-                Text(text = "BODY FAT %", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = weightAccent.onBg)
+                Text(text = "BODY FAT %", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(16.dp))
                 if (bodyFatPercent != null) {
                     Text(text = String.format("%.1f%%", bodyFatPercent), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = weightAccent.onBg)
@@ -234,7 +209,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .background(resilienceAccent.bg)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .padding(16.dp)
         ) {
             Column {
@@ -247,7 +222,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                         text = "RESILIENCE",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = resilienceAccent.onBg
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     if (resilienceBucket != null) {
                         Text(
@@ -264,7 +239,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                         text = "Log your sleep to see your Resilience score",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = resilienceAccent.onBg
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
                     Spacer(modifier = Modifier.height(16.dp))
