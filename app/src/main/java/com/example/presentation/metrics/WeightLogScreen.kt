@@ -184,11 +184,11 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
                     
                     Text("Ideal Weight (BMI 22): ${formatWeight(idealWeight, profile?.useImperialUnits ?: false)}", fontWeight = FontWeight.Medium)
                     if (weightDiff > 1f) {
-                        Text("Target to reduce: ${formatWeight(weightDiff, profile?.useImperialUnits ?: false)}", color = Red700, fontWeight = FontWeight.Bold)
+                        Text("Target to reduce: ${formatWeight(weightDiff, profile?.useImperialUnits ?: false)}", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                     } else if (weightDiff < -1f) {
-                        Text("Target to gain: ${formatWeight(-weightDiff, profile?.useImperialUnits ?: false)}", color = Orange700, fontWeight = FontWeight.Bold)
+                        Text("Target to gain: ${formatWeight(-weightDiff, profile?.useImperialUnits ?: false)}", color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.Bold)
                     } else {
-                        Text("You are at your ideal weight! Great job!", color = Emerald600, fontWeight = FontWeight.Bold)
+                        Text("You are at your ideal weight! Great job!", color = weightAccent.onBg, fontWeight = FontWeight.Bold)
                     }
                 }
             }
