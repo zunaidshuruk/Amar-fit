@@ -191,40 +191,40 @@ fun CoachScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
             modifier = Modifier.fillMaxWidth(0.95f).padding(vertical = 24.dp),
             content = {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(24.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Emerald600)
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = waterAccent.onBg)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Amar-Fit AI Coach", fontWeight = FontWeight.Bold, color = Emerald600)
+                            Text("Amar-Fit AI Coach", fontWeight = FontWeight.Bold, color = waterAccent.onBg)
                             Spacer(modifier = Modifier.weight(1f))
-                            IconButton(onClick = { 
+                            IconButton(onClick = {
                                 selectedTopic = null
                                 viewModel.clearCoachAdvice()
                             }) {
                                 Icon(Icons.Default.Close, contentDescription = "Close")
                             }
                         }
-                        
+
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(text = selectedTopic!!.condition, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = TextPrimary)
-                        
+                        Text(text = selectedTopic!!.condition, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurface)
+
                         Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = Slate100)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         Spacer(modifier = Modifier.height(16.dp))
 
                         if (isLoading && coachAdvice.isNullOrEmpty()) {
                             Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(color = Emerald600)
+                                CircularProgressIndicator(color = waterAccent.onBg)
                             }
                         } else if (!coachAdvice.isNullOrEmpty()) {
                             MarkdownText(
                                 text = coachAdvice!!,
-                                color = TextPrimary,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 15.sp,
                                 lineHeight = 22.sp,
                                 modifier = Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())
