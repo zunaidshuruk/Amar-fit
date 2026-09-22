@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -802,19 +803,29 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     Box(
                         modifier = Modifier
                             .weight(1f)
+                            .heightIn(min = 72.dp)
                             .clip(RoundedCornerShape(16.dp))
                             .background(bg)
                             .then(if (item.isTracked) Modifier.clickable { item.onClick() } else Modifier)
                             .padding(16.dp)
                     ) {
                         Column {
-                            Text(text = item.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = contentColor)
+                            Text(
+                                text = item.title,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = contentColor,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = if (item.isTracked) "Tracked" else "Not tracked",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = contentColor.copy(alpha = if (item.isTracked) 1f else 0.7f)
+                                color = contentColor.copy(alpha = if (item.isTracked) 1f else 0.7f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -847,7 +858,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     .padding(16.dp)
             ) {
                 Column {
-                    Text(text = "High heart rate", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = highColor)
+                    Text(text = "High heart rate", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = highColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = if (isHighHeartRate) "$heartRate bpm" else "Not available",
@@ -868,7 +879,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     .padding(16.dp)
             ) {
                 Column {
-                    Text(text = "Low heart rate", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = lowColor)
+                    Text(text = "Low heart rate", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = lowColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = if (isLowHeartRate) "$heartRate bpm" else "Not available",
@@ -898,7 +909,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     .padding(16.dp)
             ) {
                 Column {
-                    Text(text = "Profile", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = profileAccent.onBg)
+                    Text(text = "Profile", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = profileAccent.onBg, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(text = "Account & Settings", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = profileAccent.onBg.copy(alpha = 0.8f))
                 }
@@ -914,7 +925,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     .padding(16.dp)
             ) {
                 Column {
-                    Text(text = "Chat history", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = chatAccent.onBg)
+                    Text(text = "Chat history", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = chatAccent.onBg, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(text = "Saved AI chats", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = chatAccent.onBg.copy(alpha = 0.8f))
                 }
@@ -931,7 +942,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 .padding(16.dp)
         ) {
             Column {
-                Text(text = "Medical", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = medicalAccent.onBg)
+                Text(text = "Medical", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = medicalAccent.onBg, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = "Health records", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = medicalAccent.onBg.copy(alpha = 0.8f))
             }
