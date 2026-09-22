@@ -288,7 +288,7 @@ fun WorkoutSessionScreen(
                             .fillMaxWidth()
                             .height(8.dp)
                             .clip(RoundedCornerShape(4.dp)),
-                        color = Secondary,
+                        color = MaterialTheme.colorScheme.secondary,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                     Spacer(modifier = Modifier.height(12.dp))
@@ -498,13 +498,13 @@ fun WorkoutSessionScreen(
                                     modifier = Modifier
                                         .size(64.dp)
                                         .clip(CircleShape)
-                                        .background(Secondary.copy(alpha = 0.15f)),
+                                        .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.SelfImprovement,
                                         contentDescription = null,
-                                        tint = Secondary,
+                                        tint = MaterialTheme.colorScheme.secondary,
                                         modifier = Modifier.size(36.dp)
                                     )
                                 }
@@ -569,7 +569,7 @@ fun WorkoutSessionScreen(
                                     progress = { timerFraction },
                                     modifier = Modifier.fillMaxSize(),
                                     strokeWidth = 8.dp,
-                                    color = if (currentStep.type == SessionStepType.REST) Secondary else Orange500,
+                                    color = if (currentStep.type == SessionStepType.REST) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.tertiary,
                                     trackColor = MaterialTheme.colorScheme.surfaceVariant
                                 )
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -585,7 +585,7 @@ fun WorkoutSessionScreen(
                                         text = if (isPaused) "PAUSED" else "REMAINING",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = if (isPaused) Red500 else MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = if (isPaused) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -627,7 +627,7 @@ fun WorkoutSessionScreen(
                                     .fillMaxWidth()
                                     .height(56.dp),
                                 shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                             ) {
                                 Icon(Icons.Default.CheckCircle, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -694,7 +694,7 @@ fun WorkoutSessionScreen(
                             Icon(
                                 Icons.Default.LocalFireDepartment,
                                 contentDescription = null,
-                                tint = Orange500,
+                                tint = AccentTokens.caloriesAccent(isDark).onBg,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -725,7 +725,7 @@ fun WorkoutSessionScreen(
                         onExit()
                     }
                 ) {
-                    Text("End Session", color = Red500, fontWeight = FontWeight.Bold)
+                    Text("End Session", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -778,13 +778,13 @@ fun WorkoutCompletionSummary(
             modifier = Modifier
                 .size(80.dp)
                 .clip(CircleShape)
-                .background(Secondary.copy(alpha = 0.2f)),
+                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.EmojiEvents,
                 contentDescription = null,
-                tint = Secondary,
+                tint = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.size(48.dp)
             )
         }
@@ -859,7 +859,7 @@ fun WorkoutCompletionSummary(
                     Icon(
                         Icons.Default.LocalFireDepartment,
                         contentDescription = null,
-                        tint = Orange500,
+                        tint = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -982,7 +982,7 @@ fun WorkoutCompletionSummary(
                 .fillMaxWidth()
                 .height(56.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Primary)
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
             Text("Finish Session", fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }

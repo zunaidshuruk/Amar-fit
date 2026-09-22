@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -111,35 +112,56 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 Button(
                     onClick = { selectedTab = 0 },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (selectedTab == 0) Orange500 else MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = if (selectedTab == 0) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                        containerColor = if (selectedTab == 0) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (selectedTab == 0) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurfaceVariant
                     ),
                     modifier = Modifier.weight(1f).padding(end = 4.dp),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    Text("AI Workouts", color = if (selectedTab == 0) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "AI Workouts",
+                        color = if (selectedTab == 0) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip
+                    )
                 }
                 Button(
                     onClick = { selectedTab = 1 },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (selectedTab == 1) Orange500 else MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = if (selectedTab == 1) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                        containerColor = if (selectedTab == 1) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (selectedTab == 1) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurfaceVariant
                     ),
                     modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    Text("Saved", color = if (selectedTab == 1) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "Saved",
+                        color = if (selectedTab == 1) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip
+                    )
                 }
                 Button(
                     onClick = { selectedTab = 2 },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (selectedTab == 2) Orange500 else MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = if (selectedTab == 2) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                        containerColor = if (selectedTab == 2) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (selectedTab == 2) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurfaceVariant
                     ),
                     modifier = Modifier.weight(1f).padding(start = 4.dp),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    Text("History", color = if (selectedTab == 2) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "History",
+                        color = if (selectedTab == 2) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip
+                    )
                 }
             }
 
@@ -155,7 +177,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 Button(
                     onClick = { viewModel.generateAIStructuredWorkout() },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Orange500),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
                     shape = RoundedCornerShape(16.dp),
                     enabled = !isLoadingStructured
                 ) {
@@ -168,7 +190,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 
                 if (isLoadingStructured) {
                     Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Orange500)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.tertiary)
                     }
                 } else if (structuredError != null) {
                     Card(
@@ -244,7 +266,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                             modifier = Modifier
                                 .weight(1f)
                                 .height(52.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             shape = RoundedCornerShape(14.dp),
                             contentPadding = PaddingValues(horizontal = 4.dp)
                         ) {
@@ -342,7 +364,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                                     )
                                 }
                                 IconButton(onClick = { viewModel.deleteWorkout(workout) }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Red500)
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                                 }
                             }
                         }
@@ -625,7 +647,7 @@ fun SavedWorkoutDetailView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Icon(Icons.Default.PlayArrow, contentDescription = null)
