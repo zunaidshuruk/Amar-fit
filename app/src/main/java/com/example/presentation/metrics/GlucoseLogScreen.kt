@@ -355,7 +355,7 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
                         val bandTopY = height - ((targetMax / maxVal) * height)
                         val bandBottomY = height - ((targetMin / maxVal) * height)
                         drawRect(
-                            color = Emerald600.copy(alpha = 0.15f),
+                            color = glucoseAccent.onBg.copy(alpha = 0.15f),
                             topLeft = Offset(0f, bandTopY),
                             size = Size(width, bandBottomY - bandTopY)
                         )
