@@ -142,7 +142,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                smallChunked.forEach { rowIds ->
+                smallChunked.forEachIndexed { rowIndex, rowIds ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -169,6 +169,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                     accent = resolved.accent,
                                     isMuted = resolved.isMuted,
                                     isDark = isDark,
+                                    featured = (rowIndex == 0),
                                     onClick = resolved.onClick
                                 )
                             } else {
@@ -1016,6 +1017,7 @@ private fun TodayPillCard(
     accent: AccentColors? = null,
     isMuted: Boolean = false,
     isDark: Boolean,
+    featured: Boolean = false,
     onClick: (() -> Unit)? = null
 ) {
     val containerBg = when {
@@ -1029,16 +1031,21 @@ private fun TodayPillCard(
         else -> if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
     }
 
+    val cardShape = if (featured) RoundedCornerShape(18.dp) else RoundedCornerShape(16.dp)
+
     Box(
         modifier = modifier
-            .shadow(if (isMuted) 0.dp else 1.dp, RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp))
+            .shadow(if (isMuted) 0.dp else 1.dp, cardShape)
+            .clip(cardShape)
             .background(containerBg)
             .then(
                 if (onClick != null && !isMuted) Modifier.clickable { onClick() }
                 else Modifier
             )
-            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .padding(
+                horizontal = if (featured) 14.dp else 12.dp,
+                vertical = if (featured) 14.dp else 10.dp
+            )
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1047,7 +1054,7 @@ private fun TodayPillCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(if (featured) 38.dp else 32.dp)
                     .clip(CircleShape)
                     .background(
                         if (isMuted) (if (isDark) MaterialTheme.colorScheme.surface else Slate200)
@@ -1060,13 +1067,13 @@ private fun TodayPillCard(
                     imageVector = icon,
                     contentDescription = null,
                     tint = contentTint,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(if (featured) 19.dp else 16.dp)
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = label,
-                    fontSize = 11.sp,
+                    fontSize = if (featured) 12.sp else 11.sp,
                     fontWeight = FontWeight.Medium,
                     color = if (isDark) Slate400 else Slate500,
                     maxLines = 1,
@@ -1074,7 +1081,7 @@ private fun TodayPillCard(
                 )
                 Text(
                     text = value,
-                    fontSize = 14.sp,
+                    fontSize = if (featured) 16.sp else 14.sp,
                     fontWeight = if (isMuted) FontWeight.Normal else FontWeight.Bold,
                     color = if (isMuted) (if (isDark) Slate500 else Slate400) else if (accent != null) accent.onBg else (if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary),
                     maxLines = 1,
