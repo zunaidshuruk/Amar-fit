@@ -538,10 +538,10 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(text = "Ask AI Assistant", color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text(text = "Get instant diet & health answers", color = Slate500, fontSize = 14.sp)
+                        Text(text = "Get instant diet & health answers", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
-                Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Go", tint = Slate400)
+                Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Go", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
@@ -565,7 +565,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
             ) {
                 Text(
                     text = "No activities logged yet today",
-                    color = Slate500,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -625,7 +625,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                 Text(
                                     text = timeFormat.format(Date(event.timestamp)),
                                     fontSize = 12.sp,
-                                    color = Slate500
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
