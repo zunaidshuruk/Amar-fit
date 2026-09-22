@@ -15,7 +15,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.Emerald600
 
 enum class PickerMode {
     HEIGHT, WEIGHT
@@ -100,7 +99,7 @@ fun HeightWeightPickerDialog(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (selected) Emerald600 else Color.Transparent)
+                                    .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
                                     .clickable {
                                         when (heightUnit) {
                                             HeightUnit.CM -> currentCm = cmVal.toFloat()
@@ -122,12 +121,12 @@ fun HeightWeightPickerDialog(
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     if (selected) {
-                                        Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                        Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(4.dp))
                                     }
                                     Text(
                                         text = unit.name.lowercase(),
-                                        color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                                     )
                                 }
@@ -140,7 +139,7 @@ fun HeightWeightPickerDialog(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (selected) Emerald600 else Color.Transparent)
+                                    .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
                                     .clickable {
                                         when (weightUnit) {
                                             WeightUnit.KG -> currentKg = kgVal.toFloat()
@@ -164,12 +163,12 @@ fun HeightWeightPickerDialog(
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     if (selected) {
-                                        Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                        Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(4.dp))
                                     }
                                     Text(
                                         text = unit.name.lowercase(),
-                                        color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                                     )
                                 }
@@ -300,7 +299,7 @@ fun HeightWeightPickerDialog(
                 }
                 onConfirm(finalCanonical)
             }) {
-                Text("OK", color = Emerald600, fontWeight = FontWeight.Bold)
+                Text("OK", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
