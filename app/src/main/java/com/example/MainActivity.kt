@@ -150,7 +150,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
         if (!sessionChecked) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Emerald600)
+                CircularProgressIndicator(color = if (isDark) MaterialTheme.colorScheme.primary else Emerald600)
             }
         } else {
             val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
