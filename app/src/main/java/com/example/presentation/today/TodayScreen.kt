@@ -6,10 +6,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +25,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +40,7 @@ import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 import java.text.SimpleDateFormat
@@ -114,11 +115,15 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Large Hero Tiles: swipeable when there's more than one, each card flippable for detail.
+        // Large Ring Tiles (Full-width, stacked vertically). Each card is flippable in
+        // place -- tap or swipe it to reveal a back face with extra detail.
         if (activeLargeIds.isNotEmpty()) {
-            val resolvedLargeTiles = remember(activeLargeIds, metrics, last7Metrics, stepGoal) {
-                activeLargeIds.mapNotNull { largeId ->
-                    resolveLargeTile(
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                activeLargeIds.forEach { largeId ->
+                    val resolved = resolveLargeTile(
                         id = largeId,
                         metrics = metrics,
                         last7Metrics = last7Metrics,
@@ -127,46 +132,12 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                         onOpenStepsDialog = { showStepsOptionDialog = true },
                         onNavigateToFitness = { navigateToTab(navController, "fitness") }
                     )
-                }
-            }
-
-            if (resolvedLargeTiles.isNotEmpty()) {
-                val pagerState = rememberPagerState(pageCount = { resolvedLargeTiles.size })
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    HorizontalPager(
-                        state = pagerState,
-                        modifier = Modifier.fillMaxWidth()
-                    ) { page ->
-                        val tile = resolvedLargeTiles[page]
+                    if (resolved != null) {
                         FlippableHeroCard(
-                            tile = tile,
+                            tile = resolved,
                             isDark = isDark,
-                            heroStyle = (tile.id == "large_steps"),
-                            modifier = Modifier.padding(horizontal = 2.dp)
+                            heroStyle = (largeId == "large_steps")
                         )
-                    }
-
-                    if (resolvedLargeTiles.size > 1) {
-                        Row(
-                            modifier = Modifier.padding(top = 10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            repeat(resolvedLargeTiles.size) { dotIndex ->
-                                val isActive = pagerState.currentPage == dotIndex
-                                Box(
-                                    modifier = Modifier
-                                        .size(if (isActive) 8.dp else 6.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            if (isActive) MaterialTheme.colorScheme.primary
-                                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                                        )
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -1225,9 +1196,10 @@ private fun CalendarStripCard(
 
 /**
  * A large hero tile that flips between a front face (the ring/progress view) and a
- * back face (a short list of related detail stats) on tap. The card's original
+ * back face (a short list of related detail stats). It flips on either a tap or a
+ * horizontal swipe, so the gesture that feels natural just works. The card's original
  * navigation/log action (e.g. opening the steps dialog) moves to a small corner
- * button so it stays reachable without hijacking the tap-to-flip gesture.
+ * button so it stays reachable without hijacking the flip gesture.
  */
 @Composable
 private fun FlippableHeroCard(
@@ -1243,6 +1215,7 @@ private fun FlippableHeroCard(
         label = "heroCardFlip"
     )
     val density = LocalDensity.current
+    var dragAccumPx by remember(tile.id) { mutableStateOf(0f) }
 
     Box(
         modifier = modifier
@@ -1250,6 +1223,24 @@ private fun FlippableHeroCard(
             .shadow(2.dp, RoundedCornerShape(20.dp))
             .clip(RoundedCornerShape(20.dp))
             .background(if (heroStyle) MaterialTheme.colorScheme.primary else (if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface))
+            // Swipe (in either direction) toggles the flip, same as a tap.
+            .pointerInput(tile.id) {
+                detectHorizontalDragGestures(
+                    onDragStart = { dragAccumPx = 0f },
+                    onHorizontalDrag = { change, dragAmount ->
+                        change.consume()
+                        dragAccumPx += dragAmount
+                    },
+                    onDragEnd = {
+                        val thresholdPx = with(density) { 56.dp.toPx() }
+                        if (abs(dragAccumPx) > thresholdPx) {
+                            flipped = !flipped
+                        }
+                        dragAccumPx = 0f
+                    },
+                    onDragCancel = { dragAccumPx = 0f }
+                )
+            }
             .clickable { flipped = !flipped }
             .graphicsLayer {
                 rotationY = rotation
