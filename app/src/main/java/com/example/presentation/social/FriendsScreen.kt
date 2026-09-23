@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -51,6 +52,7 @@ fun FriendsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) 
 
     var selectedTab by remember { mutableStateOf(0) }
     var codeInput by remember { mutableStateOf("") }
+    var showQrScanner by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { viewModel.refreshFriendRequests() }
 
@@ -123,6 +125,16 @@ fun FriendsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) 
                         ) {
                             Text("Send Request")
                         }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedButton(
+                            onClick = { showQrScanner = true },
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Scan QR Code")
+                        }
                     }
                 }
                 2 -> {
@@ -183,5 +195,15 @@ fun FriendsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) 
                 }
             }
         }
+    }
+
+    if (showQrScanner) {
+        QrScannerScreen(
+            onCodeScanned = { code ->
+                showQrScanner = false
+                viewModel.sendFriendRequestByCode(code)
+            },
+            onClose = { showQrScanner = false }
+        )
     }
 }
