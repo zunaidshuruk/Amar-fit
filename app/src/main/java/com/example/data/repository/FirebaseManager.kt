@@ -156,6 +156,101 @@ object FirebaseManager {
         }
     }
 
+    data class FriendRequestInfo(
+        val pairId: String,
+        val otherUid: String,
+        val otherName: String
+    )
+
+    suspend fun resolveFriendCode(code: String): String? {
+        val db = FirebaseFirestore.getInstance()
+        return try {
+            val snap = db.collection("friend_codes").document(code.uppercase()).get().await()
+            snap.getString("uid")
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun pairIdFor(uidA: String, uidB: String): String =
+        if (uidA < uidB) "${uidA}_${uidB}" else "${uidB}_${uidA}"
+
+    suspend fun sendFriendRequest(targetUid: String): String {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser ?: return "Not signed in."
+        if (user.uid == targetUid) return "You can't add yourself."
+        val db = FirebaseFirestore.getInstance()
+        val pairId = pairIdFor(user.uid, targetUid)
+        return try {
+            val existing = db.collection("friendships").document(pairId).get().await()
+            if (existing.exists()) {
+                val status = existing.getString("status")
+                return if (status == "accepted") "You're already friends." else "A request is already pending with this user."
+            }
+            val data = mapOf(
+                "uid1" to (if (user.uid < targetUid) user.uid else targetUid),
+                "uid2" to (if (user.uid < targetUid) targetUid else user.uid),
+                "requestedBy" to user.uid,
+                "status" to "pending",
+                "createdAt" to com.google.firebase.Timestamp.now()
+            )
+            db.collection("friendships").document(pairId).set(data).await()
+            "Friend request sent."
+        } catch (e: Exception) {
+            "Couldn't send request: ${e.message}"
+        }
+    }
+
+    suspend fun getFriendRequests(): Pair<List<FriendRequestInfo>, List<FriendRequestInfo>> {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser ?: return Pair(emptyList(), emptyList())
+        val db = FirebaseFirestore.getInstance()
+        return try {
+            val asUid1 = db.collection("friendships").whereEqualTo("uid1", user.uid).whereEqualTo("status", "pending").get().await()
+            val asUid2 = db.collection("friendships").whereEqualTo("uid2", user.uid).whereEqualTo("status", "pending").get().await()
+            val incoming = mutableListOf<FriendRequestInfo>()
+            val outgoing = mutableListOf<FriendRequestInfo>()
+            for (doc in (asUid1.documents + asUid2.documents)) {
+                val uid1 = doc.getString("uid1") ?: continue
+                val uid2 = doc.getString("uid2") ?: continue
+                val requestedBy = doc.getString("requestedBy") ?: continue
+                val otherUid = if (uid1 == user.uid) uid2 else uid1
+                val otherName = try {
+                    db.collection("public_profiles").document(otherUid).get().await().getString("name") ?: "Unknown"
+                } catch (e: Exception) {
+                    "Unknown"
+                }
+                val info = FriendRequestInfo(pairId = doc.id, otherUid = otherUid, otherName = otherName)
+                if (requestedBy == user.uid) outgoing.add(info) else incoming.add(info)
+            }
+            Pair(incoming, outgoing)
+        } catch (e: Exception) {
+            Pair(emptyList(), emptyList())
+        }
+    }
+
+    suspend fun acceptFriendRequest(pairId: String): Boolean {
+        val db = FirebaseFirestore.getInstance()
+        return try {
+            db.collection("friendships").document(pairId)
+                .update(mapOf("status" to "accepted", "acceptedAt" to com.google.firebase.Timestamp.now()))
+                .await()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun deleteFriendRequest(pairId: String): Boolean {
+        val db = FirebaseFirestore.getInstance()
+        return try {
+            db.collection("friendships").document(pairId).delete().await()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     fun syncFoodLog(log: FoodLog) {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser

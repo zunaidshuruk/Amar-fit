@@ -57,7 +57,8 @@ fun SettingsScreen(
     viewModel: ShasthoViewModel,
     onNavigateBack: () -> Unit = {},
     onLogout: () -> Unit = {},
-    onNavigateToHealthGoals: () -> Unit = {}
+    onNavigateToHealthGoals: () -> Unit = {},
+    onNavigateToFriends: () -> Unit = {}
 ) {
     val profile by viewModel.userProfile.collectAsState()
     val isDark = true
@@ -715,6 +716,26 @@ fun SettingsScreen(
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = "Health Goals",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateToFriends() }
+                        .padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Friends", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
+                        Text("Add friends, challenges, and leaderboard", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "Friends",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

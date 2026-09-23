@@ -7,6 +7,7 @@ import com.example.data.local.AppDatabase
 import com.example.data.local.DailyMetric
 import com.example.data.local.UserProfile
 import com.example.data.repository.AppRepository
+import com.example.data.repository.FirebaseManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -1821,6 +1822,59 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     suspend fun getExerciseLibrary(context: android.content.Context): List<com.example.data.local.LibraryExercise> {
         return repository.getExerciseLibrary(context)
+    }
+
+    private val _incomingFriendRequests = MutableStateFlow<List<FirebaseManager.FriendRequestInfo>>(emptyList())
+    val incomingFriendRequests: StateFlow<List<FirebaseManager.FriendRequestInfo>> = _incomingFriendRequests.asStateFlow()
+
+    private val _outgoingFriendRequests = MutableStateFlow<List<FirebaseManager.FriendRequestInfo>>(emptyList())
+    val outgoingFriendRequests: StateFlow<List<FirebaseManager.FriendRequestInfo>> = _outgoingFriendRequests.asStateFlow()
+
+    private val _friendActionMessage = MutableStateFlow<String?>(null)
+    val friendActionMessage: StateFlow<String?> = _friendActionMessage.asStateFlow()
+
+    fun clearFriendActionMessage() {
+        _friendActionMessage.value = null
+    }
+
+    fun refreshFriendRequests() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val (incoming, outgoing) = FirebaseManager.getFriendRequests()
+            _incomingFriendRequests.value = incoming
+            _outgoingFriendRequests.value = outgoing
+        }
+    }
+
+    fun sendFriendRequestByCode(code: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val trimmed = code.trim().uppercase()
+            if (trimmed.isBlank()) {
+                _friendActionMessage.value = "Enter a friend code."
+                return@launch
+            }
+            val targetUid = FirebaseManager.resolveFriendCode(trimmed)
+            if (targetUid == null) {
+                _friendActionMessage.value = "No user found with that code."
+                return@launch
+            }
+            val result = FirebaseManager.sendFriendRequest(targetUid)
+            _friendActionMessage.value = result
+            refreshFriendRequests()
+        }
+    }
+
+    fun acceptFriendRequest(pairId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            FirebaseManager.acceptFriendRequest(pairId)
+            refreshFriendRequests()
+        }
+    }
+
+    fun declineOrCancelFriendRequest(pairId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            FirebaseManager.deleteFriendRequest(pairId)
+            refreshFriendRequests()
+        }
     }
 
     companion object {
