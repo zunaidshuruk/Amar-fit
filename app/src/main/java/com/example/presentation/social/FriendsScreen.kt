@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.SportsScore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -61,10 +62,12 @@ fun FriendsScreen(
     var selectedFriendUid by remember { mutableStateOf<String?>(null) }
     val friendsList by viewModel.friendsList.collectAsState()
     val selectedFriendStats by viewModel.selectedFriendStats.collectAsState()
+    val challenges by viewModel.challenges.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.refreshFriendRequests() }
     LaunchedEffect(selectedTab) {
         if (selectedTab == 3) viewModel.fetchFriendsList()
+        if (selectedTab == 4) viewModel.fetchChallenges()
     }
 
     LaunchedEffect(actionMessage) {
@@ -97,6 +100,7 @@ fun FriendsScreen(
                 Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Add Friend") })
                 Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }, text = { Text("Requests") })
                 Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }, text = { Text("Friends") })
+                Tab(selected = selectedTab == 4, onClick = { selectedTab = 4 }, text = { Text("Challenges") })
             }
 
             when (selectedTab) {
@@ -263,7 +267,58 @@ fun FriendsScreen(
                                         Text("Water: ${stats.waterLiters}L / ${stats.waterGoal}L", fontSize = 13.sp)
                                         Text("Sleep: ${stats.sleepHours}h / ${stats.sleepGoal}h", fontSize = 13.sp)
                                         Text("Calories: ${stats.caloriesConsumed} / ${stats.calorieGoal}", fontSize = 13.sp)
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Button(
+                                            onClick = { viewModel.createChallengeWithFriend(friend.uid) },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Text("Challenge to a 7-Day Steps Race")
+                                        }
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+                4 -> {
+                    LazyColumn(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (challenges.isEmpty()) {
+                            item {
+                                Text(
+                                    "No challenges yet -- start one from a friend's expanded stats.",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 24.dp)
+                                )
+                            }
+                        }
+                        items(challenges) { challenge ->
+                            val myUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .padding(16.dp)
+                            ) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("vs ${challenge.otherName}", fontWeight = FontWeight.Bold)
+                                    Icon(Icons.Default.SportsScore, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                }
+                                Text("${challenge.startDate} to ${challenge.endDate}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("You: ${challenge.myProgress} steps", fontSize = 14.sp)
+                                Text("${challenge.otherName}: ${challenge.otherProgress} steps", fontSize = 14.sp)
+                                if (challenge.status == "completed") {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    val resultText = when (challenge.winnerUid) {
+                                        myUid -> "You won! +150 pts"
+                                        null -> "It's a tie."
+                                        else -> "${challenge.otherName} won."
+                                    }
+                                    Text(resultText, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                } else {
+                                    Text("In progress", fontSize = 12.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }

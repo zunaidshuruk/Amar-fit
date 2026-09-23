@@ -246,6 +246,14 @@ class AppRepository(
             e.printStackTrace()
         }
     }
+
+    suspend fun awardChallengeBonus(points: Int, badgeId: String) {
+        val profile = userDao.getUserProfile().firstOrNull() ?: return
+        val badges = profile.badges.split(",").filter { it.isNotBlank() }.toMutableList()
+        if (!badges.contains(badgeId)) badges.add(badgeId)
+        val updated = profile.copy(points = profile.points + points, badges = badges.joinToString(","))
+        saveUserProfile(updated)
+    }
     
     suspend fun checkAndAwardBadges(metric: DailyMetric) {
         val profile = userDao.getUserProfile().firstOrNull() ?: return

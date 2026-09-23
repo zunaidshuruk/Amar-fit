@@ -1908,6 +1908,36 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         _selectedFriendStats.value = null
     }
 
+    private val _challenges = MutableStateFlow<List<FirebaseManager.ChallengeInfo>>(emptyList())
+    val challenges: StateFlow<List<FirebaseManager.ChallengeInfo>> = _challenges.asStateFlow()
+
+    fun createChallengeWithFriend(targetUid: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            FirebaseManager.createChallenge(targetUid)
+            fetchChallenges()
+        }
+    }
+
+    fun fetchChallenges() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val myUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return@launch
+            val list = FirebaseManager.getMyChallenges()
+            for (challenge in list) {
+                if (challenge.status != "active") continue
+                val mySteps = repository.getMetricsHistoryRange(challenge.startDate, challenge.endDate).firstOrNull()
+                    ?.sumOf { it.steps } ?: 0
+                FirebaseManager.updateMyChallengeProgress(challenge.challengeId, mySteps.toLong())
+                val winnerUid = FirebaseManager.completeChallengeIfDue(
+                    challenge.challengeId, challenge.endDate, mySteps.toLong(), challenge.otherProgress, myUid, challenge.otherUid
+                )
+                if (winnerUid == myUid) {
+                    repository.awardChallengeBonus(150, "Challenge Champion")
+                }
+            }
+            _challenges.value = FirebaseManager.getMyChallenges()
+        }
+    }
+
     companion object {
         fun calculateResilienceScore(metricsHistory: List<DailyMetric>): ResilienceResult {
             val recent7Days = metricsHistory.take(7)

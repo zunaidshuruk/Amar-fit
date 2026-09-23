@@ -123,5 +123,6 @@ val ALL_BADGES: List<BadgeDefinition> = listOf(
     // --- Points milestones ---
     BadgeDefinition("Point Collector", "Point Collector", "Earn 500 total reward points.", Icons.Default.Star, 0, BadgeTier.GOLD),
     BadgeDefinition("Point Master", "Point Master", "Earn 1,000 total reward points.", Icons.Default.EmojiEvents, 0, BadgeTier.PLATINUM),
-    BadgeDefinition("Point Legend", "Point Legend", "Earn 2,500 total reward points.", Icons.Default.EmojiEvents, 0, BadgeTier.PLATINUM)
+    BadgeDefinition("Point Legend", "Point Legend", "Earn 2,500 total reward points.", Icons.Default.EmojiEvents, 0, BadgeTier.PLATINUM),
+    BadgeDefinition("Challenge Champion", "Challenge Champion", "Win a friend challenge.", Icons.Default.EmojiEvents, 150, BadgeTier.GOLD)
 )

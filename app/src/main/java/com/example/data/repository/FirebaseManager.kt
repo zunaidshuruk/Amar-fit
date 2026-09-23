@@ -341,6 +341,112 @@ object FirebaseManager {
         }
     }
 
+    data class ChallengeInfo(
+        val challengeId: String = "",
+        val otherUid: String = "",
+        val otherName: String = "",
+        val startDate: String = "",
+        val endDate: String = "",
+        val status: String = "",
+        val myProgress: Long = 0L,
+        val otherProgress: Long = 0L,
+        val winnerUid: String? = null
+    )
+
+    suspend fun createChallenge(targetUid: String): String? {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser ?: return null
+        val db = FirebaseFirestore.getInstance()
+        val startDate = java.time.LocalDate.now()
+        val endDate = startDate.plusDays(7)
+        val data = mapOf(
+            "uid1" to user.uid,
+            "uid2" to targetUid,
+            "createdBy" to user.uid,
+            "startDate" to startDate.toString(),
+            "endDate" to endDate.toString(),
+            "status" to "active",
+            "progress" to mapOf(user.uid to 0L, targetUid to 0L),
+            "winnerUid" to null,
+            "createdAt" to com.google.firebase.Timestamp.now()
+        )
+        return try {
+            val ref = db.collection("challenges").document()
+            ref.set(data).await()
+            ref.id
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun getMyChallenges(): List<ChallengeInfo> {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser ?: return emptyList()
+        val db = FirebaseFirestore.getInstance()
+        return try {
+            val asUid1 = db.collection("challenges").whereEqualTo("uid1", user.uid).get().await()
+            val asUid2 = db.collection("challenges").whereEqualTo("uid2", user.uid).get().await()
+            (asUid1.documents + asUid2.documents).mapNotNull { doc ->
+                val uid1 = doc.getString("uid1") ?: return@mapNotNull null
+                val uid2 = doc.getString("uid2") ?: return@mapNotNull null
+                val otherUid = if (uid1 == user.uid) uid2 else uid1
+                val progressMap = doc.get("progress") as? Map<*, *> ?: emptyMap<String, Long>()
+                val otherName = try {
+                    db.collection("public_profiles").document(otherUid).get().await().getString("name") ?: "Unknown"
+                } catch (e: Exception) {
+                    "Unknown"
+                }
+                ChallengeInfo(
+                    challengeId = doc.id,
+                    otherUid = otherUid,
+                    otherName = otherName,
+                    startDate = doc.getString("startDate") ?: "",
+                    endDate = doc.getString("endDate") ?: "",
+                    status = doc.getString("status") ?: "active",
+                    myProgress = (progressMap[user.uid] as? Number)?.toLong() ?: 0L,
+                    otherProgress = (progressMap[otherUid] as? Number)?.toLong() ?: 0L,
+                    winnerUid = doc.getString("winnerUid")
+                )
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun updateMyChallengeProgress(challengeId: String, mySteps: Long): Boolean {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser ?: return false
+        val db = FirebaseFirestore.getInstance()
+        return try {
+            db.collection("challenges").document(challengeId)
+                .update("progress.${user.uid}", mySteps)
+                .await()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun completeChallengeIfDue(challengeId: String, endDate: String, myProgress: Long, otherProgress: Long, myUid: String, otherUid: String): String? {
+        val today = java.time.LocalDate.now()
+        val end = try { java.time.LocalDate.parse(endDate) } catch (e: Exception) { return null }
+        if (today.isBefore(end)) return null
+        val winnerUid = when {
+            myProgress > otherProgress -> myUid
+            otherProgress > myProgress -> otherUid
+            else -> null
+        }
+        val db = FirebaseFirestore.getInstance()
+        return try {
+            db.collection("challenges").document(challengeId)
+                .update(mapOf("status" to "completed", "winnerUid" to winnerUid))
+                .await()
+            winnerUid
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun syncFoodLog(log: FoodLog) {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser
