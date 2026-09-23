@@ -202,6 +202,7 @@ fun MetricDetailScreen(
         "exerciseDays" -> "Exercise Days"
         "heartRate" -> "Heart Rate"
         "oxygenSaturation" -> "Blood Oxygen (SpO2)"
+        "bloodPressure" -> "Blood Pressure"
         "heartRateVariability" -> "Heart Rate Variability (HRV)"
         "skinTemperatureCelsius" -> "Skin Temperature"
         "respiratoryRate" -> "Respiratory Rate"
@@ -221,6 +222,7 @@ fun MetricDetailScreen(
                 "exerciseDays" -> it.exerciseMinutes > 0
                 "heartRate" -> it.heartRate > 0
                 "oxygenSaturation" -> it.oxygenSaturation > 0
+                "bloodPressure" -> it.bloodPressure.isNotBlank()
                 "heartRateVariability" -> it.heartRateVariability > 0
                 "skinTemperatureCelsius" -> it.skinTemperatureCelsius > 0
                 "respiratoryRate" -> it.respiratoryRate > 0
@@ -241,6 +243,7 @@ fun MetricDetailScreen(
             "exerciseDays" -> it.exerciseMinutes > 0
             "heartRate" -> it.heartRate > 0
             "oxygenSaturation" -> it.oxygenSaturation > 0
+            "bloodPressure" -> it.bloodPressure.isNotBlank()
             "heartRateVariability" -> it.heartRateVariability > 0
             "skinTemperatureCelsius" -> it.skinTemperatureCelsius > 0
             "respiratoryRate" -> it.respiratoryRate > 0
@@ -260,6 +263,7 @@ fun MetricDetailScreen(
             "exerciseDays" -> "${chronologicalData.count { it.exerciseMinutes > 0 }} active days"
             "heartRate" -> "${latestVal.heartRate} bpm"
             "oxygenSaturation" -> "${String.format(java.util.Locale.US, "%.1f", latestVal.oxygenSaturation)}%"
+            "bloodPressure" -> "${latestVal.bloodPressure} mmHg"
             "heartRateVariability" -> "${String.format(java.util.Locale.US, "%.1f", latestVal.heartRateVariability)} ms"
             "skinTemperatureCelsius" -> "${String.format(java.util.Locale.US, "%.1f", latestVal.skinTemperatureCelsius)} °C"
             "respiratoryRate" -> "${String.format(java.util.Locale.US, "%.1f", latestVal.respiratoryRate)} rpm"
@@ -739,7 +743,7 @@ fun MetricDetailScreen(
                                     isDark = isDark
                                 )
                             }
-                            "heartRate", "oxygenSaturation" -> {
+                            "heartRate", "oxygenSaturation", "bloodPressure" -> {
                                 if (metricKey == "heartRate" && selectedRange == "D") {
                                     IntradayRangeBarChart(
                                         samples = heartRateDaySamples,
@@ -1269,12 +1273,27 @@ private fun ZoneBarChart(
                 .fillMaxSize()
                 .horizontalScroll(rememberScrollState())
         ) {
-            if (metricKey == "heartRate") {
+            if (metricKey == "heartRate" || metricKey == "bloodPressure") {
                 Canvas(modifier = Modifier.width(contentWidth).fillMaxHeight().padding(vertical = 16.dp)) {
-                    val dayMins = data.map { it.heartRateMin }.filter { it > 0 }
-                    val dayMaxs = data.map { it.heartRateMax }.filter { it > 0 }
-                    val dataMin = dayMins.minOrNull() ?: 40
-                    val dataMax = dayMaxs.maxOrNull() ?: 160
+                    val dayMins: List<Int>
+                    val dayMaxs: List<Int>
+                    if (metricKey == "heartRate") {
+                        dayMins = data.map { it.heartRateMin }.filter { it > 0 }
+                        dayMaxs = data.map { it.heartRateMax }.filter { it > 0 }
+                    } else {
+                        val parsedBp = data.mapNotNull { metric ->
+                            val parts = metric.bloodPressure.split("/")
+                            if (parts.size == 2) {
+                                val sys = parts[0].trim().toIntOrNull()
+                                val dia = parts[1].trim().toIntOrNull()
+                                if (sys != null && dia != null && sys > 0 && dia > 0) Pair(dia, sys) else null
+                            } else null
+                        }
+                        dayMins = parsedBp.map { it.first }
+                        dayMaxs = parsedBp.map { it.second }
+                    }
+                    val dataMin = dayMins.minOrNull() ?: if (metricKey == "heartRate") 40 else 60
+                    val dataMax = dayMaxs.maxOrNull() ?: if (metricKey == "heartRate") 160 else 140
                     val goalInt = goalValue?.toInt()
                     val rawAxisMin = (if (goalInt != null) minOf(dataMin, goalInt) else dataMin) - 10
                     val rawAxisMax = (if (goalInt != null) maxOf(dataMax, goalInt) else dataMax) + 15
@@ -1298,9 +1317,21 @@ private fun ZoneBarChart(
 
                     data.forEachIndexed { index, metric ->
                         val x = if (count > 1) index * (barWidth + spacing) else (chartWidth - barWidth) / 2f
-                        if (metric.heartRateMax > 0) {
-                            val yTop = getY(metric.heartRateMax)
-                            val yBottom = getY(metric.heartRateMin.takeIf { it > 0 } ?: metric.heartRateMax)
+                        val (barMin, barMax) = if (metricKey == "heartRate") {
+                            Pair(metric.heartRateMin, metric.heartRateMax)
+                        } else {
+                            val parts = metric.bloodPressure.split("/")
+                            if (parts.size == 2) {
+                                val sys = parts[0].trim().toIntOrNull() ?: 0
+                                val dia = parts[1].trim().toIntOrNull() ?: 0
+                                Pair(dia, sys)
+                            } else {
+                                Pair(0, 0)
+                            }
+                        }
+                        if (barMax > 0) {
+                            val yTop = getY(barMax)
+                            val yBottom = getY(barMin.takeIf { it > 0 } ?: barMax)
                             drawRoundRect(
                                 color = barColor,
                                 topLeft = Offset(x, yTop),
@@ -1516,6 +1547,7 @@ private fun hasMetricValue(metric: DailyMetric, metricKey: String): Boolean {
         "exerciseDays" -> metric.exerciseMinutes > 0
         "heartRate" -> metric.heartRate > 0
         "oxygenSaturation" -> metric.oxygenSaturation > 0
+        "bloodPressure" -> metric.bloodPressure.isNotBlank()
         "heartRateVariability" -> metric.heartRateVariability > 0
         "skinTemperatureCelsius" -> metric.skinTemperatureCelsius > 0
         "respiratoryRate" -> metric.respiratoryRate > 0
@@ -1535,6 +1567,7 @@ private fun formatMetricValueForEntry(metric: DailyMetric, metricKey: String): S
         "exerciseDays" -> "${metric.exerciseMinutes} mins"
         "heartRate" -> "${metric.heartRate} bpm"
         "oxygenSaturation" -> "${String.format(Locale.US, "%.1f", metric.oxygenSaturation)}%"
+        "bloodPressure" -> "${metric.bloodPressure} mmHg"
         "heartRateVariability" -> "${String.format(Locale.US, "%.1f", metric.heartRateVariability)} ms"
         "skinTemperatureCelsius" -> "${String.format(Locale.US, "%.1f", metric.skinTemperatureCelsius)} °C"
         "respiratoryRate" -> "${String.format(Locale.US, "%.1f", metric.respiratoryRate)} rpm"

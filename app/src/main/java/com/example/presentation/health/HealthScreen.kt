@@ -149,6 +149,29 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
             )
         }
 
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { navController.navigate("metric_detail/bloodPressure") }
+                .padding(vertical = 4.dp, horizontal = 8.dp),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "View Blood Pressure Trend",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "View Blood Pressure Trend",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+
         // BMI Card
         Box(
             modifier = Modifier
