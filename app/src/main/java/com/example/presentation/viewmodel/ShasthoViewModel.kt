@@ -75,6 +75,21 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 null
             }
             val hasValidProfile = profile != null && profile.onboardingCompleted
+            if (profile != null && hasValidProfile && profile.friendCode.isBlank()) {
+                try {
+                    val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                    if (user != null) {
+                        val claimedCode = FirebaseManager.claimFriendCode(user.uid)
+                        if (claimedCode != null) {
+                            val updated = profile.copy(friendCode = claimedCode)
+                            repository.saveUserProfile(updated)
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Non-fatal -- the Friends screen will simply keep showing
+                    // "Your code is being generated" and can be retried next launch.
+                }
+            }
             withContext(Dispatchers.Main) {
                 onComplete(hasValidProfile)
             }

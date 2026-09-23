@@ -95,12 +95,12 @@ fun FriendsScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-            TabRow(selectedTabIndex = selectedTab) {
-                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("My Code") })
-                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Add Friend") })
-                Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }, text = { Text("Requests") })
-                Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }, text = { Text("Friends") })
-                Tab(selected = selectedTab == 4, onClick = { selectedTab = 4 }, text = { Text("Challenges") })
+            ScrollableTabRow(selectedTabIndex = selectedTab, edgePadding = 12.dp) {
+                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("My Code", maxLines = 1) })
+                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Add Friend", maxLines = 1) })
+                Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }, text = { Text("Requests", maxLines = 1) })
+                Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }, text = { Text("Friends", maxLines = 1) })
+                Tab(selected = selectedTab == 4, onClick = { selectedTab = 4 }, text = { Text("Challenges", maxLines = 1) })
             }
 
             when (selectedTab) {
