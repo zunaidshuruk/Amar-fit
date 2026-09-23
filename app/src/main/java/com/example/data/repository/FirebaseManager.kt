@@ -251,6 +251,96 @@ object FirebaseManager {
         }
     }
 
+    data class LeaderboardEntry(
+        val uid: String = "",
+        val name: String = "",
+        val points: Int = 0,
+        val currentStreak: Int = 0
+    )
+
+    data class FriendInfo(
+        val uid: String = "",
+        val name: String = "",
+        val currentStreak: Int = 0,
+        val points: Int = 0,
+        val badgeCount: Int = 0
+    )
+
+    data class FriendStatsInfo(
+        val date: String = "",
+        val steps: Int = 0,
+        val stepGoal: Int = 0,
+        val waterLiters: Float = 0f,
+        val waterGoal: Float = 0f,
+        val sleepHours: Float = 0f,
+        val sleepGoal: Float = 0f,
+        val caloriesConsumed: Int = 0,
+        val calorieGoal: Int = 0
+    )
+
+    suspend fun getLeaderboard(limit: Long = 50): List<LeaderboardEntry> {
+        val db = FirebaseFirestore.getInstance()
+        return try {
+            val snap = db.collection("public_profiles")
+                .orderBy("points", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .limit(limit)
+                .get().await()
+            snap.documents.map { doc ->
+                LeaderboardEntry(
+                    uid = doc.id,
+                    name = doc.getString("name") ?: "Unknown",
+                    points = (doc.getLong("points") ?: 0L).toInt(),
+                    currentStreak = (doc.getLong("currentStreak") ?: 0L).toInt()
+                )
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun getAcceptedFriends(): List<FriendInfo> {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser ?: return emptyList()
+        val db = FirebaseFirestore.getInstance()
+        return try {
+            val asUid1 = db.collection("friendships").whereEqualTo("uid1", user.uid).whereEqualTo("status", "accepted").get().await()
+            val asUid2 = db.collection("friendships").whereEqualTo("uid2", user.uid).whereEqualTo("status", "accepted").get().await()
+            val friends = mutableListOf<FriendInfo>()
+            for (doc in (asUid1.documents + asUid2.documents)) {
+                val uid1 = doc.getString("uid1") ?: continue
+                val uid2 = doc.getString("uid2") ?: continue
+                val otherUid = if (uid1 == user.uid) uid2 else uid1
+                try {
+                    val profileSnap = db.collection("public_profiles").document(otherUid).get().await()
+                    val badgesStr = profileSnap.getString("badges") ?: ""
+                    friends.add(
+                        FriendInfo(
+                            uid = otherUid,
+                            name = profileSnap.getString("name") ?: "Unknown",
+                            currentStreak = (profileSnap.getLong("currentStreak") ?: 0L).toInt(),
+                            points = (profileSnap.getLong("points") ?: 0L).toInt(),
+                            badgeCount = badgesStr.split(",").count { it.isNotBlank() }
+                        )
+                    )
+                } catch (e: Exception) {
+                    // Skip a friend whose public profile couldn't be read.
+                }
+            }
+            friends
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun getFriendStats(uid: String): FriendStatsInfo? {
+        val db = FirebaseFirestore.getInstance()
+        return try {
+            db.collection("friend_stats").document(uid).get().await().toObject(FriendStatsInfo::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun syncFoodLog(log: FoodLog) {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser

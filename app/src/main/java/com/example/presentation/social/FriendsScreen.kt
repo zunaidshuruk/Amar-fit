@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,7 +44,11 @@ private fun generateQrBitmap(text: String, sizePx: Int = 512): Bitmap {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FriendsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
+fun FriendsScreen(
+    viewModel: ShasthoViewModel,
+    onNavigateBack: () -> Unit = {},
+    onNavigateToLeaderboard: () -> Unit = {}
+) {
     val profile by viewModel.userProfile.collectAsState()
     val incoming by viewModel.incomingFriendRequests.collectAsState()
     val outgoing by viewModel.outgoingFriendRequests.collectAsState()
@@ -53,8 +58,14 @@ fun FriendsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) 
     var selectedTab by remember { mutableStateOf(0) }
     var codeInput by remember { mutableStateOf("") }
     var showQrScanner by remember { mutableStateOf(false) }
+    var selectedFriendUid by remember { mutableStateOf<String?>(null) }
+    val friendsList by viewModel.friendsList.collectAsState()
+    val selectedFriendStats by viewModel.selectedFriendStats.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.refreshFriendRequests() }
+    LaunchedEffect(selectedTab) {
+        if (selectedTab == 3) viewModel.fetchFriendsList()
+    }
 
     LaunchedEffect(actionMessage) {
         actionMessage?.let {
@@ -71,6 +82,11 @@ fun FriendsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) 
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
+                },
+                actions = {
+                    IconButton(onClick = onNavigateToLeaderboard) {
+                        Icon(Icons.Default.EmojiEvents, contentDescription = "Leaderboard")
+                    }
                 }
             )
         }
@@ -80,6 +96,7 @@ fun FriendsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) 
                 Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("My Code") })
                 Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Add Friend") })
                 Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }, text = { Text("Requests") })
+                Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }, text = { Text("Friends") })
             }
 
             when (selectedTab) {
@@ -189,6 +206,65 @@ fun FriendsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) 
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(top = 24.dp)
                                 )
+                            }
+                        }
+                    }
+                }
+                3 -> {
+                    LazyColumn(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (friendsList.isEmpty()) {
+                            item {
+                                Text(
+                                    "No friends yet -- add one from the Add Friend tab.",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 24.dp)
+                                )
+                            }
+                        }
+                        items(friendsList) { friend ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .clickable {
+                                        if (selectedFriendUid == friend.uid) {
+                                            selectedFriendUid = null
+                                            viewModel.clearSelectedFriendStats()
+                                        } else {
+                                            selectedFriendUid = friend.uid
+                                            viewModel.fetchFriendStats(friend.uid)
+                                        }
+                                    }
+                                    .padding(16.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(friend.name, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                        Text("${friend.currentStreak} day streak · ${friend.badgeCount} badges", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Text("${friend.points} pts", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                }
+                                if (selectedFriendUid == friend.uid) {
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    val stats = selectedFriendStats
+                                    if (stats == null) {
+                                        Text("Loading stats...", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    } else {
+                                        Text("Today's progress (${stats.date})", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text("Steps: ${stats.steps} / ${stats.stepGoal}", fontSize = 13.sp)
+                                        Text("Water: ${stats.waterLiters}L / ${stats.waterGoal}L", fontSize = 13.sp)
+                                        Text("Sleep: ${stats.sleepHours}h / ${stats.sleepGoal}h", fontSize = 13.sp)
+                                        Text("Calories: ${stats.caloriesConsumed} / ${stats.calorieGoal}", fontSize = 13.sp)
+                                    }
+                                }
                             }
                         }
                     }

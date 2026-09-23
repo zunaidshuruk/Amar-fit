@@ -1877,6 +1877,37 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private val _leaderboard = MutableStateFlow<List<FirebaseManager.LeaderboardEntry>>(emptyList())
+    val leaderboard: StateFlow<List<FirebaseManager.LeaderboardEntry>> = _leaderboard.asStateFlow()
+
+    private val _friendsList = MutableStateFlow<List<FirebaseManager.FriendInfo>>(emptyList())
+    val friendsList: StateFlow<List<FirebaseManager.FriendInfo>> = _friendsList.asStateFlow()
+
+    private val _selectedFriendStats = MutableStateFlow<FirebaseManager.FriendStatsInfo?>(null)
+    val selectedFriendStats: StateFlow<FirebaseManager.FriendStatsInfo?> = _selectedFriendStats.asStateFlow()
+
+    fun fetchLeaderboard() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _leaderboard.value = FirebaseManager.getLeaderboard()
+        }
+    }
+
+    fun fetchFriendsList() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _friendsList.value = FirebaseManager.getAcceptedFriends()
+        }
+    }
+
+    fun fetchFriendStats(uid: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _selectedFriendStats.value = FirebaseManager.getFriendStats(uid)
+        }
+    }
+
+    fun clearSelectedFriendStats() {
+        _selectedFriendStats.value = null
+    }
+
     companion object {
         fun calculateResilienceScore(metricsHistory: List<DailyMetric>): ResilienceResult {
             val recent7Days = metricsHistory.take(7)
