@@ -212,9 +212,23 @@ class AppRepository(
     fun getMetricsHistoryRange(startDate: String, endDate: String) = metricsDao.getMetricsHistoryRange(startDate, endDate)
 
     suspend fun saveUserProfile(profile: UserProfile) {
-        userDao.insertProfile(profile)
+        val profileToSave = if (profile.friendCode.isBlank()) {
+            val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+            val claimedCode = if (user != null) FirebaseManager.claimFriendCode(user.uid) else null
+            if (claimedCode != null) profile.copy(friendCode = claimedCode) else profile
+        } else {
+            profile
+        }
+        userDao.insertProfile(profileToSave)
         try {
-            FirebaseManager.syncProfile(profile)
+            FirebaseManager.syncProfile(profileToSave)
+            FirebaseManager.syncPublicProfile(
+                name = profileToSave.name,
+                currentStreak = profileToSave.currentStreak,
+                points = profileToSave.points,
+                badges = profileToSave.badges,
+                friendCode = profileToSave.friendCode
+            )
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -224,6 +238,10 @@ class AppRepository(
         metricsDao.insertMetrics(metric)
         try {
             FirebaseManager.syncMetric(metric)
+            val currentProfile = userDao.getUserProfile().firstOrNull()
+            if (currentProfile != null) {
+                FirebaseManager.syncFriendStats(metric, currentProfile)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }

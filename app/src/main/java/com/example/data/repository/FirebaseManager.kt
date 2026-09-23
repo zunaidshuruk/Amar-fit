@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.data.local.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 
@@ -95,6 +96,64 @@ object FirebaseManager {
             }
         }
         return false
+    }
+
+    suspend fun claimFriendCode(uid: String): String? {
+        val safeChars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789" // excludes ambiguous 0/O/1/I/L
+        val db = FirebaseFirestore.getInstance()
+        repeat(5) {
+            val candidate = (1..5).map { safeChars.random() }.joinToString("")
+            try {
+                db.runTransaction { transaction ->
+                    val codeRef = db.collection("friend_codes").document(candidate)
+                    val snapshot = transaction.get(codeRef)
+                    if (snapshot.exists()) {
+                        throw FirebaseFirestoreException("Code already claimed", FirebaseFirestoreException.Code.ALREADY_EXISTS)
+                    }
+                    transaction.set(codeRef, mapOf("uid" to uid))
+                }.await()
+                return candidate
+            } catch (e: Exception) {
+                // This candidate was taken (or a transient error) -- try another.
+            }
+        }
+        return null
+    }
+
+    fun syncPublicProfile(name: String, currentStreak: Int, points: Int, badges: String, friendCode: String) {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            val data = mapOf(
+                "name" to name,
+                "currentStreak" to currentStreak,
+                "points" to points,
+                "badges" to badges,
+                "friendCode" to friendCode
+            )
+            db.collection("public_profiles").document(user.uid).set(data, SetOptions.merge())
+        }
+    }
+
+    fun syncFriendStats(metric: DailyMetric, profile: UserProfile) {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            val data = mapOf(
+                "date" to metric.date,
+                "steps" to metric.steps,
+                "stepGoal" to profile.stepGoal,
+                "waterLiters" to metric.waterLiters,
+                "waterGoal" to profile.dailyWaterLimitLiters,
+                "sleepHours" to metric.sleepHours,
+                "sleepGoal" to profile.sleepGoalHours,
+                "caloriesConsumed" to metric.caloriesConsumed,
+                "calorieGoal" to profile.dailyCalorieLimit
+            )
+            db.collection("friend_stats").document(user.uid).set(data, SetOptions.merge())
+        }
     }
 
     fun syncFoodLog(log: FoodLog) {
