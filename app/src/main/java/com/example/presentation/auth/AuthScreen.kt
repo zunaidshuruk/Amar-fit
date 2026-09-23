@@ -35,6 +35,7 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import kotlinx.coroutines.launch
 
@@ -459,6 +460,8 @@ fun AuthScreen(
                                 authViewModel.signInWithGoogle(result.credential)
                             } catch (e: GetCredentialCancellationException) {
                                 authViewModel.resetState()
+                            } catch (e: NoCredentialException) {
+                                authViewModel.setCustomError("No Google account found on this device. Add one in your device's Settings > Accounts, or sign in with email instead.")
                             } catch (e: GetCredentialException) {
                                 authViewModel.setCustomError(e.message ?: "Google Sign-In failed")
                             } catch (e: Exception) {
