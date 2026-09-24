@@ -6,6 +6,9 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.SetOptions
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 sealed class DeleteAccountResult {
@@ -358,6 +361,7 @@ object FirebaseManager {
                     "createdAt" to com.google.firebase.Timestamp.now()
                 )
             ).await()
+            postActivityEvent("kudos_sent", "Sent Kudos to a friend")
             true
         } catch (e: Exception) {
             false
@@ -385,6 +389,105 @@ object FirebaseManager {
         } catch (e: Exception) {
             false
         }
+    }
+
+    data class ActivityFeedEntry(
+        val eventId: String = "",
+        val uid: String = "",
+        val name: String = "",
+        val type: String = "",
+        val message: String = "",
+        val createdAt: com.google.firebase.Timestamp? = null
+    )
+
+    fun postActivityEvent(type: String, message: String) {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            db.collection("activity_events").document().set(
+                mapOf(
+                    "uid" to user.uid,
+                    "type" to type,
+                    "message" to message,
+                    "createdAt" to com.google.firebase.Timestamp.now()
+                )
+            )
+        }
+    }
+
+    suspend fun getActivityFeed(): List<ActivityFeedEntry> {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser ?: return emptyList()
+        val db = FirebaseFirestore.getInstance()
+        return try {
+            val friends = getAcceptedFriends()
+            val relevantUids = (friends.map { it.uid } + user.uid).distinct().take(30)
+            if (relevantUids.isEmpty()) return emptyList()
+            val snap = db.collection("activity_events")
+                .whereIn("uid", relevantUids)
+                .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .limit(30)
+                .get().await()
+            snap.documents.mapNotNull { doc ->
+                val uid = doc.getString("uid") ?: return@mapNotNull null
+                val name = if (uid == user.uid) "You" else (friends.find { it.uid == uid }?.name ?: "Unknown")
+                ActivityFeedEntry(
+                    eventId = doc.id,
+                    uid = uid,
+                    name = name,
+                    type = doc.getString("type") ?: "",
+                    message = doc.getString("message") ?: "",
+                    createdAt = doc.getTimestamp("createdAt")
+                )
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    data class DirectMessage(
+        val messageId: String = "",
+        val senderUid: String = "",
+        val text: String = "",
+        val createdAt: com.google.firebase.Timestamp? = null
+    )
+
+    fun sendDirectMessage(pairId: String, text: String) {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
+        if (user != null && text.isNotBlank()) {
+            val db = FirebaseFirestore.getInstance()
+            db.collection("dm_threads").document(pairId).collection("messages").document().set(
+                mapOf(
+                    "senderUid" to user.uid,
+                    "text" to text.trim(),
+                    "createdAt" to com.google.firebase.Timestamp.now()
+                )
+            )
+        }
+    }
+
+    fun observeMessages(pairId: String): Flow<List<DirectMessage>> = callbackFlow {
+        val db = FirebaseFirestore.getInstance()
+        val registration = db.collection("dm_threads").document(pairId).collection("messages")
+            .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.ASCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                val messages = snapshot?.documents?.mapNotNull { doc ->
+                    DirectMessage(
+                        messageId = doc.id,
+                        senderUid = doc.getString("senderUid") ?: "",
+                        text = doc.getString("text") ?: "",
+                        createdAt = doc.getTimestamp("createdAt")
+                    )
+                } ?: emptyList()
+                trySend(messages)
+            }
+        awaitClose { registration.remove() }
     }
 
     data class ChallengeInfo(
@@ -487,6 +590,9 @@ object FirebaseManager {
             db.collection("challenges").document(challengeId)
                 .update(mapOf("status" to "completed", "winnerUid" to winnerUid))
                 .await()
+            if (winnerUid != null) {
+                postActivityEvent("challenge_won", "Won a 7-day steps challenge")
+            }
             winnerUid
         } catch (e: Exception) {
             null

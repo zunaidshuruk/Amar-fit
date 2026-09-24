@@ -289,6 +289,7 @@ class AppRepository(
             if (!currentBadges.contains(id)) {
                 currentBadges.add(id)
                 pointsToAdd += points
+                com.example.data.repository.FirebaseManager.postActivityEvent("badge_earned", "Earned a new badge!")
             }
         }
 

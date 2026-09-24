@@ -395,7 +395,23 @@ class MainActivity : ComponentActivity() {
                   composable("foodlog") { FoodLogScreen(viewModel = viewModel, onNavigateToScanner = { navController.navigate("scanner") }, onNavigateBack = { navController.popBackStack() }) }
                   composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }, onNavigateToHealthGoals = { navController.navigate("health_goals") }, onNavigateToFriends = { navController.navigate("friends") }) }
                   composable("health_goals") { HealthGoalsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
-                  composable("friends") { FriendsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onNavigateToLeaderboard = { navController.navigate("leaderboard") }) }
+                  composable("friends") { FriendsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onNavigateToLeaderboard = { navController.navigate("leaderboard") }, onNavigateToDm = { pairId, name -> navController.navigate("dm/$pairId/$name") }) }
+                  composable(
+                      route = "dm/{pairId}/{friendName}",
+                      arguments = listOf(
+                          androidx.navigation.navArgument("pairId") { type = androidx.navigation.NavType.StringType },
+                          androidx.navigation.navArgument("friendName") { type = androidx.navigation.NavType.StringType }
+                      )
+                  ) { backStackEntry ->
+                      val pairId = backStackEntry.arguments?.getString("pairId") ?: ""
+                      val friendName = backStackEntry.arguments?.getString("friendName") ?: ""
+                      com.example.presentation.social.DirectMessageScreen(
+                          pairId = pairId,
+                          friendName = friendName,
+                          viewModel = viewModel,
+                          onNavigateBack = { navController.popBackStack() }
+                      )
+                  }
                   composable("leaderboard") { LeaderboardScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("scanner") { ScannerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("medical_records") { com.example.presentation.health.MedicalRecordsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }

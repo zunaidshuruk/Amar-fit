@@ -12,10 +12,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.MilitaryTech
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.SportsScore
@@ -51,7 +54,8 @@ private fun generateQrBitmap(text: String, sizePx: Int = 512): Bitmap {
 fun FriendsScreen(
     viewModel: ShasthoViewModel,
     onNavigateBack: () -> Unit = {},
-    onNavigateToLeaderboard: () -> Unit = {}
+    onNavigateToLeaderboard: () -> Unit = {},
+    onNavigateToDm: (pairId: String, friendName: String) -> Unit = { _, _ -> }
 ) {
     val profile by viewModel.userProfile.collectAsState()
     val incoming by viewModel.incomingFriendRequests.collectAsState()
@@ -67,13 +71,15 @@ fun FriendsScreen(
     val selectedFriendStats by viewModel.selectedFriendStats.collectAsState()
     val challenges by viewModel.challenges.collectAsState()
     val challengeActionMessage by viewModel.challengeActionMessage.collectAsState()
+    val activityFeed by viewModel.activityFeed.collectAsState()
     val kudosSentTo by viewModel.kudosSentTo.collectAsState()
     var friendPendingRemoval by remember { mutableStateOf<FirebaseManager.FriendInfo?>(null) }
 
     LaunchedEffect(Unit) { viewModel.refreshFriendRequests() }
     LaunchedEffect(selectedTab) {
         if (selectedTab == 3) viewModel.fetchFriendsList()
-        if (selectedTab == 4) viewModel.fetchChallenges()
+        if (selectedTab == 4) viewModel.fetchActivityFeed()
+        if (selectedTab == 5) viewModel.fetchChallenges()
     }
 
     LaunchedEffect(actionMessage) {
@@ -87,7 +93,7 @@ fun FriendsScreen(
         challengeActionMessage?.let {
             android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
             viewModel.clearChallengeActionMessage()
-            selectedTab = 4
+            selectedTab = 5
             selectedFriendUid = null
             viewModel.clearSelectedFriendStats()
         }
@@ -116,7 +122,8 @@ fun FriendsScreen(
                 Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Add Friend", maxLines = 1) })
                 Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }, text = { Text("Requests", maxLines = 1) })
                 Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }, text = { Text("Friends", maxLines = 1) })
-                Tab(selected = selectedTab == 4, onClick = { selectedTab = 4 }, text = { Text("Challenges", maxLines = 1) })
+                Tab(selected = selectedTab == 4, onClick = { selectedTab = 4 }, text = { Text("Feed", maxLines = 1) })
+                Tab(selected = selectedTab == 5, onClick = { selectedTab = 5 }, text = { Text("Challenges", maxLines = 1) })
             }
 
             when (selectedTab) {
@@ -286,6 +293,16 @@ fun FriendsScreen(
                                         Text("Calories: ${stats.caloriesConsumed} / ${stats.calorieGoal}", fontSize = 13.sp)
                                         Spacer(modifier = Modifier.height(12.dp))
                                         Button(
+                                            onClick = { onNavigateToDm(friend.pairId, friend.name) },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Icon(Icons.Default.ChatBubbleOutline, contentDescription = null, modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text("Message ${friend.name}")
+                                        }
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Button(
                                             onClick = { viewModel.createChallengeWithFriend(friend.uid) },
                                             modifier = Modifier.fillMaxWidth(),
                                             shape = RoundedCornerShape(12.dp)
@@ -318,6 +335,53 @@ fun FriendsScreen(
                     }
                 }
                 4 -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (activityFeed.isEmpty()) {
+                            item {
+                                Text(
+                                    "No recent activity from you or your friends.",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 24.dp)
+                                )
+                            }
+                        }
+                        items(activityFeed, key = { it.eventId.ifBlank { it.hashCode().toString() } }) { entry ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .padding(16.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(entry.name, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                    val icon = when (entry.type) {
+                                        "kudos_sent" -> Icons.Default.Celebration
+                                        "challenge_won" -> Icons.Default.EmojiEvents
+                                        "badge_earned" -> Icons.Default.MilitaryTech
+                                        else -> Icons.Default.Notifications
+                                    }
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(entry.message, fontSize = 14.sp)
+                            }
+                        }
+                    }
+                }
+                5 -> {
                     LazyColumn(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (challenges.isEmpty()) {
                             item {

@@ -1988,6 +1988,41 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private val _activityFeed = MutableStateFlow<List<FirebaseManager.ActivityFeedEntry>>(emptyList())
+    val activityFeed: StateFlow<List<FirebaseManager.ActivityFeedEntry>> = _activityFeed.asStateFlow()
+
+    fun fetchActivityFeed() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _activityFeed.value = FirebaseManager.getActivityFeed()
+        }
+    }
+
+    private val _messages = MutableStateFlow<List<FirebaseManager.DirectMessage>>(emptyList())
+    val messages: StateFlow<List<FirebaseManager.DirectMessage>> = _messages.asStateFlow()
+
+    private var dmJob: kotlinx.coroutines.Job? = null
+
+    fun observeDmThread(pairId: String) {
+        dmJob?.cancel()
+        dmJob = viewModelScope.launch(Dispatchers.IO) {
+            FirebaseManager.observeMessages(pairId).collect {
+                _messages.value = it
+            }
+        }
+    }
+
+    fun stopObservingDmThread() {
+        dmJob?.cancel()
+        dmJob = null
+        _messages.value = emptyList()
+    }
+
+    fun sendDirectMessage(pairId: String, text: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            FirebaseManager.sendDirectMessage(pairId, text)
+        }
+    }
+
     companion object {
         fun calculateResilienceScore(metricsHistory: List<DailyMetric>): ResilienceResult {
             val recent7Days = metricsHistory.take(7)
