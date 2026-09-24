@@ -200,7 +200,7 @@ fun CoachScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = waterAccent.onBg)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Amar-Fit AI Coach", fontWeight = FontWeight.Bold, color = waterAccent.onBg)
+                            Text("KardIQ AI Coach", fontWeight = FontWeight.Bold, color = waterAccent.onBg)
                             Spacer(modifier = Modifier.weight(1f))
                             IconButton(onClick = {
                                 selectedTopic = null

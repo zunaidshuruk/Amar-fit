@@ -103,7 +103,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 database.clearAllTables()
                 _weeklyInsights.value = null
                 _chatHistory.value = listOf(
-                    ChatMessage("Hi! I'm Amar-Fit AI. How can I help you?", false)
+                    ChatMessage("Hi! I'm KardIQ AI. How can I help you?", false)
                 )
                 _scanResult.value = null
                 _coachAdvice.value = null
@@ -127,7 +127,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             database.clearAllTables()
             _weeklyInsights.value = null
             _chatHistory.value = listOf(
-                ChatMessage("Hi! I'm Amar-Fit AI. How can I help you?", false)
+                ChatMessage("Hi! I'm KardIQ AI. How can I help you?", false)
             )
             _scanResult.value = null
             _coachAdvice.value = null
@@ -469,7 +469,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     
     private val _chatHistory = MutableStateFlow<List<ChatMessage>>(
-        listOf(ChatMessage("Hello! I am Amar-Fit AI, your universal health bot. Ask me anything about fitness, wellness, nutrition, or lifestyle!", false))
+        listOf(ChatMessage("Hello! I am KardIQ AI, your universal health bot. Ask me anything about fitness, wellness, nutrition, or lifestyle!", false))
     )
     val chatHistory: StateFlow<List<ChatMessage>> = _chatHistory.asStateFlow()
     

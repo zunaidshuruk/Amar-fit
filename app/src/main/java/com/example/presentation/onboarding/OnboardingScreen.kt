@@ -156,7 +156,7 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
             .imePadding()
     ) {
         Text(
-            text = "Welcome to Amar-Fit AI",
+            text = "Welcome to KardIQ AI",
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,

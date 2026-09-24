@@ -350,7 +350,7 @@ fun AuthScreen(
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 Text(
-                    text = "আমার Fit",
+                    text = "KardIQ",
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
