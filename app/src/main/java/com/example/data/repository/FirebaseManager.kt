@@ -453,18 +453,22 @@ object FirebaseManager {
         val createdAt: com.google.firebase.Timestamp? = null
     )
 
-    fun sendDirectMessage(pairId: String, text: String) {
+    suspend fun sendDirectMessage(pairId: String, text: String): String? {
         val auth = FirebaseAuth.getInstance()
-        val user = auth.currentUser
-        if (user != null && text.isNotBlank()) {
-            val db = FirebaseFirestore.getInstance()
+        val user = auth.currentUser ?: return "Not signed in."
+        if (text.isBlank()) return null
+        val db = FirebaseFirestore.getInstance()
+        return try {
             db.collection("dm_threads").document(pairId).collection("messages").document().set(
                 mapOf(
                     "senderUid" to user.uid,
                     "text" to text.trim(),
                     "createdAt" to com.google.firebase.Timestamp.now()
                 )
-            )
+            ).await()
+            null
+        } catch (e: Exception) {
+            "Couldn't send message: ${e.message}"
         }
     }
 
@@ -474,6 +478,7 @@ object FirebaseManager {
             .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
+                    android.util.Log.e("DirectMessages", "observeMessages failed for pairId=$pairId", error)
                     trySend(emptyList())
                     return@addSnapshotListener
                 }

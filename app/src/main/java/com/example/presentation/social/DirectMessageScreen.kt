@@ -31,11 +31,19 @@ fun DirectMessageScreen(
     val myUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
     var messageInput by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+    val dmErrorMessage by viewModel.dmErrorMessage.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     LaunchedEffect(pairId) { viewModel.startObservingMessages(pairId) }
     DisposableEffect(Unit) { onDispose { viewModel.stopObservingMessages() } }
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
+    }
+    LaunchedEffect(dmErrorMessage) {
+        dmErrorMessage?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_LONG).show()
+            viewModel.clearDmErrorMessage()
+        }
     }
 
     Scaffold(

@@ -2013,8 +2013,20 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         _messages.value = emptyList()
     }
 
+    private val _dmErrorMessage = MutableStateFlow<String?>(null)
+    val dmErrorMessage: StateFlow<String?> = _dmErrorMessage.asStateFlow()
+
+    fun clearDmErrorMessage() {
+        _dmErrorMessage.value = null
+    }
+
     fun sendMessage(pairId: String, text: String) {
-        FirebaseManager.sendDirectMessage(pairId, text)
+        viewModelScope.launch(Dispatchers.IO) {
+            val error = FirebaseManager.sendDirectMessage(pairId, text)
+            if (error != null) {
+                _dmErrorMessage.value = error
+            }
+        }
     }
 
     companion object {
