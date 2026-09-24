@@ -77,7 +77,6 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
         viewModel.checkAndGenerateHealthInsight(navController.context)
     }
 
-    var showStepsDialog by remember { mutableStateOf(false) }
     var showStepsOptionDialog by remember { mutableStateOf(false) }
     var showWaterDialog by remember { mutableStateOf(false) }
     var showLogBottomSheet by remember { mutableStateOf(false) }
@@ -789,142 +788,17 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
     if (showStepsOptionDialog) {
         AlertDialog(
             onDismissRequest = { showStepsOptionDialog = false },
-            title = { Text("Log Steps") },
-            text = { Text("How would you like to update your step count today?") },
+            title = { Text("Steps") },
+            text = { Text("Your step count syncs automatically from Health Connect every few seconds. Manual step entry has been removed to keep this number accurate to your device's sensor.") },
             confirmButton = {
                 TextButton(onClick = {
                     showStepsOptionDialog = false
                     android.widget.Toast.makeText(navController.context, "Syncing steps via Health Connect...", android.widget.Toast.LENGTH_SHORT).show()
                     viewModel.syncWithHealthConnect(navController.context)
-                }) { Text("Sync Device Steps") }
+                }) { Text("Sync Now") }
             },
             dismissButton = {
-                TextButton(onClick = { 
-                    showStepsOptionDialog = false
-                    showStepsDialog = true 
-                }) { Text("Enter Manually") }
-            }
-        )
-    }
-
-    if (showStepsDialog) {
-        var stepsInput by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showStepsDialog = false },
-            title = {
-                Text(
-                    text = "Log Steps Manually",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        text = "Quick add",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        val quickOptions = listOf(
-                            Triple("Short Walk", "+500", 500),
-                            Triple("Walk", "+1,000", 1000),
-                            Triple("Long Walk", "+2,000", 2000)
-                        )
-                        quickOptions.forEach { (name, label, amount) ->
-                            Surface(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        viewModel.addSteps(amount)
-                                        showStepsDialog = false
-                                    },
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Emerald50,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f) else Emerald200)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Text(
-                                        text = name,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                        maxLines = 1
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = label,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isDark) MaterialTheme.colorScheme.primary else Emerald700
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 4.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
-
-                    Text(
-                        text = "Other amount",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = stepsInput,
-                            onValueChange = { stepsInput = it },
-                            label = { Text("Steps") },
-                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                            ),
-                            singleLine = true,
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        Button(
-                            onClick = {
-                                val s = stepsInput.toIntOrNull()
-                                if (s != null && s > 0) {
-                                    viewModel.addSteps(s)
-                                    showStepsDialog = false
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = if (isDark) MaterialTheme.colorScheme.primary else Emerald600),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.height(56.dp)
-                        ) {
-                            Text("Add")
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showStepsDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showStepsOptionDialog = false }) { Text("Close") }
             }
         )
     }

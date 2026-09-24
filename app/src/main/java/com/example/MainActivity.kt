@@ -2,10 +2,6 @@ package com.example
 
 import android.content.Context
 import android.content.Intent
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -89,11 +85,8 @@ val bottomTabs = listOf(
     TabScreen.Health
 )
 
-class MainActivity : ComponentActivity(), SensorEventListener {
+class MainActivity : ComponentActivity() {
   private val viewModel: ShasthoViewModel by viewModels()
-  private var sensorManager: SensorManager? = null
-  private var stepSensor: Sensor? = null
-  private var isSensorRegistered = false
   private var pendingNavigationRoute by mutableStateOf<String?>(null)
 
   @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
@@ -102,8 +95,6 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     pendingNavigationRoute = intent.getStringExtra("NAVIGATE_TO")
     
     NotificationHelper.createNotificationChannel(this)
-    sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    stepSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
 
     enableEdgeToEdge()
     setContent {
@@ -431,29 +422,4 @@ class MainActivity : ComponentActivity(), SensorEventListener {
       setIntent(intent)
       pendingNavigationRoute = intent.getStringExtra("NAVIGATE_TO")
   }
-
-  override fun onResume() {
-    super.onResume()
-    if (!isSensorRegistered) {
-        stepSensor?.let {
-            sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
-            isSensorRegistered = true
-        }
-    }
-  }
-
-  override fun onPause() {
-    super.onPause()
-    if (isSensorRegistered) {
-        sensorManager?.unregisterListener(this)
-        isSensorRegistered = false
-    }
-  }
-
-  override fun onSensorChanged(event: SensorEvent?) {
-    if (event?.sensor?.type == Sensor.TYPE_STEP_COUNTER) {
-        viewModel.addSteps(1)
-    }
-  }
-  override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 }
