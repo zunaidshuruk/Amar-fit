@@ -54,6 +54,7 @@ import com.example.presentation.onboarding.OnboardingScreen
 import com.example.presentation.recipe.RecipeScreen
 import com.example.presentation.scanner.ScannerScreen
 import com.example.presentation.settings.HealthGoalsScreen
+import com.example.presentation.social.DirectMessageScreen
 import com.example.presentation.social.FriendsScreen
 import com.example.presentation.social.LeaderboardScreen
 import com.example.presentation.settings.SettingsScreen
@@ -397,20 +398,15 @@ class MainActivity : ComponentActivity() {
                   composable("health_goals") { HealthGoalsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("friends") { FriendsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onNavigateToLeaderboard = { navController.navigate("leaderboard") }, onNavigateToDm = { pairId, name -> navController.navigate("dm/$pairId/$name") }) }
                   composable(
-                      route = "dm/{pairId}/{friendName}",
+                      "dm/{pairId}/{friendName}",
                       arguments = listOf(
                           androidx.navigation.navArgument("pairId") { type = androidx.navigation.NavType.StringType },
                           androidx.navigation.navArgument("friendName") { type = androidx.navigation.NavType.StringType }
                       )
                   ) { backStackEntry ->
                       val pairId = backStackEntry.arguments?.getString("pairId") ?: ""
-                      val friendName = backStackEntry.arguments?.getString("friendName") ?: ""
-                      com.example.presentation.social.DirectMessageScreen(
-                          pairId = pairId,
-                          friendName = friendName,
-                          viewModel = viewModel,
-                          onNavigateBack = { navController.popBackStack() }
-                      )
+                      val friendName = backStackEntry.arguments?.getString("friendName") ?: "Friend"
+                      DirectMessageScreen(viewModel = viewModel, pairId = pairId, friendName = friendName, onNavigateBack = { navController.popBackStack() })
                   }
                   composable("leaderboard") { LeaderboardScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("scanner") { ScannerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }

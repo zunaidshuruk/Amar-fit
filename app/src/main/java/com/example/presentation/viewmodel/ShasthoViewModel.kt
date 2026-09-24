@@ -1997,30 +1997,24 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private var messagesJob: kotlinx.coroutines.Job? = null
     private val _messages = MutableStateFlow<List<FirebaseManager.DirectMessage>>(emptyList())
     val messages: StateFlow<List<FirebaseManager.DirectMessage>> = _messages.asStateFlow()
 
-    private var dmJob: kotlinx.coroutines.Job? = null
-
-    fun observeDmThread(pairId: String) {
-        dmJob?.cancel()
-        dmJob = viewModelScope.launch(Dispatchers.IO) {
-            FirebaseManager.observeMessages(pairId).collect {
-                _messages.value = it
-            }
+    fun startObservingMessages(pairId: String) {
+        messagesJob?.cancel()
+        messagesJob = viewModelScope.launch {
+            FirebaseManager.observeMessages(pairId).collect { _messages.value = it }
         }
     }
 
-    fun stopObservingDmThread() {
-        dmJob?.cancel()
-        dmJob = null
+    fun stopObservingMessages() {
+        messagesJob?.cancel()
         _messages.value = emptyList()
     }
 
-    fun sendDirectMessage(pairId: String, text: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            FirebaseManager.sendDirectMessage(pairId, text)
-        }
+    fun sendMessage(pairId: String, text: String) {
+        FirebaseManager.sendDirectMessage(pairId, text)
     }
 
     companion object {
