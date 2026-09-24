@@ -263,7 +263,8 @@ object FirebaseManager {
         val name: String = "",
         val currentStreak: Int = 0,
         val points: Int = 0,
-        val badgeCount: Int = 0
+        val badgeCount: Int = 0,
+        val pairId: String = ""
     )
 
     data class FriendStatsInfo(
@@ -319,7 +320,8 @@ object FirebaseManager {
                             name = profileSnap.getString("name") ?: "Unknown",
                             currentStreak = (profileSnap.getLong("currentStreak") ?: 0L).toInt(),
                             points = (profileSnap.getLong("points") ?: 0L).toInt(),
-                            badgeCount = badgesStr.split(",").count { it.isNotBlank() }
+                            badgeCount = badgesStr.split(",").count { it.isNotBlank() },
+                            pairId = doc.id
                         )
                     )
                 } catch (e: Exception) {
@@ -338,6 +340,50 @@ object FirebaseManager {
             db.collection("friend_stats").document(uid).get().await().toObject(FriendStatsInfo::class.java)
         } catch (e: Exception) {
             null
+        }
+    }
+
+    suspend fun sendKudos(toUid: String): Boolean {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser ?: return false
+        val db = FirebaseFirestore.getInstance()
+        return try {
+            val today = java.time.LocalDate.now().toString()
+            val kudosId = "${user.uid}_${toUid}_$today"
+            db.collection("kudos").document(kudosId).set(
+                mapOf(
+                    "fromUid" to user.uid,
+                    "toUid" to toUid,
+                    "date" to today,
+                    "createdAt" to com.google.firebase.Timestamp.now()
+                )
+            ).await()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun hasSentKudosToday(toUid: String): Boolean {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser ?: return false
+        val db = FirebaseFirestore.getInstance()
+        val today = java.time.LocalDate.now().toString()
+        val kudosId = "${user.uid}_${toUid}_$today"
+        return try {
+            db.collection("kudos").document(kudosId).get().await().exists()
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun removeFriend(pairId: String): Boolean {
+        val db = FirebaseFirestore.getInstance()
+        return try {
+            db.collection("friendships").document(pairId).delete().await()
+            true
+        } catch (e: Exception) {
+            false
         }
     }
 

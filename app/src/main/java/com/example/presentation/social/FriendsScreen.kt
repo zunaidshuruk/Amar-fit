@@ -14,7 +14,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.SportsScore
 import androidx.compose.material3.*
@@ -27,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.repository.FirebaseManager
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
@@ -64,6 +67,8 @@ fun FriendsScreen(
     val selectedFriendStats by viewModel.selectedFriendStats.collectAsState()
     val challenges by viewModel.challenges.collectAsState()
     val challengeActionMessage by viewModel.challengeActionMessage.collectAsState()
+    val kudosSentTo by viewModel.kudosSentTo.collectAsState()
+    var friendPendingRemoval by remember { mutableStateOf<FirebaseManager.FriendInfo?>(null) }
 
     LaunchedEffect(Unit) { viewModel.refreshFriendRequests() }
     LaunchedEffect(selectedTab) {
@@ -237,6 +242,7 @@ fun FriendsScreen(
                             }
                         }
                         items(friendsList) { friend ->
+                            LaunchedEffect(friend.uid) { viewModel.checkKudosSentToday(friend.uid) }
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -285,6 +291,25 @@ fun FriendsScreen(
                                             shape = RoundedCornerShape(12.dp)
                                         ) {
                                             Text("Challenge to a 7-Day Steps Race")
+                                        }
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            val alreadySentKudos = kudosSentTo.contains(friend.uid)
+                                            OutlinedButton(
+                                                onClick = { if (!alreadySentKudos) viewModel.sendKudosToFriend(friend.uid) },
+                                                enabled = !alreadySentKudos,
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Icon(Icons.Default.Celebration, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(if (alreadySentKudos) "Kudos sent" else "Send Kudos")
+                                            }
+                                            OutlinedButton(
+                                                onClick = { friendPendingRemoval = friend },
+                                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                            ) {
+                                                Icon(Icons.Default.PersonRemove, contentDescription = "Remove Friend")
+                                            }
                                         }
                                     }
                                 }
@@ -346,6 +371,24 @@ fun FriendsScreen(
                 viewModel.sendFriendRequestByCode(code)
             },
             onClose = { showQrScanner = false }
+        )
+    }
+
+    friendPendingRemoval?.let { friend ->
+        AlertDialog(
+            onDismissRequest = { friendPendingRemoval = null },
+            title = { Text("Remove ${friend.name}?") },
+            text = { Text("You'll need to send a new friend request to reconnect.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.removeFriend(friend.pairId)
+                    friendPendingRemoval = null
+                    selectedFriendUid = null
+                }) { Text("Remove", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { friendPendingRemoval = null }) { Text("Cancel") }
+            }
         )
     }
 }

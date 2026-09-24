@@ -1892,6 +1892,33 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private val _kudosSentTo = MutableStateFlow<Set<String>>(emptySet())
+    val kudosSentTo: StateFlow<Set<String>> = _kudosSentTo.asStateFlow()
+
+    fun sendKudosToFriend(uid: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val sent = FirebaseManager.sendKudos(uid)
+            if (sent) {
+                _kudosSentTo.value = _kudosSentTo.value + uid
+            }
+        }
+    }
+
+    fun checkKudosSentToday(uid: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (FirebaseManager.hasSentKudosToday(uid)) {
+                _kudosSentTo.value = _kudosSentTo.value + uid
+            }
+        }
+    }
+
+    fun removeFriend(pairId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            FirebaseManager.removeFriend(pairId)
+            fetchFriendsList()
+        }
+    }
+
     private val _leaderboard = MutableStateFlow<List<FirebaseManager.LeaderboardEntry>>(emptyList())
     val leaderboard: StateFlow<List<FirebaseManager.LeaderboardEntry>> = _leaderboard.asStateFlow()
 
