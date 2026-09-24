@@ -1926,9 +1926,17 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     private val _challenges = MutableStateFlow<List<FirebaseManager.ChallengeInfo>>(emptyList())
     val challenges: StateFlow<List<FirebaseManager.ChallengeInfo>> = _challenges.asStateFlow()
 
+    private val _challengeActionMessage = MutableStateFlow<String?>(null)
+    val challengeActionMessage: StateFlow<String?> = _challengeActionMessage.asStateFlow()
+
+    fun clearChallengeActionMessage() {
+        _challengeActionMessage.value = null
+    }
+
     fun createChallengeWithFriend(targetUid: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            FirebaseManager.createChallenge(targetUid)
+            val challengeId = FirebaseManager.createChallenge(targetUid)
+            _challengeActionMessage.value = if (challengeId != null) "Challenge sent!" else "Couldn't create challenge -- try again."
             fetchChallenges()
         }
     }

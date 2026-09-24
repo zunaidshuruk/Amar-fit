@@ -63,6 +63,7 @@ fun FriendsScreen(
     val friendsList by viewModel.friendsList.collectAsState()
     val selectedFriendStats by viewModel.selectedFriendStats.collectAsState()
     val challenges by viewModel.challenges.collectAsState()
+    val challengeActionMessage by viewModel.challengeActionMessage.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.refreshFriendRequests() }
     LaunchedEffect(selectedTab) {
@@ -74,6 +75,16 @@ fun FriendsScreen(
         actionMessage?.let {
             android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
             viewModel.clearFriendActionMessage()
+        }
+    }
+
+    LaunchedEffect(challengeActionMessage) {
+        challengeActionMessage?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            viewModel.clearChallengeActionMessage()
+            selectedTab = 4
+            selectedFriendUid = null
+            viewModel.clearSelectedFriendStats()
         }
     }
 

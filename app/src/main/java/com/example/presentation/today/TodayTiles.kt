@@ -16,7 +16,8 @@ import java.util.Locale
 
 val ALL_LARGE_TILE_IDS = listOf(
     "large_steps",
-    "large_weekly_cardio"
+    "large_weekly_cardio",
+    "large_calories"
 )
 
 val ALL_SMALL_TILE_IDS = listOf(
@@ -139,7 +140,11 @@ fun resolveLargeTile(
     isDark: Boolean,
     stepGoal: Int = 10000,
     onOpenStepsDialog: () -> Unit,
-    onNavigateToFitness: () -> Unit
+    onNavigateToFitness: () -> Unit,
+    totalCalories: Int = 0,
+    calorieLimit: Int = 2000,
+    calorieProgress: Float = 0f,
+    onNavigateToNutrition: () -> Unit = {}
 ): ResolvedLargeTile? {
     return when (id) {
         "large_steps" -> {
@@ -188,6 +193,26 @@ fun resolveLargeTile(
                     "Days active" to "$activeDays/7",
                     "Best day" to (if (bestDay != null && bestDay.exerciseMinutes > 0) "$bestDayLabel · ${bestDay.exerciseMinutes} min" else "--"),
                     "Daily avg" to "$dailyAvg min"
+                )
+            )
+        }
+        "large_calories" -> {
+            val accent = AccentTokens.caloriesAccent(isDark)
+            val remaining = calorieLimit - totalCalories
+            val remainingLabel = if (remaining >= 0) "$remaining kcal" else "Over by ${-remaining} kcal"
+            ResolvedLargeTile(
+                id = "large_calories",
+                title = "Daily Calories",
+                progress = calorieProgress,
+                insideValue = "$totalCalories",
+                insideSubtext = "of $calorieLimit kcal",
+                accent = accent,
+                onClick = onNavigateToNutrition,
+                backStats = listOf(
+                    "Remaining" to remainingLabel,
+                    "Protein" to "${String.format(Locale.US, "%.0f", metrics?.proteinG ?: 0f)}g",
+                    "Carbs" to "${String.format(Locale.US, "%.0f", metrics?.carbsG ?: 0f)}g",
+                    "Fat" to "${String.format(Locale.US, "%.0f", metrics?.fatG ?: 0f)}g"
                 )
             )
         }

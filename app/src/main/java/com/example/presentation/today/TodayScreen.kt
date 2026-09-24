@@ -130,7 +130,11 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                         isDark = isDark,
                         stepGoal = stepGoal,
                         onOpenStepsDialog = { showStepsOptionDialog = true },
-                        onNavigateToFitness = { navigateToTab(navController, "fitness") }
+                        onNavigateToFitness = { navigateToTab(navController, "fitness") },
+                        totalCalories = totalCalories,
+                        calorieLimit = calorieLimit,
+                        calorieProgress = calorieProgress,
+                        onNavigateToNutrition = { navigateToTab(navController, "nutrition") }
                     )
                     if (resolved != null) {
                         FlippableHeroCard(
