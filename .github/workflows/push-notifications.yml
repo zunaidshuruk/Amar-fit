@@ -1,0 +1,32 @@
+name: KardIQ Push Notifications
+
+"on":
+  schedule:
+    # Every 5 minutes. GitHub's scheduler can occasionally delay this under
+    # heavy platform load -- that's expected and fine for this use case.
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+    # Lets you trigger a run manually from the Actions tab, useful for testing
+    # without waiting for the schedule.
+
+jobs:
+  send-notifications:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        working-directory: scripts
+        run: npm install
+
+      - name: Run push notification poller
+        working-directory: scripts
+        env:
+          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+        run: node send_push_notifications.js
