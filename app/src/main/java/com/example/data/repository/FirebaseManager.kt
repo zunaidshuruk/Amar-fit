@@ -479,7 +479,8 @@ object FirebaseManager {
                 mapOf(
                     "senderUid" to user.uid,
                     "text" to text.trim(),
-                    "createdAt" to com.google.firebase.Timestamp.now()
+                    "createdAt" to com.google.firebase.Timestamp.now(),
+                    "notified" to false
                 )
             ).await()
             null
@@ -538,7 +539,9 @@ object FirebaseManager {
             "status" to "active",
             "progress" to mapOf(user.uid to 0L, targetUid to 0L),
             "winnerUid" to null,
-            "createdAt" to com.google.firebase.Timestamp.now()
+            "createdAt" to com.google.firebase.Timestamp.now(),
+            "notifiedCreation" to false,
+            "notifiedCompletion" to false
         )
         return try {
             val ref = db.collection("challenges").document()
