@@ -17,7 +17,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 import android.content.Context
-import com.example.presentation.notifications.NotificationHelper
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.feature.ExperimentalFeatureAvailabilityApi
@@ -1970,14 +1969,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     fun createChallengeWithFriend(targetUid: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val challengeId = FirebaseManager.createChallenge(targetUid)
-            _challengeActionMessage.value = if (challengeId != null) {
-                NotificationHelper.showChallengeNotification(
-                    getApplication(),
-                    "Challenge Started ⚔️",
-                    "7-Day Step Challenge created! Step up to win."
-                )
-                "Challenge sent!"
-            } else "Couldn't create challenge -- try again."
+            _challengeActionMessage.value = if (challengeId != null) "Challenge sent!" else "Couldn't create challenge -- try again."
             fetchChallenges()
         }
     }
@@ -1996,17 +1988,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 )
                 if (winnerUid == myUid) {
                     repository.awardChallengeBonus(150, "Challenge Champion")
-                    NotificationHelper.showChallengeNotification(
-                        getApplication(),
-                        "Challenge Victory! 🏆",
-                        "You won the 7-day challenge against ${challenge.otherName}!"
-                    )
-                } else if (winnerUid == challenge.otherUid) {
-                    NotificationHelper.showChallengeNotification(
-                        getApplication(),
-                        "Challenge Completed",
-                        "${challenge.otherName} won the 7-day challenge."
-                    )
                 }
             }
             _challenges.value = FirebaseManager.getMyChallenges()
@@ -2029,23 +2010,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     fun startObservingMessages(pairId: String, friendName: String? = null) {
         messagesJob?.cancel()
         messagesJob = viewModelScope.launch {
-            var initialLoadDone = false
-            var lastSeenCount = 0
             FirebaseManager.observeMessages(pairId).collect { list ->
-                val myUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
-                if (initialLoadDone && list.size > lastSeenCount) {
-                    val newMsg = list.lastOrNull()
-                    if (newMsg != null && newMsg.senderUid != myUid) {
-                        NotificationHelper.showMessageNotification(
-                            getApplication(),
-                            senderName = friendName ?: "Friend",
-                            messageText = newMsg.text,
-                            pairId = pairId
-                        )
-                    }
-                }
-                lastSeenCount = list.size
-                initialLoadDone = true
                 _messages.value = list
             }
         }

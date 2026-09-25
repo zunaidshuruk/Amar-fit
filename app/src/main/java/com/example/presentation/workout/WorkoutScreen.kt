@@ -279,7 +279,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    // Action Buttons: Start Workout, Save Workout, and Browse Exercises
+                    // Action Buttons: Start Workout and Save Workout
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -330,29 +330,6 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                                 )
                             }
                         }
-
-                        OutlinedButton(
-                            onClick = { navController?.navigate("exercise_library") },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(60.dp),
-                            shape = RoundedCornerShape(14.dp),
-                            contentPadding = PaddingValues(horizontal = 2.dp, vertical = 6.dp)
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(Icons.Default.FitnessCenter, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    "Browse Exercises",
-                                    fontSize = 10.sp,
-                                    lineHeight = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    textAlign = TextAlign.Center,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
                     }
                     
                     Spacer(modifier = Modifier.height(24.dp))
@@ -365,6 +342,16 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
+                OutlinedButton(
+                    onClick = { navController?.navigate("exercise_library") },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Default.FitnessCenter, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Create Custom Workout", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(16.dp))
                 ProtocolPracticeCard(
                     title = "Physical Exercise & HIIT",
                     description = "High-Intensity Interval Training to deplete glycogen stores and boost growth hormone.",
