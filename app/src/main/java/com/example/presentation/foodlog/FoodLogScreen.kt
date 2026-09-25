@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Check
@@ -267,20 +268,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, navController: androidx.navigatio
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedButton(
-                        onClick = {
-                            showManualEntry = false
-                            navController?.navigate("food_chat")
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.Chat, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Or chat with AI instead")
-                    }
 
-                    Spacer(modifier = Modifier.height(16.dp))
 
                     if (manualEntryMode == "Describe") {
                         Text("What did you eat?", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
@@ -439,21 +427,28 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, navController: androidx.navigatio
 
     Scaffold(
         floatingActionButton = {
-            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                ExtendedFloatingActionButton(
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SmallFloatingActionButton(
                     onClick = { showManualEntry = true },
                     containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    icon = { Icon(Icons.Default.Edit, contentDescription = "Type Food") },
-                    text = { Text("Manual Entry") }
-                )
-                ExtendedFloatingActionButton(
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Manual Entry")
+                }
+                SmallFloatingActionButton(
                     onClick = onNavigateToScanner,
                     containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    icon = { Icon(Icons.Default.AddAPhoto, contentDescription = "Scan Photo") },
-                    text = { Text("Scan Photo") }
-                )
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(Icons.Default.CameraAlt, contentDescription = "Scan Photo")
+                }
+                FloatingActionButton(
+                    onClick = { navController?.navigate("food_chat") },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(Icons.Default.Chat, contentDescription = "Chat with AI")
+                }
             }
         },
         containerColor = MaterialTheme.colorScheme.background
