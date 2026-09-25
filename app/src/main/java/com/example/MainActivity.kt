@@ -97,6 +97,14 @@ class MainActivity : ComponentActivity() {
     
     NotificationHelper.createNotificationChannel(this)
 
+    com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+        if (task.isSuccessful) {
+            task.result?.let { token ->
+                com.example.data.repository.FirebaseManager.updateFcmToken(token)
+            }
+        }
+    }
+
     enableEdgeToEdge()
     setContent {
       val userProfile by viewModel.userProfile.collectAsState()

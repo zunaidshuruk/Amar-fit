@@ -139,6 +139,22 @@ object FirebaseManager {
         }
     }
 
+    fun updateFcmToken(token: String) {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
+        if (user != null && token.isNotBlank()) {
+            val db = FirebaseFirestore.getInstance()
+            db.collection("public_profiles").document(user.uid).set(
+                mapOf("fcmToken" to token, "fcmTokenUpdatedAt" to com.google.firebase.Timestamp.now()),
+                SetOptions.merge()
+            )
+            db.collection("users").document(user.uid).set(
+                mapOf("fcmToken" to token),
+                SetOptions.merge()
+            )
+        }
+    }
+
     fun syncFriendStats(metric: DailyMetric, profile: UserProfile) {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser

@@ -50,6 +50,14 @@
         </activity>
         <receiver android:name=".presentation.notifications.MealReminderReceiver" android:exported="false" />
 
+        <service
+            android:name=".presentation.notifications.AmarFitMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
     
         <activity
             android:name=".PrivacyPolicyActivity"
