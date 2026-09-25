@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Close
@@ -45,8 +46,9 @@ import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit = {}, onNavigateBack: () -> Unit = {}) {
+fun FoodLogScreen(viewModel: ShasthoViewModel, navController: androidx.navigation.NavController? = null, onNavigateToScanner: () -> Unit = {}, onNavigateBack: () -> Unit = {}) {
     val todayFoodLogs by viewModel.todayFoodLogs.collectAsState()
     val allFoodLogs by viewModel.allFoodLogs.collectAsState()
     val frequentFoods by viewModel.frequentFoods.collectAsState()
@@ -62,6 +64,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
     var animationPlayed by remember { mutableStateOf(false) }
     var showManualEntry by remember { mutableStateOf(false) }
     var manualEntryMode by remember { mutableStateOf("Describe") } // "Describe" or "Enter Values"
+    var awaitingAnalysisClose by remember { mutableStateOf(false) }
     var manualText by remember { mutableStateOf("") }
     var manualMealType by remember { mutableStateOf("Snack") }
     var manualFoodName by remember { mutableStateOf("") }
@@ -77,8 +80,17 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
     var editCalories by remember { mutableStateOf("") }
     var editTime by remember { mutableStateOf("") }
     var editMealType by remember { mutableStateOf("") }
+    var editPortionAmount by remember { mutableStateOf("") }
+    var editPortionUnit by remember { mutableStateOf("g") }
+    var portionUnitExpanded by remember { mutableStateOf(false) }
 
-        val isScanning by viewModel.isScanning.collectAsState()
+    val isScanning by viewModel.isScanning.collectAsState()
+    LaunchedEffect(isScanning) {
+        if (awaitingAnalysisClose && !isScanning) {
+            showManualEntry = false
+            awaitingAnalysisClose = false
+        }
+    }
     val weeklyInsights by viewModel.weeklyInsights.collectAsState()
     val isLoadingInsights by viewModel.isLoadingInsights.collectAsState()
     val animatedProgress by animateFloatAsState(
@@ -116,6 +128,42 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                         label = { Text("Calories") },
                         modifier = Modifier.fillMaxWidth()
                     )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = editPortionAmount,
+                            onValueChange = { editPortionAmount = it },
+                            label = { Text("Portion") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        ExposedDropdownMenuBox(
+                            expanded = portionUnitExpanded,
+                            onExpandedChange = { portionUnitExpanded = it },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            OutlinedTextField(
+                                value = editPortionUnit,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Unit") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = portionUnitExpanded) },
+                                modifier = Modifier.menuAnchor().fillMaxWidth()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = portionUnitExpanded,
+                                onDismissRequest = { portionUnitExpanded = false }
+                            ) {
+                                listOf("g", "oz", "ml", "L", "serving").forEach { unit ->
+                                    DropdownMenuItem(
+                                        text = { Text(unit) },
+                                        onClick = {
+                                            editPortionUnit = unit
+                                            portionUnitExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                     OutlinedTextField(
                         value = editTime,
                         onValueChange = { editTime = it },
@@ -138,7 +186,9 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                             category = editCategory,
                             calories = editCalories.toIntOrNull() ?: editingLog!!.calories,
                             time = editTime,
-                            mealType = editMealType
+                            mealType = editMealType,
+                            portionAmount = editPortionAmount.toFloatOrNull() ?: editingLog!!.portionAmount,
+                            portionUnit = editPortionUnit
                         )
                         viewModel.updateFoodLog(updatedLog)
                         showEditDialog = false
@@ -215,6 +265,19 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = {
+                            showManualEntry = false
+                            navController?.navigate("food_chat")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Chat, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Or chat with AI instead")
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -337,7 +400,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                         } else {
                             if (manualText.isNotBlank()) {
                                 viewModel.analyzeFoodText(manualText, manualMealType)
-                                manualEntryMode = "Describe"
+                                awaitingAnalysisClose = true
                                 manualText = ""
                                 manualFoodName = ""
                                 manualCalories = ""
@@ -345,7 +408,6 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                                 manualProtein = ""
                                 manualFat = ""
                                 manualMealType = "Snack"
-                                showManualEntry = false
                             }
                         }
                     },
@@ -627,6 +689,8 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, onNavigateToScanner: () -> Unit =
                                         editCalories = log.calories.toString()
                                         editTime = log.time
                                         editMealType = log.mealType
+                                        editPortionAmount = log.portionAmount.toString()
+                                        editPortionUnit = log.portionUnit
                                         showEditDialog = true
                                     }) {
                                         Icon(Icons.Default.Edit, contentDescription = "Edit", tint = foodLogAccent.onBg.copy(alpha = 0.8f))

@@ -1582,6 +1582,73 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             _isLoadingChat.value = false
         }
     }
+
+    private val _foodChatHistory = MutableStateFlow<List<ChatMessage>>(emptyList())
+    val foodChatHistory: StateFlow<List<ChatMessage>> = _foodChatHistory.asStateFlow()
+
+    private val _isLoadingFoodChat = MutableStateFlow(false)
+    val isLoadingFoodChat: StateFlow<Boolean> = _isLoadingFoodChat.asStateFlow()
+
+    private val _foodChatLoggedConfirmation = MutableStateFlow<String?>(null)
+    val foodChatLoggedConfirmation: StateFlow<String?> = _foodChatLoggedConfirmation.asStateFlow()
+
+    fun clearFoodChatLoggedConfirmation() {
+        _foodChatLoggedConfirmation.value = null
+    }
+
+    fun resetFoodChat() {
+        _foodChatHistory.value = emptyList()
+    }
+
+    fun sendFoodChatMessage(message: String) {
+        viewModelScope.launch {
+            val newUserMsg = ChatMessage(message, true)
+            _foodChatHistory.value = _foodChatHistory.value + newUserMsg
+            _isLoadingFoodChat.value = true
+
+            val placeholderIndex = _foodChatHistory.value.size
+            _foodChatHistory.value = _foodChatHistory.value + ChatMessage("", false)
+
+            var accumulated = ""
+            try {
+                repository.getFoodChatResponseStream(_foodChatHistory.value.dropLast(1)).collect { chunk ->
+                    accumulated += chunk
+                    val displayText = accumulated.substringBefore("READY_TO_LOG").trim()
+                    _foodChatHistory.value = _foodChatHistory.value.toMutableList().also {
+                        it[placeholderIndex] = ChatMessage(displayText, false)
+                    }
+                }
+
+                if (accumulated.contains("READY_TO_LOG")) {
+                    val jsonPart = accumulated.substringAfter("READY_TO_LOG").trim()
+                    try {
+                        val json = org.json.JSONObject(jsonPart)
+                        logScannedFood(
+                            name = json.optString("name", "Food"),
+                            category = json.optString("category", "Meal"),
+                            calories = json.optInt("calories", 0),
+                            description = json.optString("description", ""),
+                            mealType = json.optString("mealType", "Snack"),
+                            carbsG = json.optDouble("carbs", 0.0).toFloat(),
+                            proteinG = json.optDouble("protein", 0.0).toFloat(),
+                            fatG = json.optDouble("fat", 0.0).toFloat(),
+                            sodiumMg = json.optDouble("sodium", 0.0).toFloat(),
+                            sugarG = json.optDouble("sugar", 0.0).toFloat(),
+                            fiberG = json.optDouble("fiber", 0.0).toFloat()
+                        )
+                        _foodChatLoggedConfirmation.value = "${json.optString("name", "Food")} logged -- ${json.optInt("calories", 0)} kcal"
+                    } catch (e: Exception) {
+                        // Model didn't return valid JSON this turn -- leave the chat text as-is, no log happens.
+                    }
+                }
+            } catch (e: Exception) {
+                _foodChatHistory.value = _foodChatHistory.value.toMutableList().also {
+                    it[placeholderIndex] = ChatMessage("Sorry, I couldn't process that. Please try again.", false)
+                }
+            }
+            _isLoadingFoodChat.value = false
+        }
+    }
     
     private val _coachAdvice = MutableStateFlow<String?>(null)
     val coachAdvice: StateFlow<String?> = _coachAdvice.asStateFlow()

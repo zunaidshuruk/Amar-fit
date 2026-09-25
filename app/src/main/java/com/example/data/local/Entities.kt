@@ -98,6 +98,8 @@ data class FoodLog(
     val carbsG: Float = 0f,
     val proteinG: Float = 0f,
     val fatG: Float = 0f,
+    val portionAmount: Float = 100f,
+    val portionUnit: String = "g",
     val sodiumMg: Float = 0f,
     val sugarG: Float = 0f,
     val fiberG: Float = 0f

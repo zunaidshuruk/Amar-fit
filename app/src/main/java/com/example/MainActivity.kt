@@ -40,6 +40,7 @@ import com.example.presentation.badges.BadgeGalleryScreen
 import com.example.presentation.chat.ChatScreen
 import com.example.presentation.coach.CoachScreen
 import com.example.presentation.fitness.FitnessScreen
+import com.example.presentation.foodlog.FoodChatScreen
 import com.example.presentation.foodlog.FoodLogScreen
 import com.example.presentation.health.HealthScreen
 import com.example.presentation.lifestyle.LifestyleScreen
@@ -196,33 +197,6 @@ class MainActivity : ComponentActivity() {
                               }
                           },
                           actions = {
-                              val context = androidx.compose.ui.platform.LocalContext.current
-                              var isHealthConnectAvailable by remember { mutableStateOf(HealthConnectManager.isAvailable(context)) }
-                              
-                              if (isHealthConnectAvailable) {
-                                  val coroutineScope = rememberCoroutineScope()
-                                  IconButton(
-                                      onClick = {
-                                          coroutineScope.launch {
-                                              if (HealthConnectManager.hasAnyPermissions(context)) {
-                                                  android.widget.Toast.makeText(context, "Syncing with Health Connect...", android.widget.Toast.LENGTH_SHORT).show()
-                                                  viewModel.syncWithHealthConnect(context)
-                                              } else {
-                                                  android.widget.Toast.makeText(context, "Please connect Health Connect in Profile & Settings first", android.widget.Toast.LENGTH_LONG).show()
-                                              }
-                                          }
-                                      },
-                                      modifier = Modifier
-                                          .padding(end = 8.dp)
-                                          .size(36.dp)
-                                          .clip(CircleShape)
-                                          .background(MaterialTheme.colorScheme.surface)
-                                          .border(1.dp, if (isDark) MaterialTheme.colorScheme.outline else Slate200, CircleShape)
-                                  ) {
-                                      Icon(Icons.Default.Sync, contentDescription = "Sync Health Connect", tint = if (isDark) MaterialTheme.colorScheme.primary else Emerald600, modifier = Modifier.size(20.dp))
-                                  }
-                              }
-
                               Box(
                                   modifier = Modifier
                                       .padding(end = 16.dp)
@@ -401,10 +375,11 @@ class MainActivity : ComponentActivity() {
                   composable("weightlog") { WeightLogScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("badges") { BadgeGalleryScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("recipe") { RecipeScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
-                  composable("foodlog") { FoodLogScreen(viewModel = viewModel, onNavigateToScanner = { navController.navigate("scanner") }, onNavigateBack = { navController.popBackStack() }) }
+                  composable("foodlog") { FoodLogScreen(viewModel = viewModel, navController = navController, onNavigateToScanner = { navController.navigate("scanner") }, onNavigateBack = { navController.popBackStack() }) }
                   composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }, onNavigateToHealthGoals = { navController.navigate("health_goals") }, onNavigateToFriends = { navController.navigate("friends") }) }
                   composable("health_goals") { HealthGoalsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("friends") { FriendsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onNavigateToLeaderboard = { navController.navigate("leaderboard") }, onNavigateToDm = { pairId, name -> navController.navigate("dm/$pairId/$name") }) }
+                  composable("food_chat") { FoodChatScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable(
                       "dm/{pairId}/{friendName}",
                       arguments = listOf(
