@@ -1642,8 +1642,9 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
             } catch (e: Exception) {
+                android.util.Log.e("FoodChat", "sendFoodChatMessage failed", e)
                 _foodChatHistory.value = _foodChatHistory.value.toMutableList().also {
-                    it[placeholderIndex] = ChatMessage("Sorry, I couldn't process that. Please try again.", false)
+                    it[placeholderIndex] = ChatMessage("Error: ${e.message ?: e.toString()}", false)
                 }
             }
             _isLoadingFoodChat.value = false
