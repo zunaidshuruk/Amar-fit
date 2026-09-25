@@ -17,6 +17,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +41,7 @@ import com.example.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Date
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutScreen(viewModel: ShasthoViewModel) {
     val navController = com.example.LocalNavController.current
@@ -70,6 +73,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
     }
     
     val context = LocalContext.current
+    val isSyncing by viewModel.isSyncing.collectAsState()
     LaunchedEffect(Unit) {
         viewModel.syncErrorEvent.collect { message ->
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
@@ -86,7 +90,12 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
         return
     }
 
-    Column(
+    PullToRefreshBox(
+        isRefreshing = isSyncing,
+        onRefresh = { viewModel.syncWithHealthConnect(context) },
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
@@ -443,6 +452,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
         }
         
         Spacer(modifier = Modifier.height(100.dp))
+    }
     }
 
     if (showSaveDialog && (structuredPlan != null || !workoutTitle.isEmpty())) {

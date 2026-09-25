@@ -13,6 +13,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -36,6 +38,7 @@ import com.example.ui.components.HeroStatCard
 import com.example.ui.components.NavListCard
 import com.example.ui.theme.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SleepScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val profile by viewModel.userProfile.collectAsState()
@@ -51,7 +54,13 @@ fun SleepScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val sleepHistory by sleepHistoryFlow.collectAsState(initial = emptyList())
     val chronologicalSleepHistory = remember(sleepHistory) { sleepHistory.reversed() }
 
-    Column(
+    val isSyncing by viewModel.isSyncing.collectAsState()
+    PullToRefreshBox(
+        isRefreshing = isSyncing,
+        onRefresh = { viewModel.syncWithHealthConnect(navController.context) },
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
@@ -114,6 +123,7 @@ fun SleepScreen(viewModel: ShasthoViewModel, navController: NavController) {
             accent = coachAccent,
             onClick = { navController.navigate("coach") }
         )
+    }
     }
 
     if (showSleepDialog) {

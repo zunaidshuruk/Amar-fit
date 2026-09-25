@@ -14,6 +14,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,7 +91,13 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
     var showBpDialog by remember { mutableStateOf(false) }
     var showBmiDialog by remember { mutableStateOf(false) }
 
-    Column(
+    val isSyncing by viewModel.isSyncing.collectAsState()
+    PullToRefreshBox(
+        isRefreshing = isSyncing,
+        onRefresh = { viewModel.syncWithHealthConnect(navController.context) },
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
@@ -945,6 +953,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 Text(text = "Health records", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = medicalAccent.onBg.copy(alpha = 0.8f))
             }
         }
+    }
     }
 
     if (showBpDialog) {

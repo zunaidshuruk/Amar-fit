@@ -1001,9 +1001,13 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     }
     
     
+    private val _isSyncing = MutableStateFlow(false)
+    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
     @OptIn(ExperimentalFeatureAvailabilityApi::class)
     fun syncWithHealthConnect(context: Context) {
         viewModelScope.launch {
+            _isSyncing.value = true
             try {
                 if (HealthConnectClient.getSdkStatus(context) != HealthConnectClient.SDK_AVAILABLE) return@launch
                 val healthConnectClient = HealthConnectClient.getOrCreate(context)
@@ -1287,6 +1291,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 repository.saveMetrics(updated)
             } catch (e: Exception) {
                 e.printStackTrace()
+            } finally {
+                _isSyncing.value = false
             }
         }
     }

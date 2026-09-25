@@ -17,6 +17,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,7 +79,6 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
         viewModel.checkAndGenerateHealthInsight(navController.context)
     }
 
-    var showStepsOptionDialog by remember { mutableStateOf(false) }
     var showWaterDialog by remember { mutableStateOf(false) }
     var showLogBottomSheet by remember { mutableStateOf(false) }
 
@@ -107,13 +108,19 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
         parseTodayTileSlots(profile?.todayTileSlots)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+    val isSyncing by viewModel.isSyncing.collectAsState()
+    PullToRefreshBox(
+        isRefreshing = isSyncing,
+        onRefresh = { viewModel.syncWithHealthConnect(navController.context) },
+        modifier = Modifier.fillMaxSize()
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         // Large Ring Tiles (Full-width, stacked vertically). Each card is flippable in
         // place -- tap or swipe it to reveal a back face with extra detail.
         if (activeLargeIds.isNotEmpty()) {
@@ -128,7 +135,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                         last7Metrics = last7Metrics,
                         isDark = isDark,
                         stepGoal = stepGoal,
-                        onOpenStepsDialog = { showStepsOptionDialog = true },
+                        onOpenStepsDialog = { navController.navigate("metric_detail/steps") },
                         onNavigateToFitness = { navigateToTab(navController, "fitness") },
                         totalCalories = totalCalories,
                         calorieLimit = calorieLimit,
@@ -167,7 +174,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                 todayFoodLogs = todayFoodLogs,
                                 isDark = isDark,
                                 navController = navController,
-                                onOpenStepsDialog = { showStepsOptionDialog = true },
+                                onOpenStepsDialog = { navController.navigate("metric_detail/steps") },
                                 onOpenWaterDialog = { showWaterDialog = true },
                                 onNavigateToTab = { tab -> navigateToTab(navController, tab) }
                             )
@@ -645,6 +652,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
             }
         }
     }
+    }
 
     // Dialogs
     if (showWaterDialog) {
@@ -781,24 +789,6 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showWaterDialog = false }) { Text("Cancel") }
-            }
-        )
-    }
-    
-    if (showStepsOptionDialog) {
-        AlertDialog(
-            onDismissRequest = { showStepsOptionDialog = false },
-            title = { Text("Steps") },
-            text = { Text("Your step count syncs automatically from Health Connect every few seconds. Manual step entry has been removed to keep this number accurate to your device's sensor.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showStepsOptionDialog = false
-                    android.widget.Toast.makeText(navController.context, "Syncing steps via Health Connect...", android.widget.Toast.LENGTH_SHORT).show()
-                    viewModel.syncWithHealthConnect(navController.context)
-                }) { Text("Sync Now") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showStepsOptionDialog = false }) { Text("Close") }
             }
         )
     }
