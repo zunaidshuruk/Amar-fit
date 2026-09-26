@@ -429,6 +429,13 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, navController: androidx.navigatio
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SmallFloatingActionButton(
+                    onClick = { navController?.navigate("food_chat") },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(Icons.Default.Chat, contentDescription = "Chat with AI")
+                }
+                SmallFloatingActionButton(
                     onClick = { showManualEntry = true },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
@@ -441,13 +448,6 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, navController: androidx.navigatio
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {
                     Icon(Icons.Default.CameraAlt, contentDescription = "Scan Photo")
-                }
-                FloatingActionButton(
-                    onClick = { navController?.navigate("food_chat") },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ) {
-                    Icon(Icons.Default.Chat, contentDescription = "Chat with AI")
                 }
             }
         },

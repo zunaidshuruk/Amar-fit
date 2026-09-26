@@ -1,19 +1,25 @@
 package com.example.presentation.foodlog
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.presentation.viewmodel.ShasthoViewModel
@@ -24,9 +30,14 @@ fun FoodChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {})
     val messages by viewModel.foodChatHistory.collectAsState()
     val isLoading by viewModel.isLoadingFoodChat.collectAsState()
     val loggedConfirmation by viewModel.foodChatLoggedConfirmation.collectAsState()
+    val pendingEntry by viewModel.pendingFoodLogEntry.collectAsState()
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val context = androidx.compose.ui.platform.LocalContext.current
+
+    BackHandler(enabled = pendingEntry != null) {
+        viewModel.discardPendingFoodLog()
+    }
 
     LaunchedEffect(Unit) { viewModel.resetFoodChat() }
     LaunchedEffect(messages.size) {
@@ -62,56 +73,148 @@ fun FoodChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {})
                     placeholder = { Text("Ki khaisen? / What did you eat?") },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(20.dp),
-                    enabled = !isLoading
+                    enabled = !isLoading && pendingEntry == null
                 )
                 IconButton(
                     onClick = {
-                        if (input.isNotBlank() && !isLoading) {
+                        if (input.isNotBlank() && !isLoading && pendingEntry == null) {
                             viewModel.sendFoodChatMessage(input)
                             input = ""
                         }
-                    }
+                    },
+                    enabled = !isLoading && pendingEntry == null
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = MaterialTheme.colorScheme.primary)
+                    Icon(
+                        Icons.AutoMirrored.Filled.Send, 
+                        contentDescription = "Send", 
+                        tint = if (!isLoading && pendingEntry == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                    )
                 }
             }
         }
     ) { padding ->
-        if (messages.isEmpty()) {
-            Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    "Tell me what you ate -- in English, Bangla, or Banglish. e.g. \"ami 2 ta porota r ek cup cha khaisi\"",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(24.dp),
-                    fontSize = 14.sp
-                )
+        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+            if (messages.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        "Tell me what you ate -- in English, Bangla, or Banglish. e.g. \"ami 2 ta porota r ek cup cha khaisi\"",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(24.dp),
+                        fontSize = 14.sp
+                    )
+                }
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(messages) { msg ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = if (msg.isUser) Arrangement.End else Arrangement.Start
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(if (msg.isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                            ) {
+                                Text(
+                                    text = msg.text,
+                                    color = if (msg.isUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
+                    item { Spacer(modifier = Modifier.height(8.dp)) }
+                }
             }
-        } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.padding(padding).fillMaxSize().padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                items(messages) { msg ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = if (msg.isUser) Arrangement.End else Arrangement.Start
+
+            // Overlay for pending food review
+            pendingEntry?.let { entry ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.75f))
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(24.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(if (msg.isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                                .padding(horizontal = 14.dp, vertical = 10.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = msg.text,
-                                color = if (msg.isUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                                fontSize = 14.sp
+                                "Review Meal",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
+                            IconButton(onClick = { viewModel.discardPendingFoodLog() }) {
+                                Icon(Icons.Default.Close, contentDescription = "Close")
+                            }
+                        }
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 12.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+
+                        Text(
+                            text = "${entry.name} (${entry.calories} kcal)\n\nCategory: ${entry.category} • Meal: ${entry.mealType}${if (entry.description.isNotBlank()) "\n\n" + entry.description else ""}",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 15.sp,
+                            modifier = Modifier.verticalScroll(rememberScrollState()).weight(1f, fill = false)
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(horizontal = 8.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceAround
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Carbs", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("${entry.carbsG.toInt()}g", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Protein", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("${entry.proteinG.toInt()}g", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Fat", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("${entry.fatG.toInt()}g", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            onClick = {
+                                viewModel.confirmPendingFoodLog()
+                            },
+                            modifier = Modifier.fillMaxWidth().height(50.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Text("Awesome! Log this meal")
                         }
                     }
                 }
-                item { Spacer(modifier = Modifier.height(8.dp)) }
             }
         }
     }

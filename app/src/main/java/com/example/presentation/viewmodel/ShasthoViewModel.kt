@@ -1592,13 +1592,54 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     private val _foodChatLoggedConfirmation = MutableStateFlow<String?>(null)
     val foodChatLoggedConfirmation: StateFlow<String?> = _foodChatLoggedConfirmation.asStateFlow()
 
+    private val _pendingFoodLogEntry = MutableStateFlow<PendingFoodLogEntry?>(null)
+    val pendingFoodLogEntry: StateFlow<PendingFoodLogEntry?> = _pendingFoodLogEntry.asStateFlow()
+
+    fun confirmPendingFoodLog() {
+        val entry = _pendingFoodLogEntry.value ?: return
+        logScannedFood(
+            name = entry.name,
+            category = entry.category,
+            calories = entry.calories,
+            description = entry.description,
+            mealType = entry.mealType,
+            carbsG = entry.carbsG,
+            proteinG = entry.proteinG,
+            fatG = entry.fatG,
+            sodiumMg = entry.sodiumMg,
+            sugarG = entry.sugarG,
+            fiberG = entry.fiberG
+        )
+        _foodChatLoggedConfirmation.value = "${entry.name} logged -- ${entry.calories} kcal"
+        _pendingFoodLogEntry.value = null
+    }
+
+    fun discardPendingFoodLog() {
+        _pendingFoodLogEntry.value = null
+    }
+
     fun clearFoodChatLoggedConfirmation() {
         _foodChatLoggedConfirmation.value = null
     }
 
     fun resetFoodChat() {
         _foodChatHistory.value = emptyList()
+        _pendingFoodLogEntry.value = null
     }
+
+    data class PendingFoodLogEntry(
+        val name: String,
+        val category: String,
+        val calories: Int,
+        val description: String,
+        val mealType: String,
+        val carbsG: Float,
+        val proteinG: Float,
+        val fatG: Float,
+        val sodiumMg: Float,
+        val sugarG: Float,
+        val fiberG: Float
+    )
 
     fun sendFoodChatMessage(message: String) {
         viewModelScope.launch {
@@ -1623,7 +1664,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     val jsonPart = accumulated.substringAfter("READY_TO_LOG").trim()
                     try {
                         val json = org.json.JSONObject(jsonPart)
-                        logScannedFood(
+                        _pendingFoodLogEntry.value = PendingFoodLogEntry(
                             name = json.optString("name", "Food"),
                             category = json.optString("category", "Meal"),
                             calories = json.optInt("calories", 0),
@@ -1636,7 +1677,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                             sugarG = json.optDouble("sugar", 0.0).toFloat(),
                             fiberG = json.optDouble("fiber", 0.0).toFloat()
                         )
-                        _foodChatLoggedConfirmation.value = "${json.optString("name", "Food")} logged -- ${json.optInt("calories", 0)} kcal"
                     } catch (e: Exception) {
                         // Model didn't return valid JSON this turn -- leave the chat text as-is, no log happens.
                     }
