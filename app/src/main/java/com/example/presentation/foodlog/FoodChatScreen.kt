@@ -1,6 +1,11 @@
 package com.example.presentation.foodlog
 
+import android.app.Activity
+import android.content.Intent
+import android.speech.RecognizerIntent
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,8 +29,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.presentation.viewmodel.ShasthoViewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun FoodChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
     val messages by viewModel.foodChatHistory.collectAsState()
@@ -34,6 +43,33 @@ fun FoodChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {})
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val context = androidx.compose.ui.platform.LocalContext.current
+
+    val micPermissionState = rememberPermissionState(android.Manifest.permission.RECORD_AUDIO)
+
+    val speechRecognizerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val spokenText = result.data
+                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()
+            if (!spokenText.isNullOrBlank()) {
+                input = if (input.isBlank()) spokenText else "$input $spokenText"
+            }
+        }
+    }
+
+    fun launchVoiceInput() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Ki khaisen? / What did you eat?")
+        }
+        try {
+            speechRecognizerLauncher.launch(intent)
+        } catch (e: Exception) {
+            android.widget.Toast.makeText(context, "Voice input isn't available on this device.", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
 
     BackHandler(enabled = pendingEntry != null) {
         viewModel.discardPendingFoodLog()
@@ -47,6 +83,12 @@ fun FoodChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {})
         loggedConfirmation?.let {
             android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_LONG).show()
             viewModel.clearFoodChatLoggedConfirmation()
+        }
+    }
+    LaunchedEffect(micPermissionState.status) {
+        if (micPermissionState.status.isGranted) {
+            // Permission just became granted -- no auto-launch here to avoid surprising the
+            // user with a mic prompt they didn't just tap for; they'll tap the mic again.
         }
     }
 
@@ -67,6 +109,22 @@ fun FoodChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {})
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                IconButton(
+                    onClick = {
+                        if (micPermissionState.status.isGranted) {
+                            launchVoiceInput()
+                        } else {
+                            micPermissionState.launchPermissionRequest()
+                        }
+                    },
+                    enabled = !isLoading && pendingEntry == null
+                ) {
+                    Icon(
+                        Icons.Default.Mic,
+                        contentDescription = "Voice input",
+                        tint = if (!isLoading && pendingEntry == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                    )
+                }
                 OutlinedTextField(
                     value = input,
                     onValueChange = { input = it },
