@@ -70,7 +70,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
         while (true) {
             delay(10_000L)
             if (HealthConnectManager.hasAnyPermissions(navController.context)) {
-                viewModel.syncWithHealthConnect(navController.context)
+                viewModel.syncWithHealthConnect(navController.context, showRefreshIndicator = false)
             }
         }
     }

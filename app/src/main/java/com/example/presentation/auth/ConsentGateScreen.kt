@@ -2,6 +2,8 @@ package com.example.presentation.auth
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,6 +17,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.LegalContent
 import com.example.presentation.settings.LegalDocumentScreen
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ConsentGateScreen(
     onAccept: () -> Unit,
@@ -62,22 +65,27 @@ fun ConsentGateScreen(
                     checked = hasChecked,
                     onCheckedChange = { hasChecked = it }
                 )
-                Text("I agree to the ", fontSize = 12.sp)
-                Text(
-                    "Privacy Policy",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { showPrivacyPolicy = true }
-                )
-                Text(" and ", fontSize = 12.sp)
-                Text(
-                    "Terms of Service",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { showTerms = true }
-                )
+                FlowRow(
+                    verticalArrangement = Arrangement.spacedBy(0.dp),
+                    horizontalArrangement = Arrangement.spacedBy(0.dp)
+                ) {
+                    Text("I agree to the ", fontSize = 12.sp)
+                    Text(
+                        "Privacy Policy",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { showPrivacyPolicy = true }
+                    )
+                    Text(" and ", fontSize = 12.sp)
+                    Text(
+                        "Terms of Service",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { showTerms = true }
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
