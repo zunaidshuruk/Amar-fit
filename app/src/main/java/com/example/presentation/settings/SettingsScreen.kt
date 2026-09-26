@@ -58,7 +58,8 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit = {},
     onLogout: () -> Unit = {},
     onNavigateToHealthGoals: () -> Unit = {},
-    onNavigateToFriends: () -> Unit = {}
+    onNavigateToFriends: () -> Unit = {},
+    onNavigateToAbout: () -> Unit = {}
 ) {
     val profile by viewModel.userProfile.collectAsState()
     val isDark = true
@@ -736,6 +737,22 @@ fun SettingsScreen(
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = "Friends",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateToAbout() }
+                        .padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("About", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "About",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

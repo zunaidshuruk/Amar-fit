@@ -54,11 +54,13 @@ import com.example.presentation.nutrition.NutritionScreen
 import com.example.presentation.onboarding.OnboardingScreen
 import com.example.presentation.recipe.RecipeScreen
 import com.example.presentation.scanner.ScannerScreen
+import com.example.presentation.settings.AboutScreen
 import com.example.presentation.settings.HealthGoalsScreen
+import com.example.presentation.settings.LegalDocumentScreen
+import com.example.presentation.settings.SettingsScreen
 import com.example.presentation.social.DirectMessageScreen
 import com.example.presentation.social.FriendsScreen
 import com.example.presentation.social.LeaderboardScreen
-import com.example.presentation.settings.SettingsScreen
 import com.example.presentation.sleep.SleepScreen
 import com.example.presentation.today.TodayScreen
 import com.example.presentation.viewmodel.ShasthoViewModel
@@ -146,7 +148,12 @@ class MainActivity : ComponentActivity() {
                 sessionChecked = true
             } else {
                 viewModel.syncDataOnLogin { hasValidProfile ->
-                    initialRoute = if (hasValidProfile) TabScreen.Today.route else "onboarding"
+                    initialRoute = if (!hasValidProfile) {
+                        "onboarding"
+                    } else {
+                        val profile = viewModel.userProfile.value
+                        if (profile != null && !profile.hasAcceptedPrivacyPolicy) "privacy_consent" else TabScreen.Today.route
+                    }
                     sessionChecked = true
                 }
             }
@@ -376,7 +383,54 @@ class MainActivity : ComponentActivity() {
                   composable("badges") { BadgeGalleryScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("recipe") { RecipeScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("foodlog") { FoodLogScreen(viewModel = viewModel, navController = navController, onNavigateToScanner = { navController.navigate("scanner") }, onNavigateBack = { navController.popBackStack() }) }
-                  composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }, onNavigateToHealthGoals = { navController.navigate("health_goals") }, onNavigateToFriends = { navController.navigate("friends") }) }
+                  composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }, onNavigateToHealthGoals = { navController.navigate("health_goals") }, onNavigateToFriends = { navController.navigate("friends") }, onNavigateToAbout = { navController.navigate("about") }) }
+                  composable("privacy_consent") {
+                      var accepted by remember { mutableStateOf(false) }
+                      val coroutineScope = rememberCoroutineScope()
+                      Scaffold { padding ->
+                          Column(modifier = Modifier.padding(padding).fillMaxSize().padding(20.dp)) {
+                              Text("Updated Privacy Policy & Terms", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                              Spacer(modifier = Modifier.height(12.dp))
+                              Text("Please review and accept our Privacy Policy and Terms of Service to continue using KardIQ.", fontSize = 14.sp)
+                              Spacer(modifier = Modifier.height(16.dp))
+                              Row(verticalAlignment = Alignment.CenterVertically) {
+                                  Checkbox(checked = accepted, onCheckedChange = { accepted = it })
+                                  Text("I agree to the Privacy Policy and Terms of Service", fontSize = 13.sp)
+                              }
+                              Spacer(modifier = Modifier.height(16.dp))
+                              Button(
+                                  onClick = {
+                                      val profile = viewModel.userProfile.value
+                                      if (profile != null) {
+                                          coroutineScope.launch {
+                                              viewModel.saveProfile(profile.copy(hasAcceptedPrivacyPolicy = true))
+                                          }
+                                      }
+                                      navController.navigate(TabScreen.Today.route) {
+                                          popUpTo("privacy_consent") { inclusive = true }
+                                      }
+                                  },
+                                  enabled = accepted,
+                                  modifier = Modifier.fillMaxWidth().height(56.dp)
+                              ) {
+                                  Text("Continue")
+                              }
+                          }
+                      }
+                  }
+                  composable("about") {
+                      AboutScreen(
+                          onNavigateBack = { navController.popBackStack() },
+                          onNavigateToPrivacyPolicy = { navController.navigate("privacy_policy") },
+                          onNavigateToTerms = { navController.navigate("terms_of_service") }
+                      )
+                  }
+                  composable("privacy_policy") {
+                      LegalDocumentScreen(title = "Privacy Policy", content = com.example.data.model.LegalContent.PRIVACY_POLICY, onNavigateBack = { navController.popBackStack() })
+                  }
+                  composable("terms_of_service") {
+                      LegalDocumentScreen(title = "Terms of Service", content = com.example.data.model.LegalContent.TERMS_OF_SERVICE, onNavigateBack = { navController.popBackStack() })
+                  }
                   composable("health_goals") { HealthGoalsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("friends") { FriendsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onNavigateToLeaderboard = { navController.navigate("leaderboard") }, onNavigateToDm = { pairId, name -> navController.navigate("dm/$pairId/$name") }) }
                   composable("food_chat") { FoodChatScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }

@@ -33,6 +33,7 @@ data class UserProfile(
     val currentStreak: Int = 0,
     val points: Int = 0,
     val badges: String = "", 
+    val hasAcceptedPrivacyPolicy: Boolean = false,
     val friendCode: String = "",
     val lastActiveDate: String = "",
     val profilePictureUri: String? = null,

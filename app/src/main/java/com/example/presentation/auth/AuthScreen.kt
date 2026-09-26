@@ -38,6 +38,8 @@ import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import kotlinx.coroutines.launch
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,6 +54,9 @@ fun AuthScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLogin by remember { mutableStateOf(true) }
+    var hasAcceptedTerms by remember { mutableStateOf(false) }
+    var showPrivacyPolicyFromAuth by remember { mutableStateOf(false) }
+    var showTermsFromAuth by remember { mutableStateOf(false) }
     
     val uiState by authViewModel.uiState.collectAsState()
     val isLoading = uiState is com.example.presentation.auth.AuthUiState.Loading
@@ -400,6 +405,31 @@ fun AuthScreen(
                     ) {
                         Text("Forgot Password?", fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
                     }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(checked = hasAcceptedTerms, onCheckedChange = { hasAcceptedTerms = it })
+                        Column {
+                            Row {
+                                Text("I agree to the ", fontSize = 12.sp)
+                                Text(
+                                    "Privacy Policy",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.clickable { showPrivacyPolicyFromAuth = true }
+                                )
+                                Text(" and ", fontSize = 12.sp)
+                            }
+                            Text(
+                                "Terms of Service",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.clickable { showTermsFromAuth = true }
+                            )
+                        }
+                    }
                 }
                 
                 Button(
@@ -415,7 +445,7 @@ fun AuthScreen(
                         .height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(12.dp),
-                    enabled = !isLoading
+                    enabled = !isLoading && (isLogin || hasAcceptedTerms)
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
@@ -500,6 +530,25 @@ fun AuthScreen(
                     )
                 }
             }
+        }
+    }
+
+    if (showPrivacyPolicyFromAuth) {
+        Dialog(onDismissRequest = { showPrivacyPolicyFromAuth = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            com.example.presentation.settings.LegalDocumentScreen(
+                title = "Privacy Policy",
+                content = com.example.data.model.LegalContent.PRIVACY_POLICY,
+                onNavigateBack = { showPrivacyPolicyFromAuth = false }
+            )
+        }
+    }
+    if (showTermsFromAuth) {
+        Dialog(onDismissRequest = { showTermsFromAuth = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            com.example.presentation.settings.LegalDocumentScreen(
+                title = "Terms of Service",
+                content = com.example.data.model.LegalContent.TERMS_OF_SERVICE,
+                onNavigateBack = { showTermsFromAuth = false }
+            )
         }
     }
 }

@@ -395,6 +395,7 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
                         healthGoals = if (finalGoals.isEmpty()) "Stay healthy" else finalGoals.joinToString(", "),
                         dailyCalorieLimit = 2000,
                         dailyWaterLimitLiters = 3.0f,
+                        hasAcceptedPrivacyPolicy = true,
                         currentStreak = 1
                     )
                     
