@@ -411,24 +411,20 @@ fun AuthScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(checked = hasAcceptedTerms, onCheckedChange = { hasAcceptedTerms = it })
-                        Column {
-                            Row {
-                                Text("I agree to the ", fontSize = 12.sp)
-                                Text(
-                                    "Privacy Policy",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.clickable { showPrivacyPolicyFromAuth = true }
-                                )
-                                Text(" and ", fontSize = 12.sp)
-                            }
-                            Text(
-                                "Terms of Service",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.clickable { showTermsFromAuth = true }
-                            )
-                        }
+                        Text("I agree to the ", fontSize = 11.sp)
+                        Text(
+                            "Privacy Policy",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable { showPrivacyPolicyFromAuth = true }
+                        )
+                        Text(" and ", fontSize = 11.sp)
+                        Text(
+                            "Terms of Service",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable { showTermsFromAuth = true }
+                        )
                     }
                 }
                 

@@ -594,6 +594,13 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         )
     }
 
+    fun acceptPrivacyPolicy() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val current = userProfile.value ?: return@launch
+            saveProfile(current.copy(hasAcceptedPrivacyPolicy = true))
+        }
+    }
+
     suspend fun saveProfile(profile: UserProfile): Boolean {
         return try {
             val updatedProfile = recalculateAutoGoals(profile)

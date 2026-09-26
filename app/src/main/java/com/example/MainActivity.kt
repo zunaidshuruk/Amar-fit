@@ -385,38 +385,21 @@ class MainActivity : ComponentActivity() {
                   composable("foodlog") { FoodLogScreen(viewModel = viewModel, navController = navController, onNavigateToScanner = { navController.navigate("scanner") }, onNavigateBack = { navController.popBackStack() }) }
                   composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }, onNavigateToHealthGoals = { navController.navigate("health_goals") }, onNavigateToFriends = { navController.navigate("friends") }, onNavigateToAbout = { navController.navigate("about") }) }
                   composable("privacy_consent") {
-                      var accepted by remember { mutableStateOf(false) }
-                      val coroutineScope = rememberCoroutineScope()
-                      Scaffold { padding ->
-                          Column(modifier = Modifier.padding(padding).fillMaxSize().padding(20.dp)) {
-                              Text("Updated Privacy Policy & Terms", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                              Spacer(modifier = Modifier.height(12.dp))
-                              Text("Please review and accept our Privacy Policy and Terms of Service to continue using KardIQ.", fontSize = 14.sp)
-                              Spacer(modifier = Modifier.height(16.dp))
-                              Row(verticalAlignment = Alignment.CenterVertically) {
-                                  Checkbox(checked = accepted, onCheckedChange = { accepted = it })
-                                  Text("I agree to the Privacy Policy and Terms of Service", fontSize = 13.sp)
+                      com.example.presentation.auth.ConsentGateScreen(
+                          onAccept = {
+                              viewModel.acceptPrivacyPolicy()
+                              navController.navigate(TabScreen.Today.route) {
+                                  popUpTo("privacy_consent") { inclusive = true }
                               }
-                              Spacer(modifier = Modifier.height(16.dp))
-                              Button(
-                                  onClick = {
-                                      val profile = viewModel.userProfile.value
-                                      if (profile != null) {
-                                          coroutineScope.launch {
-                                              viewModel.saveProfile(profile.copy(hasAcceptedPrivacyPolicy = true))
-                                          }
-                                      }
-                                      navController.navigate(TabScreen.Today.route) {
-                                          popUpTo("privacy_consent") { inclusive = true }
-                                      }
-                                  },
-                                  enabled = accepted,
-                                  modifier = Modifier.fillMaxWidth().height(56.dp)
-                              ) {
-                                  Text("Continue")
+                          },
+                          onDecline = {
+                              viewModel.logout {
+                                  navController.navigate("auth") {
+                                      popUpTo(0) { inclusive = true }
+                                  }
                               }
                           }
-                      }
+                      )
                   }
                   composable("about") {
                       AboutScreen(
