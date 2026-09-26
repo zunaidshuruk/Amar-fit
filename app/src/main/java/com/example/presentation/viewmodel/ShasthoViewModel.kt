@@ -262,6 +262,24 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         initialValue = emptyList()
     )
     
+    private val _updateInfo = MutableStateFlow<com.example.data.repository.UpdateChecker.UpdateInfo?>(null)
+    val updateInfo: StateFlow<com.example.data.repository.UpdateChecker.UpdateInfo?> = _updateInfo.asStateFlow()
+
+    fun checkForAppUpdate() {
+        viewModelScope.launch {
+            val info = com.example.data.repository.UpdateChecker.checkForUpdate(com.example.BuildConfig.VERSION_CODE)
+            _updateInfo.value = info
+        }
+    }
+
+    fun dismissUpdateBanner() {
+        _updateInfo.value = null
+    }
+
+    init {
+        checkForAppUpdate()
+    }
+
     private val _weeklyInsights = MutableStateFlow<String?>(null)
     val weeklyInsights: StateFlow<String?> = _weeklyInsights.asStateFlow()
     
