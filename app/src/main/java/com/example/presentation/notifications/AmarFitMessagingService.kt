@@ -46,7 +46,7 @@ class AmarFitMessagingService : FirebaseMessagingService() {
                 )
             }
             else -> {
-                val title = notification?.title ?: data["title"] ?: "Amar Fit"
+                val title = notification?.title ?: data["title"] ?: "KardIQ"
                 val messageText = notification?.body ?: data["message"] ?: data["body"] ?: "New update available"
                 val targetRoute = data["targetRoute"] ?: data["route"]
                 NotificationHelper.showNotification(

@@ -71,7 +71,7 @@ object UpdateChecker {
         }
 
         val request = DownloadManager.Request(Uri.parse(updateInfo.downloadUrl))
-            .setTitle("Downloading Amar Fit Update")
+            .setTitle("Downloading KardIQ Update")
             .setDescription("Downloading version ${updateInfo.versionName}")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setDestinationUri(Uri.fromFile(destination))
