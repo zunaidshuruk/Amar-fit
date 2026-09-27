@@ -1188,7 +1188,18 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                         if (sessionId.isBlank()) continue
                         if (!repository.hasActivityEventWithExternalId(sessionId)) {
                             val durationMinutes = java.time.Duration.between(session.startTime, session.endTime).toMinutes()
-                            val label = session.title?.takeIf { it.isNotBlank() } ?: "Workout"
+                            val label = session.title?.takeIf { it.isNotBlank() } ?: when (session.exerciseType) {
+                                ExerciseSessionRecord.EXERCISE_TYPE_RUNNING -> "Running"
+                                ExerciseSessionRecord.EXERCISE_TYPE_WALKING -> "Walking"
+                                ExerciseSessionRecord.EXERCISE_TYPE_BIKING -> "Cycling"
+                                ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER,
+                                ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL -> "Swimming"
+                                ExerciseSessionRecord.EXERCISE_TYPE_YOGA -> "Yoga"
+                                ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING -> "Strength Training"
+                                ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING -> "HIIT"
+                                ExerciseSessionRecord.EXERCISE_TYPE_PILATES -> "Pilates"
+                                else -> "Workout"
+                            }
                             repository.logActivityEvent(
                                 type = "workout",
                                 description = "$label (${durationMinutes} min)",
