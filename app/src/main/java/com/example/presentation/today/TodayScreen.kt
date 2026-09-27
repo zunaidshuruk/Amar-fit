@@ -75,10 +75,6 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
         }
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.checkAndGenerateHealthInsight(navController.context)
-    }
-
     var showWaterDialog by remember { mutableStateOf(false) }
     var showLogBottomSheet by remember { mutableStateOf(false) }
 
@@ -88,6 +84,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val metrics by viewModel.getMetricsForDateFlow(selectedDateString).collectAsState(initial = null)
     val last7Metrics by viewModel.getMetricsHistoryFlow(7).collectAsState(initial = emptyList())
     val healthInsight by viewModel.healthInsight.collectAsState()
+    val isLoadingHealthInsight by viewModel.isLoadingHealthInsight.collectAsState()
     val todayFoodLogs by viewModel.getFoodLogsForDateFlow(selectedDateString).collectAsState(initial = emptyList())
     val todayActivityEvents by viewModel.getActivityEventsForDateFlow(selectedDateString).collectAsState(initial = emptyList())
 
@@ -440,21 +437,21 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
             }
         }
 
-        if (healthInsight != null) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(imageVector = Icons.Default.Insights, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                        Text(text = "Today's Insight", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(imageVector = Icons.Default.Insights, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Text(text = "Today's Insight", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                }
+                if (healthInsight != null) {
                     Text(text = healthInsight ?: "", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 20.sp)
                     Text(
                         text = "This is an AI-generated wellness summary, not a medical diagnosis. Consult a healthcare professional for any health concerns.",
@@ -462,6 +459,25 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         lineHeight = 14.sp
                     )
+                    TextButton(
+                        onClick = { viewModel.checkAndGenerateHealthInsight(navController.context) },
+                        enabled = !isLoadingHealthInsight
+                    ) {
+                        Text(if (isLoadingHealthInsight) "Refreshing..." else "Refresh")
+                    }
+                } else if (isLoadingHealthInsight) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Text("Generating your insight...", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else {
+                    Text("Get a personalized wellness summary based on your recent activity.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Button(
+                        onClick = { viewModel.checkAndGenerateHealthInsight(navController.context) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Get Today's Insight")
+                    }
                 }
             }
         }

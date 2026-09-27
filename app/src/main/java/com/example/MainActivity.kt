@@ -130,9 +130,6 @@ class MainActivity : ComponentActivity() {
                  } else {
                      com.example.presentation.notifications.ReminderManager.cancelMealReminders(this@MainActivity)
                  }
-                 if (userProfile?.notificationsEnabled != false) {
-                     viewModel.checkNutritionalDeficiencies(this@MainActivity)
-                 }
              }
         }
         

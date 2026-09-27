@@ -1507,6 +1507,9 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     private val _healthInsight = MutableStateFlow<String?>(null)
     val healthInsight: StateFlow<String?> = _healthInsight.asStateFlow()
 
+    private val _isLoadingHealthInsight = MutableStateFlow(false)
+    val isLoadingHealthInsight: StateFlow<Boolean> = _isLoadingHealthInsight.asStateFlow()
+
     fun checkAndGenerateHealthInsight(context: android.content.Context) {
         viewModelScope.launch {
             val sharedPrefs = context.getSharedPreferences("ShasthoPrefs", android.content.Context.MODE_PRIVATE)
@@ -1517,15 +1520,20 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 _healthInsight.value = cachedText
                 return@launch
             }
-            val profile = userProfile.filterNotNull().first()
-            val metrics = getMetricsHistoryFlow(7).first()
-            val foodLogs = repository.getRecentFoodLogs().first()
-            val insight = repository.generateHealthInsight(profile, metrics, foodLogs)
-            _healthInsight.value = insight
-            sharedPrefs.edit()
-                .putLong("last_health_insight_check", now)
-                .putString("cached_health_insight_text", insight)
-                .apply()
+            _isLoadingHealthInsight.value = true
+            try {
+                val profile = userProfile.filterNotNull().first()
+                val metrics = getMetricsHistoryFlow(7).first()
+                val foodLogs = repository.getRecentFoodLogs().first()
+                val insight = repository.generateHealthInsight(profile, metrics, foodLogs)
+                _healthInsight.value = insight
+                sharedPrefs.edit()
+                    .putLong("last_health_insight_check", now)
+                    .putString("cached_health_insight_text", insight)
+                    .apply()
+            } finally {
+                _isLoadingHealthInsight.value = false
+            }
         }
     }
 

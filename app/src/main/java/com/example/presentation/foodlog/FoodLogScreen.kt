@@ -43,6 +43,7 @@ import com.example.ui.theme.*
 import com.example.ui.components.MarkdownText
 import com.example.ui.components.MealTypeSelector
 import androidx.compose.material.icons.filled.AutoGraph
+import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -572,6 +573,18 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, navController: androidx.navigatio
                                 Icon(Icons.Default.AutoGraph, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Generate AI Insights", fontWeight = FontWeight.SemiBold)
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = {
+                                    viewModel.checkNutritionalDeficiencies(context)
+                                    android.widget.Toast.makeText(context, "Checking your recent logs for nutritional deficiencies...", android.widget.Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.HealthAndSafety, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Check for Deficiencies")
                             }
                         }
                     }
