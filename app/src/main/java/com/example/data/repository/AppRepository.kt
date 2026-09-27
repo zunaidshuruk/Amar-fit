@@ -1343,11 +1343,12 @@ class AppRepository(
         val tools = buildAssistantToolsJson()
         var iterations = 0
 
-        while (iterations < 5) {
-            iterations++
-            val responseJson = executeRawGeminiCall(contents, systemInstruction, tools)
-            val candidate = responseJson.optJSONArray("candidates")?.optJSONObject(0)
-                ?: return@withContext AssistantResult.Text("Sorry, I couldn't process that. Please try again.")
+        try {
+            while (iterations < 5) {
+                iterations++
+                val responseJson = executeRawGeminiCall(contents, systemInstruction, tools)
+                val candidate = responseJson.optJSONArray("candidates")?.optJSONObject(0)
+                    ?: return@withContext AssistantResult.Text("Sorry, I couldn't process that. Please try again.")
             val contentObj = candidate.optJSONObject("content")
             val parts = contentObj?.optJSONArray("parts")
             val firstPart = parts?.optJSONObject(0)
@@ -1428,6 +1429,37 @@ class AppRepository(
             return@withContext AssistantResult.Text("Sorry, I couldn't process that. Please try again.")
         }
         AssistantResult.Text("Sorry, that took too many steps to process. Please try rephrasing.")
+        } catch (e: Exception) {
+            // Tool-calling failed outright (e.g. this API key/project doesn't have
+            // function-calling access, separate from ordinary quota limits) --
+            // fall back to a plain conversational reply using the same
+            // already-proven request path every other AI feature in this app
+            // uses, so the assistant still responds instead of showing a raw error.
+            android.util.Log.e("UniversalAssistant", "Tool-calling request failed, falling back to plain chat", e)
+            try {
+                val fallbackSystemInstruction = """
+                    You are KardIQ AI, a friendly health assistant. You can't currently take actions
+                    like logging food or generating a diet chart/workout in this conversation --
+                    just have a normal, helpful conversation and give general guidance based on
+                    what the user tells you. You are not a doctor -- frame suggestions as general
+                    wellness guidance, never a diagnosis, and never claim certainty about a medical condition.
+                """.trimIndent()
+                val fallbackRequest = GenerateContentRequest(
+                    contents = (chatHistory + ChatMessage(userMessage, true)).map { msg ->
+                        Content(role = if (msg.isUser) "user" else "model", parts = listOf(Part(text = msg.text)))
+                    },
+                    systemInstruction = Content(parts = listOf(Part(text = fallbackSystemInstruction)))
+                )
+                val fallbackResponse = executeGeminiCallWithBackoff(fallbackRequest)
+                val fallbackText = fallbackResponse.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
+                AssistantResult.Text(
+                    (fallbackText ?: "Sorry, I couldn't process that. Please try again.") +
+                        "\n\n(Note: I can't take actions like logging food or generating plans right now -- just chatting for the moment.)"
+                )
+            } catch (fallbackError: Exception) {
+                AssistantResult.Text("Sorry, something went wrong: ${fallbackError.message ?: fallbackError.toString()}")
+            }
+        }
     }
 
 
