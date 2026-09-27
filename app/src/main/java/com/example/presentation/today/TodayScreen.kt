@@ -625,41 +625,6 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
             )
         }
 
-        // AI Chat / Coach Entry Point
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .shadow(2.dp, RoundedCornerShape(20.dp))
-                .clip(RoundedCornerShape(20.dp))
-                .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface)
-                .clickable { navController.navigate("chat") }
-                .padding(20.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Emerald50),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(imageVector = Icons.Default.ChatBubbleOutline, contentDescription = "AI Assistant", tint = if (isDark) MaterialTheme.colorScheme.primary else Primary)
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "Ask AI Assistant", color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text(text = "Get instant diet & health answers", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
-                    }
-                }
-                Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Go", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-
         // Today's Activity Timeline Feed
         Text(
             text = "Today's activity",
