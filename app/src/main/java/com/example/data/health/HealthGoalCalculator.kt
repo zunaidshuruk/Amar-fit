@@ -70,6 +70,22 @@ object HealthGoalCalculator {
         return ((tdee / 50f).roundToInt() * 50)
     }
 
+    data class MacroGoals(val carbsG: Int, val proteinG: Int, val fatG: Int)
+
+    /**
+     * Derives daily macro gram targets from the calorie goal using a standard
+     * general-purpose split (45% carbs / 25% protein / 30% fat of total
+     * calories), since UserProfile has no separately-stored macro goals.
+     * Carbs and protein = 4 kcal/g, fat = 9 kcal/g.
+     */
+    fun calculateMacroGoals(profile: UserProfile): MacroGoals {
+        val calorieGoal = if (profile.dailyCalorieLimit > 0) profile.dailyCalorieLimit else calculateCalorieGoal(profile)
+        val carbsG = ((calorieGoal * 0.45f) / 4f).roundToInt()
+        val proteinG = ((calorieGoal * 0.25f) / 4f).roundToInt()
+        val fatG = ((calorieGoal * 0.30f) / 9f).roundToInt()
+        return MacroGoals(carbsG = carbsG, proteinG = proteinG, fatG = fatG)
+    }
+
     enum class HeartRateZone { PEAK, VIGOROUS, MODERATE, LIGHT, RESTING }
 
     fun maxHeartRate(age: Int): Int = if (age > 0) 220 - age else 190
