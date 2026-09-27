@@ -9,6 +9,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.MonitorHeart
@@ -63,6 +64,7 @@ fun SleepScreen(viewModel: ShasthoViewModel, navController: NavController) {
         Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -123,6 +125,8 @@ fun SleepScreen(viewModel: ShasthoViewModel, navController: NavController) {
             accent = coachAccent,
             onClick = { navController.navigate("coach") }
         )
+
+        Spacer(modifier = Modifier.height(100.dp))
     }
     }
 
