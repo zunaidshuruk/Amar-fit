@@ -1185,34 +1185,34 @@ class AppRepository(
             }
         }
 
+        fun parameterless(name: String, description: String): org.json.JSONObject {
+            return org.json.JSONObject().apply {
+                put("name", name)
+                put("description", description)
+                put("parameters", org.json.JSONObject().apply {
+                    put("type", "OBJECT")
+                    put("properties", org.json.JSONObject())
+                    put("required", org.json.JSONArray())
+                })
+            }
+        }
+
         val declarations = org.json.JSONArray()
 
-        declarations.put(org.json.JSONObject().apply {
-            put("name", "read_health_data")
-            put("description", "Reads the user's recent health metrics (steps, sleep, heart rate, blood pressure, blood glucose, weight, water, calories, macros) and recent food logs. Call this whenever you need real data about the user to give an accurate, personalized answer or suggestion -- do not guess or assume their numbers.")
-            put("parameters", org.json.JSONObject().apply {
-                put("type", "OBJECT")
-                put("properties", org.json.JSONObject())
-            })
-        })
+        declarations.put(parameterless(
+            "read_health_data",
+            "Reads the user's recent health metrics (steps, sleep, heart rate, blood pressure, blood glucose, weight, water, calories, macros) and recent food logs. Call this whenever you need real data about the user to give an accurate, personalized answer or suggestion -- do not guess or assume their numbers."
+        ))
 
-        declarations.put(org.json.JSONObject().apply {
-            put("name", "get_health_insight")
-            put("description", "Generates a personalized wellness insight summary based on the user's recent health data trends.")
-            put("parameters", org.json.JSONObject().apply {
-                put("type", "OBJECT")
-                put("properties", org.json.JSONObject())
-            })
-        })
+        declarations.put(parameterless(
+            "get_health_insight",
+            "Generates a personalized wellness insight summary based on the user's recent health data trends."
+        ))
 
-        declarations.put(org.json.JSONObject().apply {
-            put("name", "get_glucose_guidance")
-            put("description", "Generates lifestyle suggestions for managing or lowering blood glucose, based on the user's recent health data.")
-            put("parameters", org.json.JSONObject().apply {
-                put("type", "OBJECT")
-                put("properties", org.json.JSONObject())
-            })
-        })
+        declarations.put(parameterless(
+            "get_glucose_guidance",
+            "Generates lifestyle suggestions for managing or lowering blood glucose, based on the user's recent health data."
+        ))
 
         declarations.put(org.json.JSONObject().apply {
             put("name", "generate_diet_chart")
@@ -1226,14 +1226,10 @@ class AppRepository(
             })
         })
 
-        declarations.put(org.json.JSONObject().apply {
-            put("name", "generate_workout")
-            put("description", "Generates a personalized structured workout plan (warmup, main exercises, cooldown) for the user.")
-            put("parameters", org.json.JSONObject().apply {
-                put("type", "OBJECT")
-                put("properties", org.json.JSONObject())
-            })
-        })
+        declarations.put(parameterless(
+            "generate_workout",
+            "Generates a personalized structured workout plan (warmup, main exercises, cooldown) for the user."
+        ))
 
         declarations.put(org.json.JSONObject().apply {
             put("name", "generate_recipe")
@@ -1276,8 +1272,11 @@ class AppRepository(
         systemInstruction: String,
         tools: org.json.JSONArray
     ): org.json.JSONObject = withContext(Dispatchers.IO) {
-        val apiKeys = resolveApiKeys()
-        if (apiKeys.isEmpty()) throw Exception("No Gemini API key configured.")
+        val youtubeKey = try { BuildConfig.YOUTUBE_API_KEY } catch (e: Throwable) { null }
+        val apiKeys = resolveApiKeys().filter { key ->
+            key.isNotBlank() && (youtubeKey.isNullOrBlank() || key != youtubeKey)
+        }
+        if (apiKeys.isEmpty()) throw Exception("No valid Gemini API key configured. Please configure GEMINI_API_KEY in the Secrets panel.")
 
         val requestBody = org.json.JSONObject().apply {
             put("contents", contents)
@@ -1288,24 +1287,38 @@ class AppRepository(
         }
 
         var lastError: Exception? = null
-        for (apiKey in apiKeys) {
-            try {
-                val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
-                val requestBodyOkHttp = requestBody.toString()
-                    .toRequestBody("application/json; charset=UTF-8".toMediaTypeOrNull())
-                val request = okhttp3.Request.Builder()
-                    .url(url)
-                    .post(requestBodyOkHttp)
-                    .build()
-                val response = RetrofitClient.okHttpClient.newCall(request).execute()
-                val bodyString = response.body?.string() ?: ""
-                if (!response.isSuccessful) {
-                    throw Exception("HTTP ${response.code}: $bodyString")
+        var currentDelay = 1000L
+        val maxRetries = 2
+
+        for (attempt in 0..maxRetries) {
+            for (apiKey in apiKeys) {
+                try {
+                    val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
+                    val requestBodyOkHttp = requestBody.toString()
+                        .toRequestBody("application/json; charset=UTF-8".toMediaTypeOrNull())
+                    val request = okhttp3.Request.Builder()
+                        .url(url)
+                        .post(requestBodyOkHttp)
+                        .build()
+                    val response = RetrofitClient.okHttpClient.newCall(request).execute()
+                    val bodyString = response.body?.string() ?: ""
+                    if (!response.isSuccessful) {
+                        val code = response.code
+                        if (code == 429 || code == 403 || code == 503) {
+                            lastError = Exception("HTTP $code: $bodyString")
+                            continue // try next key
+                        }
+                        throw Exception("HTTP $code: $bodyString")
+                    }
+                    return@withContext org.json.JSONObject(bodyString)
+                } catch (e: Exception) {
+                    lastError = e
+                    continue
                 }
-                return@withContext org.json.JSONObject(bodyString)
-            } catch (e: Exception) {
-                lastError = e
-                continue
+            }
+            if (attempt < maxRetries) {
+                kotlinx.coroutines.delay(currentDelay)
+                currentDelay *= 2
             }
         }
         throw lastError ?: Exception("All Gemini API keys failed.")
@@ -1329,16 +1342,46 @@ class AppRepository(
         """.trimIndent()
 
         val contents = org.json.JSONArray()
+        val rawMessages = mutableListOf<ChatMessage>()
         for (msg in chatHistory) {
+            if (msg.text.isNotBlank()) rawMessages.add(msg)
+        }
+        if (userMessage.isNotBlank()) {
+            rawMessages.add(ChatMessage(userMessage, true))
+        }
+
+        var currentRole: String? = null
+        var currentParts = org.json.JSONArray()
+
+        for (msg in rawMessages) {
+            val role = if (msg.isUser) "user" else "model"
+            if (contents.length() == 0 && role != "user") {
+                // Gemini requires the conversation to begin with a user turn
+                continue
+            }
+            if (role == currentRole) {
+                currentParts.put(org.json.JSONObject().put("text", msg.text))
+            } else {
+                if (currentRole != null && currentParts.length() > 0) {
+                    val prevRole = currentRole
+                    val prevParts = currentParts
+                    contents.put(org.json.JSONObject().apply {
+                        put("role", prevRole)
+                        put("parts", prevParts)
+                    })
+                }
+                currentRole = role
+                currentParts = org.json.JSONArray().put(org.json.JSONObject().put("text", msg.text))
+            }
+        }
+        if (currentRole != null && currentParts.length() > 0) {
+            val lastRole = currentRole
+            val lastParts = currentParts
             contents.put(org.json.JSONObject().apply {
-                put("role", if (msg.isUser) "user" else "model")
-                put("parts", org.json.JSONArray().put(org.json.JSONObject().put("text", msg.text)))
+                put("role", lastRole)
+                put("parts", lastParts)
             })
         }
-        contents.put(org.json.JSONObject().apply {
-            put("role", "user")
-            put("parts", org.json.JSONArray().put(org.json.JSONObject().put("text", userMessage)))
-        })
 
         val tools = buildAssistantToolsJson()
         var iterations = 0
@@ -1358,11 +1401,15 @@ class AppRepository(
                 val fnName = functionCall.optString("name")
                 val fnArgs = functionCall.optJSONObject("args") ?: org.json.JSONObject()
 
-                // Echo the model's function-call turn back into the conversation.
-                contents.put(org.json.JSONObject().apply {
-                    put("role", "model")
-                    put("parts", org.json.JSONArray().put(org.json.JSONObject().put("functionCall", functionCall)))
-                })
+                // Echo the exact model turn returned by Gemini into the conversation.
+                if (contentObj != null) {
+                    contents.put(contentObj)
+                } else {
+                    contents.put(org.json.JSONObject().apply {
+                        put("role", "model")
+                        put("parts", org.json.JSONArray().put(org.json.JSONObject().put("functionCall", functionCall)))
+                    })
+                }
 
                 if (fnName == "log_food") {
                     val precedingText = chatHistory.lastOrNull { !it.isUser }?.text ?: ""
@@ -1410,12 +1457,17 @@ class AppRepository(
                     "Error executing $fnName: ${e.message}"
                 }
 
+                val callId = functionCall.optString("id", "")
                 contents.put(org.json.JSONObject().apply {
-                    put("role", "user")
+                    put("role", "function")
                     put("parts", org.json.JSONArray().put(org.json.JSONObject().apply {
                         put("functionResponse", org.json.JSONObject().apply {
+                            if (callId.isNotBlank()) put("id", callId)
                             put("name", fnName)
-                            put("response", org.json.JSONObject().put("content", functionResultText))
+                            put("response", org.json.JSONObject().apply {
+                                put("name", fnName)
+                                put("content", functionResultText)
+                            })
                         })
                     }))
                 })
