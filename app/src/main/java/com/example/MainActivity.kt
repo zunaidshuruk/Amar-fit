@@ -175,6 +175,17 @@ class MainActivity : ComponentActivity() {
             Scaffold(
               modifier = Modifier.fillMaxSize(),
               containerColor = MaterialTheme.colorScheme.background,
+              floatingActionButton = {
+                  if (currentRoute !in setOf("universal_assistant", "foodlog", "food_chat", "scanner")) {
+                      SmallFloatingActionButton(
+                          onClick = { navController.navigate("universal_assistant") },
+                          containerColor = MaterialTheme.colorScheme.primary,
+                          contentColor = MaterialTheme.colorScheme.onPrimary
+                      ) {
+                          Icon(Icons.Default.Chat, contentDescription = "AI Assistant")
+                      }
+                  }
+              },
               topBar = {
                   if (isMainTab) {
                       TopAppBar(
@@ -201,16 +212,6 @@ class MainActivity : ComponentActivity() {
                               }
                           },
                           actions = {
-                              IconButton(
-                                  onClick = { navController.navigate("universal_assistant") },
-                                  modifier = Modifier.padding(end = 4.dp)
-                              ) {
-                                  Icon(
-                                      imageVector = Icons.Default.SmartToy,
-                                      contentDescription = "AI Assistant",
-                                      tint = MaterialTheme.colorScheme.primary
-                                  )
-                              }
                               Box(
                                   modifier = Modifier
                                       .padding(end = 16.dp)
