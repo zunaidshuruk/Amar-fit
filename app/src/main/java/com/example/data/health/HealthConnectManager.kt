@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.DistanceRecord
@@ -18,7 +19,9 @@ import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SkinTemperatureRecord
 import androidx.health.connect.client.records.SleepSessionRecord
+import androidx.health.connect.client.records.SpeedRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 
 object HealthConnectManager {
     val REQUIRED_PERMISSIONS: Set<String> = setOf(
@@ -37,13 +40,19 @@ object HealthConnectManager {
         HealthPermission.getReadPermission(SkinTemperatureRecord::class),
         HealthPermission.getReadPermission(RespiratoryRateRecord::class),
         HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
+        HealthPermission.getReadPermission(SpeedRecord::class),
+        HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
+        HealthPermission.getReadPermission(BasalMetabolicRateRecord::class),
+        HealthPermission.getReadPermission(HydrationRecord::class),
         HealthPermission.getWritePermission(BloodPressureRecord::class),
         HealthPermission.getWritePermission(BloodGlucoseRecord::class),
         HealthPermission.getWritePermission(NutritionRecord::class),
         HealthPermission.getWritePermission(HydrationRecord::class),
         HealthPermission.getWritePermission(SleepSessionRecord::class),
         HealthPermission.getWritePermission(ExerciseSessionRecord::class),
-        HealthPermission.getWritePermission(MindfulnessSessionRecord::class)
+        HealthPermission.getWritePermission(MindfulnessSessionRecord::class),
+        HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class),
+        HealthPermission.getWritePermission(BasalMetabolicRateRecord::class)
     )
 
     fun isAvailable(context: Context): Boolean {
@@ -94,6 +103,9 @@ object HealthConnectManager {
             permission.contains("SkinTemperature", ignoreCase = true) -> "Skin Temperature"
             permission.contains("RespiratoryRate", ignoreCase = true) -> "Respiratory Rate"
             permission.contains("Mindfulness", ignoreCase = true) -> "Mindfulness"
+            permission.contains("Speed", ignoreCase = true) -> "Speed"
+            permission.contains("TotalCaloriesBurned", ignoreCase = true) -> "Total Calories Burned"
+            permission.contains("BasalMetabolicRate", ignoreCase = true) -> "Basal Metabolic Rate"
             else -> permission.substringAfterLast('.').replace("Record", "")
         }
     }
