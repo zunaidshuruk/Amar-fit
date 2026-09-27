@@ -22,17 +22,47 @@ class AppRepository(
     private val savedChatDao: com.example.data.local.SavedChatDao,
     private val activityEventDao: com.example.data.local.ActivityEventDao? = null,
     private val youtubeVideoCacheDao: com.example.data.local.YoutubeVideoCacheDao? = null,
-    private val medicalRecordDao: com.example.data.local.MedicalRecordDao? = null
+    private val medicalRecordDao: com.example.data.local.MedicalRecordDao? = null,
+    private val foodChatDao: com.example.data.local.FoodChatDao? = null
 ) {
 
-    suspend fun logActivityEvent(type: String, description: String, timestamp: Long = System.currentTimeMillis()) {
+    suspend fun logActivityEvent(
+        type: String,
+        description: String,
+        timestamp: Long = System.currentTimeMillis(),
+        source: String = "app",
+        externalId: String? = null
+    ) {
+        if (externalId != null && activityEventDao?.existsByExternalId(externalId) == true) {
+            return
+        }
         activityEventDao?.insert(
             com.example.data.local.ActivityEvent(
                 type = type,
                 description = description,
-                timestamp = timestamp
+                timestamp = timestamp,
+                source = source,
+                externalId = externalId
             )
         )
+    }
+
+    suspend fun saveFoodChatMessage(text: String, isUser: Boolean, timestamp: Long = System.currentTimeMillis()): Long {
+        return foodChatDao?.insert(
+            com.example.data.local.FoodChatMessage(
+                text = text,
+                isUser = isUser,
+                timestamp = timestamp
+            )
+        ) ?: -1L
+    }
+
+    suspend fun getAllFoodChatMessages(): List<com.example.data.local.FoodChatMessage> {
+        return foodChatDao?.getAllMessages() ?: emptyList()
+    }
+
+    fun getFoodChatMessagesFlow(): kotlinx.coroutines.flow.Flow<List<com.example.data.local.FoodChatMessage>> {
+        return foodChatDao?.getAllMessagesFlow() ?: kotlinx.coroutines.flow.flowOf(emptyList())
     }
 
     fun getTodayActivityEvents(startOfDay: Long, endOfDay: Long): kotlinx.coroutines.flow.Flow<List<com.example.data.local.ActivityEvent>> {

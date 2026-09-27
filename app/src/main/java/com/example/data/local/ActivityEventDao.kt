@@ -11,6 +11,9 @@ interface ActivityEventDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(event: ActivityEvent): Long
 
+    @Query("SELECT EXISTS(SELECT 1 FROM activity_events WHERE externalId = :externalId)")
+    suspend fun existsByExternalId(externalId: String): Boolean
+
     @Query("SELECT * FROM activity_events WHERE timestamp >= :startOfDay AND timestamp <= :endOfDay ORDER BY timestamp DESC")
     fun getTodayEvents(startOfDay: Long, endOfDay: Long): Flow<List<ActivityEvent>>
 

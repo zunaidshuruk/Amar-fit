@@ -8,5 +8,7 @@ data class ActivityEvent(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val type: String = "",
     val description: String = "",
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val source: String = "app",
+    val externalId: String? = null
 )

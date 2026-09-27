@@ -148,7 +148,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         database.savedChatDao(),
         database.activityEventDao(),
         database.youtubeVideoCacheDao(),
-        database.medicalRecordDao()
+        database.medicalRecordDao(),
+        database.foodChatDao()
     )
 
     private val startOfDayMillis: Long
@@ -184,9 +185,15 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             initialValue = emptyList()
         )
 
-    fun logActivityEvent(type: String, description: String) {
+    fun logActivityEvent(
+        type: String,
+        description: String,
+        timestamp: Long = System.currentTimeMillis(),
+        source: String = "app",
+        externalId: String? = null
+    ) {
         viewModelScope.launch {
-            repository.logActivityEvent(type, description)
+            repository.logActivityEvent(type, description, timestamp, source, externalId)
         }
     }
 
@@ -278,6 +285,13 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     init {
         checkForAppUpdate()
+        viewModelScope.launch {
+            repository.getFoodChatMessagesFlow().collect { savedList ->
+                if (!_isLoadingFoodChat.value) {
+                    _foodChatHistory.value = savedList.map { ChatMessage(it.text, it.isUser) }
+                }
+            }
+        }
     }
 
     private val _weeklyInsights = MutableStateFlow<String?>(null)
@@ -1153,16 +1167,44 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 var exerciseMinutes = 0
                 if (totalExerciseDuration != null) {
                     exerciseMinutes = totalExerciseDuration.toMinutes().toInt()
-                } else {
-                    // Fallback to readRecords if aggregate is empty
-                    val exerciseResponse = healthConnectClient.readRecords(
-                        ReadRecordsRequest(ExerciseSessionRecord::class, timeRangeFilter)
-                    )
+                }
+
+                val exerciseResponse = healthConnectClient.readRecords(
+                    ReadRecordsRequest(ExerciseSessionRecord::class, timeRangeFilter)
+                )
+                if (totalExerciseDuration == null) {
                     var fallbackMinutes = 0L
                     for (record in exerciseResponse.records) {
                         fallbackMinutes += java.time.Duration.between(record.startTime, record.endTime).toMinutes()
                     }
                     exerciseMinutes = fallbackMinutes.toInt()
+                }
+
+                for (record in exerciseResponse.records) {
+                    val isFromOtherApp = record.metadata.dataOrigin.packageName != context.packageName
+                    if (isFromOtherApp) {
+                        val durationMin = java.time.Duration.between(record.startTime, record.endTime).toMinutes()
+                        val title = record.title?.takeIf { it.isNotBlank() } ?: when (record.exerciseType) {
+                            ExerciseSessionRecord.EXERCISE_TYPE_RUNNING -> "Running"
+                            ExerciseSessionRecord.EXERCISE_TYPE_WALKING -> "Walking"
+                            ExerciseSessionRecord.EXERCISE_TYPE_BIKING -> "Cycling"
+                            ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER,
+                            ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL -> "Swimming"
+                            ExerciseSessionRecord.EXERCISE_TYPE_YOGA -> "Yoga"
+                            ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING -> "Strength Training"
+                            ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING -> "HIIT"
+                            ExerciseSessionRecord.EXERCISE_TYPE_PILATES -> "Pilates"
+                            else -> "Workout"
+                        }
+                        val desc = if (durationMin > 0) "$title ($durationMin min)" else title
+                        repository.logActivityEvent(
+                            type = "workout",
+                            description = desc,
+                            timestamp = record.startTime.toEpochMilli(),
+                            source = "health_connect",
+                            externalId = record.metadata.id
+                        )
+                    }
                 }
 
                 // 8. Nutrition Calories
@@ -1648,7 +1690,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun resetFoodChat() {
-        _foodChatHistory.value = emptyList()
         _pendingFoodLogEntry.value = null
     }
 
@@ -1671,6 +1712,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val newUserMsg = ChatMessage(message, true)
             _foodChatHistory.value = _foodChatHistory.value + newUserMsg
             _isLoadingFoodChat.value = true
+            repository.saveFoodChatMessage(message, true)
 
             val placeholderIndex = _foodChatHistory.value.size
             _foodChatHistory.value = _foodChatHistory.value + ChatMessage("", false)
@@ -1683,6 +1725,11 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     _foodChatHistory.value = _foodChatHistory.value.toMutableList().also {
                         it[placeholderIndex] = ChatMessage(displayText, false)
                     }
+                }
+
+                val finalDisplayText = accumulated.substringBefore("READY_TO_LOG").trim()
+                if (finalDisplayText.isNotBlank()) {
+                    repository.saveFoodChatMessage(finalDisplayText, false)
                 }
 
                 if (accumulated.contains("READY_TO_LOG")) {
@@ -1708,9 +1755,11 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 }
             } catch (e: Exception) {
                 android.util.Log.e("FoodChat", "sendFoodChatMessage failed", e)
+                val errText = "Error: ${e.message ?: e.toString()}"
                 _foodChatHistory.value = _foodChatHistory.value.toMutableList().also {
-                    it[placeholderIndex] = ChatMessage("Error: ${e.message ?: e.toString()}", false)
+                    it[placeholderIndex] = ChatMessage(errText, false)
                 }
+                repository.saveFoodChatMessage(errText, false)
             }
             _isLoadingFoodChat.value = false
         }
