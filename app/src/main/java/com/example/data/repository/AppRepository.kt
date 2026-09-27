@@ -23,19 +23,10 @@ class AppRepository(
     private val activityEventDao: com.example.data.local.ActivityEventDao? = null,
     private val youtubeVideoCacheDao: com.example.data.local.YoutubeVideoCacheDao? = null,
     private val medicalRecordDao: com.example.data.local.MedicalRecordDao? = null,
-    private val foodChatDao: com.example.data.local.FoodChatDao? = null
+    private val foodChatMessageDao: com.example.data.local.FoodChatMessageDao? = null
 ) {
 
-    suspend fun logActivityEvent(
-        type: String,
-        description: String,
-        timestamp: Long = System.currentTimeMillis(),
-        source: String = "app",
-        externalId: String? = null
-    ) {
-        if (externalId != null && activityEventDao?.existsByExternalId(externalId) == true) {
-            return
-        }
+    suspend fun logActivityEvent(type: String, description: String, timestamp: Long = System.currentTimeMillis(), source: String = "app", externalId: String? = null) {
         activityEventDao?.insert(
             com.example.data.local.ActivityEvent(
                 type = type,
@@ -47,22 +38,20 @@ class AppRepository(
         )
     }
 
-    suspend fun saveFoodChatMessage(text: String, isUser: Boolean, timestamp: Long = System.currentTimeMillis()): Long {
-        return foodChatDao?.insert(
-            com.example.data.local.FoodChatMessage(
-                text = text,
-                isUser = isUser,
-                timestamp = timestamp
-            )
-        ) ?: -1L
+    suspend fun hasActivityEventWithExternalId(externalId: String): Boolean {
+        return activityEventDao?.existsByExternalId(externalId) ?: false
     }
 
-    suspend fun getAllFoodChatMessages(): List<com.example.data.local.FoodChatMessage> {
-        return foodChatDao?.getAllMessages() ?: emptyList()
+    suspend fun saveFoodChatMessage(text: String, isUser: Boolean) {
+        foodChatMessageDao?.insert(
+            com.example.data.local.FoodChatMessage(text = text, isUser = isUser)
+        )
     }
 
-    fun getFoodChatMessagesFlow(): kotlinx.coroutines.flow.Flow<List<com.example.data.local.FoodChatMessage>> {
-        return foodChatDao?.getAllMessagesFlow() ?: kotlinx.coroutines.flow.flowOf(emptyList())
+    suspend fun getFoodChatHistoryOnce(): List<com.example.presentation.viewmodel.ChatMessage> {
+        return foodChatMessageDao?.getAll()?.map {
+            com.example.presentation.viewmodel.ChatMessage(it.text, it.isUser)
+        } ?: emptyList()
     }
 
     fun getTodayActivityEvents(startOfDay: Long, endOfDay: Long): kotlinx.coroutines.flow.Flow<List<com.example.data.local.ActivityEvent>> {

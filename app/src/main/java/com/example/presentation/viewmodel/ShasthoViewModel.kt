@@ -129,6 +129,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             _chatHistory.value = listOf(
                 ChatMessage("Hi! I'm KardIQ AI. How can I help you?", false)
             )
+            _foodChatHistory.value = emptyList()
+            foodChatHistoryLoaded = false
             _scanResult.value = null
             _coachAdvice.value = null
             _dietChart.value = null
@@ -149,7 +151,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         database.activityEventDao(),
         database.youtubeVideoCacheDao(),
         database.medicalRecordDao(),
-        database.foodChatDao()
+        database.foodChatMessageDao()
     )
 
     private val startOfDayMillis: Long
@@ -285,13 +287,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     init {
         checkForAppUpdate()
-        viewModelScope.launch {
-            repository.getFoodChatMessagesFlow().collect { savedList ->
-                if (!_isLoadingFoodChat.value) {
-                    _foodChatHistory.value = savedList.map { ChatMessage(it.text, it.isUser) }
-                }
-            }
-        }
     }
 
     private val _weeklyInsights = MutableStateFlow<String?>(null)
@@ -1180,31 +1175,31 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     exerciseMinutes = fallbackMinutes.toInt()
                 }
 
-                for (record in exerciseResponse.records) {
-                    val isFromOtherApp = record.metadata.dataOrigin.packageName != context.packageName
-                    if (isFromOtherApp) {
-                        val durationMin = java.time.Duration.between(record.startTime, record.endTime).toMinutes()
-                        val title = record.title?.takeIf { it.isNotBlank() } ?: when (record.exerciseType) {
-                            ExerciseSessionRecord.EXERCISE_TYPE_RUNNING -> "Running"
-                            ExerciseSessionRecord.EXERCISE_TYPE_WALKING -> "Walking"
-                            ExerciseSessionRecord.EXERCISE_TYPE_BIKING -> "Cycling"
-                            ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER,
-                            ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL -> "Swimming"
-                            ExerciseSessionRecord.EXERCISE_TYPE_YOGA -> "Yoga"
-                            ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING -> "Strength Training"
-                            ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING -> "HIIT"
-                            ExerciseSessionRecord.EXERCISE_TYPE_PILATES -> "Pilates"
-                            else -> "Workout"
+                // Log externally-sourced exercise sessions (from other apps via Health Connect,
+                // not this app's own writes) into Today's Activity, tagged accordingly.
+                try {
+                    val allSessionsToday = healthConnectClient.readRecords(
+                        ReadRecordsRequest(ExerciseSessionRecord::class, timeRangeFilter)
+                    ).records
+                    for (session in allSessionsToday) {
+                        val originPackage = session.metadata.dataOrigin.packageName
+                        if (originPackage == context.packageName) continue
+                        val sessionId = session.metadata.id
+                        if (sessionId.isBlank()) continue
+                        if (!repository.hasActivityEventWithExternalId(sessionId)) {
+                            val durationMinutes = java.time.Duration.between(session.startTime, session.endTime).toMinutes()
+                            val label = session.title?.takeIf { it.isNotBlank() } ?: "Workout"
+                            repository.logActivityEvent(
+                                type = "workout",
+                                description = "$label (${durationMinutes} min)",
+                                timestamp = session.startTime.toEpochMilli(),
+                                source = "health_connect",
+                                externalId = sessionId
+                            )
                         }
-                        val desc = if (durationMin > 0) "$title ($durationMin min)" else title
-                        repository.logActivityEvent(
-                            type = "workout",
-                            description = desc,
-                            timestamp = record.startTime.toEpochMilli(),
-                            source = "health_connect",
-                            externalId = record.metadata.id
-                        )
                     }
+                } catch (e: Exception) {
+                    // Non-fatal -- external activity tagging is a nice-to-have, never blocks the rest of sync.
                 }
 
                 // 8. Nutrition Calories
@@ -1697,8 +1692,14 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         _foodChatLoggedConfirmation.value = null
     }
 
-    fun resetFoodChat() {
-        _pendingFoodLogEntry.value = null
+    private var foodChatHistoryLoaded = false
+
+    fun loadFoodChatHistory() {
+        if (foodChatHistoryLoaded) return
+        foodChatHistoryLoaded = true
+        viewModelScope.launch {
+            _foodChatHistory.value = repository.getFoodChatHistoryOnce()
+        }
     }
 
     data class PendingFoodLogEntry(

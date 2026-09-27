@@ -75,7 +75,7 @@ fun FoodChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {})
         viewModel.discardPendingFoodLog()
     }
 
-    LaunchedEffect(Unit) { viewModel.resetFoodChat() }
+    LaunchedEffect(Unit) { viewModel.loadFoodChatHistory() }
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
     }

@@ -17,7 +17,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun activityEventDao(): ActivityEventDao
     abstract fun youtubeVideoCacheDao(): YoutubeVideoCacheDao
     abstract fun medicalRecordDao(): MedicalRecordDao
-    abstract fun foodChatDao(): FoodChatDao
+    abstract fun foodChatMessageDao(): FoodChatMessageDao
 
     companion object {
         val MIGRATION_11_12 = object : Migration(11, 12) {
