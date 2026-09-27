@@ -1784,6 +1784,67 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             _isLoadingFoodChat.value = false
         }
     }
+
+    // ============================================================
+    // UNIVERSAL AI ASSISTANT (Part Z)
+    // ============================================================
+    private val _universalAssistantHistory = MutableStateFlow<List<ChatMessage>>(emptyList())
+    val universalAssistantHistory: StateFlow<List<ChatMessage>> = _universalAssistantHistory.asStateFlow()
+
+    private val _isLoadingUniversalAssistant = MutableStateFlow(false)
+    val isLoadingUniversalAssistant: StateFlow<Boolean> = _isLoadingUniversalAssistant.asStateFlow()
+
+    fun sendUniversalAssistantMessage(message: String) {
+        viewModelScope.launch {
+            val newUserMsg = ChatMessage(message, true)
+            val historyBeforeThisMessage = _universalAssistantHistory.value
+            _universalAssistantHistory.value = historyBeforeThisMessage + newUserMsg
+            _isLoadingUniversalAssistant.value = true
+
+            try {
+                val profile = userProfile.filterNotNull().first()
+                val metrics = getMetricsHistoryFlow(7).first()
+                val foodLogs = repository.getRecentFoodLogs().first()
+
+                when (val result = repository.sendUniversalAssistantMessage(
+                    userMessage = message,
+                    chatHistory = historyBeforeThisMessage,
+                    profile = profile,
+                    metrics = metrics,
+                    foodLogs = foodLogs
+                )) {
+                    is AppRepository.AssistantResult.Text -> {
+                        _universalAssistantHistory.value = _universalAssistantHistory.value + ChatMessage(result.message, false)
+                    }
+                    is AppRepository.AssistantResult.PendingFoodLog -> {
+                        _universalAssistantHistory.value = _universalAssistantHistory.value + ChatMessage(
+                            "I've prepared a food log entry for you to review below.", false
+                        )
+                        _pendingFoodLogEntry.value = PendingFoodLogEntry(
+                            name = result.name,
+                            category = result.category,
+                            calories = result.calories,
+                            description = result.description,
+                            mealType = result.mealType,
+                            carbsG = result.carbsG,
+                            proteinG = result.proteinG,
+                            fatG = result.fatG,
+                            sodiumMg = 0f,
+                            sugarG = 0f,
+                            fiberG = 0f
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("UniversalAssistant", "sendUniversalAssistantMessage failed", e)
+                _universalAssistantHistory.value = _universalAssistantHistory.value + ChatMessage(
+                    "Sorry, something went wrong: ${e.message ?: e.toString()}", false
+                )
+            }
+            _isLoadingUniversalAssistant.value = false
+        }
+    }
+
     
     private val _coachAdvice = MutableStateFlow<String?>(null)
     val coachAdvice: StateFlow<String?> = _coachAdvice.asStateFlow()
