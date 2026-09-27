@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -61,7 +62,7 @@ enum class ScanMode {
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
+fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit, onNavigateToFoodChat: () -> Unit = {}) {
     val cameraPermissionState = rememberPermissionState(android.Manifest.permission.CAMERA)
     val scanResult by viewModel.scanResult.collectAsState()
     val isScanning by viewModel.isScanning.collectAsState()
@@ -192,6 +193,16 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit) {
                         fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                     )
                 }
+            }
+
+            IconButton(
+                onClick = onNavigateToFoodChat,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 16.dp, end = 16.dp)
+                    .background(Color.Black.copy(alpha = 0.65f), CircleShape)
+            ) {
+                Icon(Icons.Default.Chat, contentDescription = "Chat with AI", tint = Color.White)
             }
 
             // Overlay for scanning progress

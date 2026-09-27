@@ -320,7 +320,7 @@ class MainActivity : ComponentActivity() {
               DisposableEffect(lifecycleOwner) {
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
                   if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                    viewModel.syncWithHealthConnect(context)
+                    viewModel.syncWithHealthConnect(context, showRefreshIndicator = false)
                   }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
@@ -332,7 +332,7 @@ class MainActivity : ComponentActivity() {
               LaunchedEffect(Unit) {
                 while(true) {
                   kotlinx.coroutines.delay(15_000)
-                  viewModel.syncWithHealthConnect(context)
+                  viewModel.syncWithHealthConnect(context, showRefreshIndicator = false)
                 }
               }
 
@@ -429,7 +429,7 @@ class MainActivity : ComponentActivity() {
                       DirectMessageScreen(viewModel = viewModel, pairId = pairId, friendName = friendName, onNavigateBack = { navController.popBackStack() })
                   }
                   composable("leaderboard") { LeaderboardScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
-                  composable("scanner") { ScannerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                  composable("scanner") { ScannerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onNavigateToFoodChat = { navController.navigate("food_chat") }) }
                   composable("medical_records") { com.example.presentation.health.MedicalRecordsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("exercise_library") { ExerciseLibraryScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("mindfulness_timer") { com.example.presentation.mindfulness.MindfulnessTimerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
