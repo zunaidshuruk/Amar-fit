@@ -8,6 +8,8 @@ import com.example.data.local.UserProfile
 import com.example.data.remote.*
 import kotlinx.coroutines.Dispatchers
 import retrofit2.HttpException
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
@@ -1149,6 +1151,286 @@ class AppRepository(
             "Error: ${e.message}"
         }
     }
+
+    // ============================================================
+    // UNIVERSAL AI ASSISTANT (Part Z) -- function-calling / tool-use
+    // ============================================================
+    // Uses raw org.json (not Moshi-typed classes) for the request/response
+    // handling here, since function-call arguments are inherently dynamic
+    // JSON shapes -- the same proven approach already used for the food
+    // chat's structured-JSON parsing, rather than trying to force Moshi's
+    // strict codegen to model an open-ended shape.
+
+    sealed class AssistantResult {
+        data class Text(val message: String) : AssistantResult()
+        data class PendingFoodLog(
+            val name: String,
+            val category: String,
+            val calories: Int,
+            val description: String,
+            val mealType: String,
+            val carbsG: Float,
+            val proteinG: Float,
+            val fatG: Float,
+            val precedingMessage: String
+        ) : AssistantResult()
+    }
+
+    private fun buildAssistantToolsJson(): org.json.JSONArray {
+        fun schema(type: String, description: String, enumValues: List<String>? = null): org.json.JSONObject {
+            return org.json.JSONObject().apply {
+                put("type", type)
+                put("description", description)
+                if (enumValues != null) put("enum", org.json.JSONArray(enumValues))
+            }
+        }
+
+        val declarations = org.json.JSONArray()
+
+        declarations.put(org.json.JSONObject().apply {
+            put("name", "read_health_data")
+            put("description", "Reads the user's recent health metrics (steps, sleep, heart rate, blood pressure, blood glucose, weight, water, calories, macros) and recent food logs. Call this whenever you need real data about the user to give an accurate, personalized answer or suggestion -- do not guess or assume their numbers.")
+            put("parameters", org.json.JSONObject().apply {
+                put("type", "OBJECT")
+                put("properties", org.json.JSONObject())
+            })
+        })
+
+        declarations.put(org.json.JSONObject().apply {
+            put("name", "get_health_insight")
+            put("description", "Generates a personalized wellness insight summary based on the user's recent health data trends.")
+            put("parameters", org.json.JSONObject().apply {
+                put("type", "OBJECT")
+                put("properties", org.json.JSONObject())
+            })
+        })
+
+        declarations.put(org.json.JSONObject().apply {
+            put("name", "get_glucose_guidance")
+            put("description", "Generates lifestyle suggestions for managing or lowering blood glucose, based on the user's recent health data.")
+            put("parameters", org.json.JSONObject().apply {
+                put("type", "OBJECT")
+                put("properties", org.json.JSONObject())
+            })
+        })
+
+        declarations.put(org.json.JSONObject().apply {
+            put("name", "generate_diet_chart")
+            put("description", "Generates a personalized multi-day diet chart for the user.")
+            put("parameters", org.json.JSONObject().apply {
+                put("type", "OBJECT")
+                put("properties", org.json.JSONObject().apply {
+                    put("durationDays", schema("INTEGER", "Number of days the diet chart should cover, e.g. 7"))
+                })
+                put("required", org.json.JSONArray(listOf("durationDays")))
+            })
+        })
+
+        declarations.put(org.json.JSONObject().apply {
+            put("name", "generate_workout")
+            put("description", "Generates a personalized structured workout plan (warmup, main exercises, cooldown) for the user.")
+            put("parameters", org.json.JSONObject().apply {
+                put("type", "OBJECT")
+                put("properties", org.json.JSONObject())
+            })
+        })
+
+        declarations.put(org.json.JSONObject().apply {
+            put("name", "generate_recipe")
+            put("description", "Generates a functional/medicinal recipe suggestion based on a query, e.g. 'something for better sleep' or 'a high protein breakfast'.")
+            put("parameters", org.json.JSONObject().apply {
+                put("type", "OBJECT")
+                put("properties", org.json.JSONObject().apply {
+                    put("query", schema("STRING", "What kind of recipe the user is looking for"))
+                })
+                put("required", org.json.JSONArray(listOf("query")))
+            })
+        })
+
+        declarations.put(org.json.JSONObject().apply {
+            put("name", "log_food")
+            put("description", "Logs a food entry the user says they ate. Call this once you have a clear idea of what they ate and a reasonable calorie/macro estimate -- this will show the user a confirmation card before actually saving anything, so it's fine to call this as soon as you have enough detail.")
+            put("parameters", org.json.JSONObject().apply {
+                put("type", "OBJECT")
+                put("properties", org.json.JSONObject().apply {
+                    put("name", schema("STRING", "Name of the food/meal"))
+                    put("category", schema("STRING", "Food category"))
+                    put("calories", schema("INTEGER", "Estimated total calories"))
+                    put("carbs", schema("NUMBER", "Estimated carbohydrates in grams"))
+                    put("protein", schema("NUMBER", "Estimated protein in grams"))
+                    put("fat", schema("NUMBER", "Estimated fat in grams"))
+                    put("mealType", schema("STRING", "Meal type", listOf("Breakfast", "Lunch", "Dinner", "Snack")))
+                    put("description", schema("STRING", "Brief description of what was eaten"))
+                })
+                put("required", org.json.JSONArray(listOf("name", "calories", "mealType")))
+            })
+        })
+
+        val tools = org.json.JSONArray()
+        tools.put(org.json.JSONObject().apply { put("functionDeclarations", declarations) })
+        return tools
+    }
+
+    private suspend fun executeRawGeminiCall(
+        contents: org.json.JSONArray,
+        systemInstruction: String,
+        tools: org.json.JSONArray
+    ): org.json.JSONObject = withContext(Dispatchers.IO) {
+        val apiKeys = resolveApiKeys()
+        if (apiKeys.isEmpty()) throw Exception("No Gemini API key configured.")
+
+        val requestBody = org.json.JSONObject().apply {
+            put("contents", contents)
+            put("systemInstruction", org.json.JSONObject().apply {
+                put("parts", org.json.JSONArray().put(org.json.JSONObject().put("text", systemInstruction)))
+            })
+            put("tools", tools)
+        }
+
+        var lastError: Exception? = null
+        for (apiKey in apiKeys) {
+            try {
+                val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
+                val requestBodyOkHttp = requestBody.toString()
+                    .toRequestBody("application/json; charset=UTF-8".toMediaTypeOrNull())
+                val request = okhttp3.Request.Builder()
+                    .url(url)
+                    .post(requestBodyOkHttp)
+                    .build()
+                val response = RetrofitClient.okHttpClient.newCall(request).execute()
+                val bodyString = response.body?.string() ?: ""
+                if (!response.isSuccessful) {
+                    throw Exception("HTTP ${response.code}: $bodyString")
+                }
+                return@withContext org.json.JSONObject(bodyString)
+            } catch (e: Exception) {
+                lastError = e
+                continue
+            }
+        }
+        throw lastError ?: Exception("All Gemini API keys failed.")
+    }
+
+    suspend fun sendUniversalAssistantMessage(
+        userMessage: String,
+        chatHistory: List<ChatMessage>,
+        profile: UserProfile,
+        metrics: List<com.example.data.local.DailyMetric>,
+        foodLogs: List<com.example.data.local.FoodLog>
+    ): AssistantResult = withContext(Dispatchers.IO) {
+        val systemInstruction = """
+            You are KardIQ AI, a universal health assistant for the KardIQ app. You can log food, generate diet charts, generate workouts, suggest medicinal recipes, generate health insights, and give glucose guidance -- all through natural conversation.
+
+            Always call read_health_data first if you don't already have the user's real numbers in this conversation and their actual data would make your answer more accurate or personalized -- never guess or assume specific health numbers.
+
+            When the user describes food they ate, use log_food once you have a reasonable estimate -- it shows them a confirmation card, so you don't need to over-clarify first.
+
+            Keep replies conversational and concise. You are not a doctor -- frame health-related suggestions as general wellness guidance, never a diagnosis, and never claim certainty about a medical condition.
+        """.trimIndent()
+
+        val contents = org.json.JSONArray()
+        for (msg in chatHistory) {
+            contents.put(org.json.JSONObject().apply {
+                put("role", if (msg.isUser) "user" else "model")
+                put("parts", org.json.JSONArray().put(org.json.JSONObject().put("text", msg.text)))
+            })
+        }
+        contents.put(org.json.JSONObject().apply {
+            put("role", "user")
+            put("parts", org.json.JSONArray().put(org.json.JSONObject().put("text", userMessage)))
+        })
+
+        val tools = buildAssistantToolsJson()
+        var iterations = 0
+
+        while (iterations < 5) {
+            iterations++
+            val responseJson = executeRawGeminiCall(contents, systemInstruction, tools)
+            val candidate = responseJson.optJSONArray("candidates")?.optJSONObject(0)
+                ?: return@withContext AssistantResult.Text("Sorry, I couldn't process that. Please try again.")
+            val contentObj = candidate.optJSONObject("content")
+            val parts = contentObj?.optJSONArray("parts")
+            val firstPart = parts?.optJSONObject(0)
+
+            val functionCall = firstPart?.optJSONObject("functionCall")
+            if (functionCall != null) {
+                val fnName = functionCall.optString("name")
+                val fnArgs = functionCall.optJSONObject("args") ?: org.json.JSONObject()
+
+                // Echo the model's function-call turn back into the conversation.
+                contents.put(org.json.JSONObject().apply {
+                    put("role", "model")
+                    put("parts", org.json.JSONArray().put(org.json.JSONObject().put("functionCall", functionCall)))
+                })
+
+                if (fnName == "log_food") {
+                    val precedingText = chatHistory.lastOrNull { !it.isUser }?.text ?: ""
+                    return@withContext AssistantResult.PendingFoodLog(
+                        name = fnArgs.optString("name", "Food"),
+                        category = fnArgs.optString("category", "Meal"),
+                        calories = fnArgs.optInt("calories", 0),
+                        description = fnArgs.optString("description", ""),
+                        mealType = fnArgs.optString("mealType", "Snack"),
+                        carbsG = fnArgs.optDouble("carbs", 0.0).toFloat(),
+                        proteinG = fnArgs.optDouble("protein", 0.0).toFloat(),
+                        fatG = fnArgs.optDouble("fat", 0.0).toFloat(),
+                        precedingMessage = precedingText
+                    )
+                }
+
+                val functionResultText: String = try {
+                    when (fnName) {
+                        "read_health_data" -> {
+                            val metricsText = metrics.take(7).joinToString("\n") { m ->
+                                "${m.date}: steps=${m.steps}, sleepHours=${m.sleepHours}, restingHR=${m.restingHeartRate}, weightKg=${m.weightKg}, waterLiters=${m.waterLiters}, caloriesConsumed=${m.caloriesConsumed}, carbsG=${m.carbsG}, proteinG=${m.proteinG}, fatG=${m.fatG}, bloodGlucoseMorning=${m.bloodGlucoseMorning}, bloodGlucoseNight=${m.bloodGlucoseNight}, bloodPressure=${m.bloodPressure}, oxygenSaturation=${m.oxygenSaturation}"
+                            }
+                            val foodLogsText = foodLogs.take(14).joinToString("\n") { "${it.date}: ${it.name} (${it.calories} kcal)" }
+                            "Profile: ${profile.age}yo ${profile.gender}, ${profile.heightCm}cm, ${profile.weightKg}kg, activity level ${profile.activityLevel}, calorie goal ${profile.dailyCalorieLimit}.\n\n7-Day Metrics:\n$metricsText\n\nRecent Food Logs:\n$foodLogsText"
+                        }
+                        "get_health_insight" -> generateHealthInsight(profile, metrics, foodLogs)
+                        "get_glucose_guidance" -> generateGlucoseGuidance(profile, metrics)
+                        "generate_diet_chart" -> {
+                            val days = fnArgs.optInt("durationDays", 7)
+                            generateDietChart(profile, days)
+                        }
+                        "generate_workout" -> {
+                            val result = generateStructuredWorkout(profile)
+                            result.getOrNull()?.let { plan ->
+                                "Generated workout: ${plan.title}. Warmup: ${plan.warmup.size} exercises, Main: ${plan.mainExercises.size} exercises, Cooldown: ${plan.cooldown.size} exercises."
+                            } ?: "Could not generate a workout right now."
+                        }
+                        "generate_recipe" -> {
+                            val query = fnArgs.optString("query", "a healthy recipe")
+                            generatePremiumRecipe(query, profile)
+                        }
+                        else -> "Unknown function: $fnName"
+                    }
+                } catch (e: Exception) {
+                    "Error executing $fnName: ${e.message}"
+                }
+
+                contents.put(org.json.JSONObject().apply {
+                    put("role", "user")
+                    put("parts", org.json.JSONArray().put(org.json.JSONObject().apply {
+                        put("functionResponse", org.json.JSONObject().apply {
+                            put("name", fnName)
+                            put("response", org.json.JSONObject().put("content", functionResultText))
+                        })
+                    }))
+                })
+                continue
+            }
+
+            val text = firstPart?.optString("text")
+            if (!text.isNullOrBlank()) {
+                return@withContext AssistantResult.Text(text.trim())
+            }
+            return@withContext AssistantResult.Text("Sorry, I couldn't process that. Please try again.")
+        }
+        AssistantResult.Text("Sorry, that took too many steps to process. Please try rephrasing.")
+    }
+
+
 
 
     fun getAllSavedCharts() = savedDietChartDao.getAllSavedCharts()
