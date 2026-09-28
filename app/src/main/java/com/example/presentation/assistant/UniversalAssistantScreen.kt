@@ -39,7 +39,8 @@ import com.google.accompanist.permissions.rememberPermissionState
 fun UniversalAssistantScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
     val messages by viewModel.universalAssistantHistory.collectAsState()
     val isLoading by viewModel.isLoadingUniversalAssistant.collectAsState()
-    val statusMessage by viewModel.universalAssistantStatus.collectAsState()    val loggedConfirmation by viewModel.foodChatLoggedConfirmation.collectAsState()
+    val statusMessage by viewModel.universalAssistantStatus.collectAsState()
+    val loggedConfirmation by viewModel.foodChatLoggedConfirmation.collectAsState()
     val pendingEntry by viewModel.pendingFoodLogEntry.collectAsState()
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
