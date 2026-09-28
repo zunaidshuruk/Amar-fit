@@ -152,7 +152,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         database.youtubeVideoCacheDao(),
         database.medicalRecordDao(),
         database.foodChatMessageDao(),
-        database.assistantChatMessageDao()
+        database.assistantChatMessageDao(),
+        database.assistantChatSessionDao()
     )
 
     private val startOfDayMillis: Long
@@ -1787,10 +1788,31 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // ============================================================
+    // ============================================================
     // UNIVERSAL AI ASSISTANT (Part Z)
     // ============================================================
-    private val _universalAssistantHistory = MutableStateFlow<List<ChatMessage>>(emptyList())
-    val universalAssistantHistory: StateFlow<List<ChatMessage>> = _universalAssistantHistory.asStateFlow()
+    private val _activeAssistantSessionId = MutableStateFlow<String?>(null)
+    val activeAssistantSessionId: StateFlow<String?> = _activeAssistantSessionId.asStateFlow()
+
+    private val _activeAssistantMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
+    val activeAssistantMessages: StateFlow<List<ChatMessage>> = _activeAssistantMessages.asStateFlow()
+
+    // Backward-compatible alias
+    val universalAssistantHistory: StateFlow<List<ChatMessage>> = _activeAssistantMessages.asStateFlow()
+
+    val assistantSessions: StateFlow<List<com.example.data.local.AssistantChatSession>> = repository.getAssistantSessionsFlow()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    private val _universalAssistantTab = MutableStateFlow(0) // 0 = Chat, 1 = History
+    val universalAssistantTab: StateFlow<Int> = _universalAssistantTab.asStateFlow()
+
+    fun setUniversalAssistantTab(tab: Int) {
+        _universalAssistantTab.value = tab
+    }
 
     private val _isLoadingUniversalAssistant = MutableStateFlow(false)
     val isLoadingUniversalAssistant: StateFlow<Boolean> = _isLoadingUniversalAssistant.asStateFlow()
@@ -1803,17 +1825,81 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     fun loadUniversalAssistantHistory() {
         if (universalAssistantHistoryLoaded) return
         universalAssistantHistoryLoaded = true
+        if (_activeAssistantSessionId.value == null) {
+            startNewAssistantChat()
+        }
+    }
+
+    fun startNewAssistantChat() {
+        _activeAssistantSessionId.value = java.util.UUID.randomUUID().toString()
+        _activeAssistantMessages.value = emptyList()
+        _universalAssistantTab.value = 0
+        _universalAssistantStatus.value = null
+        discardPendingFoodLog()
+    }
+
+    fun openAssistantSession(session: com.example.data.local.AssistantChatSession) {
         viewModelScope.launch {
-            _universalAssistantHistory.value = repository.getAssistantChatHistoryOnce()
+            _activeAssistantSessionId.value = session.id
+            val messages = repository.getAssistantMessagesForSession(session.id)
+            _activeAssistantMessages.value = messages
+            _universalAssistantTab.value = 0
+            _universalAssistantStatus.value = null
+            discardPendingFoodLog()
+        }
+    }
+
+    fun deleteAssistantSession(sessionId: String) {
+        viewModelScope.launch {
+            repository.deleteAssistantSession(sessionId)
+            if (_activeAssistantSessionId.value == sessionId) {
+                startNewAssistantChat()
+            }
+        }
+    }
+
+    fun clearAllAssistantHistory() {
+        viewModelScope.launch {
+            repository.clearAllAssistantHistory()
+            startNewAssistantChat()
         }
     }
 
     fun sendUniversalAssistantMessage(message: String) {
+        if (message.isBlank()) return
         viewModelScope.launch {
+            var currentSessionId = _activeAssistantSessionId.value
+            val isNewSession = currentSessionId.isNullOrBlank() || _activeAssistantMessages.value.isEmpty()
+            if (currentSessionId.isNullOrBlank()) {
+                currentSessionId = java.util.UUID.randomUUID().toString()
+                _activeAssistantSessionId.value = currentSessionId
+            }
+
             val newUserMsg = ChatMessage(message, true)
-            val historyBeforeThisMessage = _universalAssistantHistory.value
-            _universalAssistantHistory.value = historyBeforeThisMessage + newUserMsg
-            repository.saveAssistantChatMessage(message, true)
+            // CRITICAL FIX: Only messages from the current active chat session are kept in memory and passed to Gemini!
+            // When a new chat is started, _activeAssistantMessages is empty, ensuring the AI never shows results
+            // based on earlier conversations or past first entries.
+            val historyBeforeThisMessage = _activeAssistantMessages.value
+            _activeAssistantMessages.value = historyBeforeThisMessage + newUserMsg
+
+            repository.saveAssistantChatMessage(currentSessionId, message, true)
+
+            val sessionTitle = if (isNewSession) {
+                message.trim().take(45).let { if (message.length > 45) "$it..." else it }
+            } else {
+                null
+            }
+            val existingSession = assistantSessions.value.find { it.id == currentSessionId }
+            val sessionToSave = com.example.data.local.AssistantChatSession(
+                id = currentSessionId,
+                title = sessionTitle ?: existingSession?.title ?: message.take(45),
+                preview = message.take(70),
+                messageCount = (existingSession?.messageCount ?: 0) + 1,
+                createdAt = existingSession?.createdAt ?: System.currentTimeMillis(),
+                updatedAt = System.currentTimeMillis()
+            )
+            repository.saveAssistantSession(sessionToSave)
+
             _isLoadingUniversalAssistant.value = true
             _universalAssistantStatus.value = "Thinking..."
 
@@ -1822,24 +1908,40 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 val metrics = getMetricsHistoryFlow(7).first()
                 val foodLogs = repository.getRecentFoodLogs().first()
 
+                val sessionHistoryForCall = historyBeforeThisMessage.takeLast(10)
+
                 when (val result = repository.sendUniversalAssistantMessage(
                     userMessage = message,
-                    chatHistory = historyBeforeThisMessage,
+                    chatHistory = sessionHistoryForCall,
                     profile = profile,
                     metrics = metrics,
                     foodLogs = foodLogs,
                     onStatusUpdate = { status -> _universalAssistantStatus.value = status }
                 )) {
                     is AppRepository.AssistantResult.Text -> {
-                        _universalAssistantHistory.value = _universalAssistantHistory.value + ChatMessage(result.message, false)
-                        repository.saveAssistantChatMessage(result.message, false)
+                        _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(result.message, false)
+                        repository.saveAssistantChatMessage(currentSessionId, result.message, false)
+                        repository.saveAssistantSession(
+                            sessionToSave.copy(
+                                preview = result.message.take(70),
+                                messageCount = sessionToSave.messageCount + 1,
+                                updatedAt = System.currentTimeMillis()
+                            )
+                        )
                     }
                     is AppRepository.AssistantResult.PendingFoodLog -> {
                         val confirmationText = "I've prepared a food log entry for you to review below."
-                        _universalAssistantHistory.value = _universalAssistantHistory.value + ChatMessage(
+                        _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(
                             confirmationText, false
                         )
-                        repository.saveAssistantChatMessage(confirmationText, false)
+                        repository.saveAssistantChatMessage(currentSessionId, confirmationText, false)
+                        repository.saveAssistantSession(
+                            sessionToSave.copy(
+                                preview = "Logged: ${result.name}",
+                                messageCount = sessionToSave.messageCount + 1,
+                                updatedAt = System.currentTimeMillis()
+                            )
+                        )
                         _pendingFoodLogEntry.value = PendingFoodLogEntry(
                             name = result.name,
                             category = result.category,
@@ -1866,8 +1968,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     else ->
                         "Sorry, I encountered an issue processing your request. Please try asking again."
                 }
-                _universalAssistantHistory.value = _universalAssistantHistory.value + ChatMessage(errorText, false)
-                repository.saveAssistantChatMessage(errorText, false)
+                _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(errorText, false)
+                repository.saveAssistantChatMessage(currentSessionId, errorText, false)
             }
             _isLoadingUniversalAssistant.value = false
             _universalAssistantStatus.value = null

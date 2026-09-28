@@ -26,7 +26,8 @@ class AppRepository(
     private val youtubeVideoCacheDao: com.example.data.local.YoutubeVideoCacheDao? = null,
     private val medicalRecordDao: com.example.data.local.MedicalRecordDao? = null,
     private val foodChatMessageDao: com.example.data.local.FoodChatMessageDao? = null,
-    private val assistantChatMessageDao: com.example.data.local.AssistantChatMessageDao? = null
+    private val assistantChatMessageDao: com.example.data.local.AssistantChatMessageDao? = null,
+    private val assistantChatSessionDao: com.example.data.local.AssistantChatSessionDao? = null
 ) {
 
     suspend fun logActivityEvent(type: String, description: String, timestamp: Long = System.currentTimeMillis(), source: String = "app", externalId: String? = null) {
@@ -63,10 +64,40 @@ class AppRepository(
         )
     }
 
+    suspend fun saveAssistantChatMessage(sessionId: String, text: String, isUser: Boolean) {
+        assistantChatMessageDao?.insert(
+            com.example.data.local.AssistantChatMessage(sessionId = sessionId, text = text, isUser = isUser)
+        )
+    }
+
     suspend fun getAssistantChatHistoryOnce(): List<com.example.presentation.viewmodel.ChatMessage> {
         return assistantChatMessageDao?.getAll()?.map {
             com.example.presentation.viewmodel.ChatMessage(it.text, it.isUser)
         } ?: emptyList()
+    }
+
+    fun getAssistantSessionsFlow(): kotlinx.coroutines.flow.Flow<List<com.example.data.local.AssistantChatSession>> {
+        return assistantChatSessionDao?.getAllSessions() ?: kotlinx.coroutines.flow.flowOf(emptyList())
+    }
+
+    suspend fun getAssistantMessagesForSession(sessionId: String): List<com.example.presentation.viewmodel.ChatMessage> {
+        return assistantChatMessageDao?.getMessagesBySession(sessionId)?.map {
+            com.example.presentation.viewmodel.ChatMessage(it.text, it.isUser)
+        } ?: emptyList()
+    }
+
+    suspend fun saveAssistantSession(session: com.example.data.local.AssistantChatSession) {
+        assistantChatSessionDao?.insertOrUpdate(session)
+    }
+
+    suspend fun deleteAssistantSession(sessionId: String) {
+        assistantChatSessionDao?.deleteSessionById(sessionId)
+        assistantChatMessageDao?.deleteMessagesBySession(sessionId)
+    }
+
+    suspend fun clearAllAssistantHistory() {
+        assistantChatSessionDao?.clearAll()
+        assistantChatMessageDao?.clearAll()
     }
 
     fun getTodayActivityEvents(startOfDay: Long, endOfDay: Long): kotlinx.coroutines.flow.Flow<List<com.example.data.local.ActivityEvent>> {

@@ -6,6 +6,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "assistant_chat_messages")
 data class AssistantChatMessage(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val sessionId: String = "",
     val text: String = "",
     val isUser: Boolean = false,
     val timestamp: Long = System.currentTimeMillis()
