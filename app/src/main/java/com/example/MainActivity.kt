@@ -426,6 +426,7 @@ class MainActivity : ComponentActivity() {
                   composable("friends") { FriendsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onNavigateToLeaderboard = { navController.navigate("leaderboard") }, onNavigateToDm = { pairId, name -> navController.navigate("dm/$pairId/$name") }) }
                   composable("food_chat") { FoodChatScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("universal_assistant") { com.example.presentation.assistant.UniversalAssistantScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                  composable("health_correlations") { com.example.presentation.correlations.HealthCorrelationsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable(
                       "dm/{pairId}/{friendName}",
                       arguments = listOf(
