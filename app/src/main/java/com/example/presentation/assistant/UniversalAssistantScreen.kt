@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.presentation.viewmodel.ShasthoViewModel
+import com.example.ui.components.MarkdownText
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -38,7 +39,7 @@ import com.google.accompanist.permissions.rememberPermissionState
 fun UniversalAssistantScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
     val messages by viewModel.universalAssistantHistory.collectAsState()
     val isLoading by viewModel.isLoadingUniversalAssistant.collectAsState()
-    val loggedConfirmation by viewModel.foodChatLoggedConfirmation.collectAsState()
+    val statusMessage by viewModel.universalAssistantStatus.collectAsState()    val loggedConfirmation by viewModel.foodChatLoggedConfirmation.collectAsState()
     val pendingEntry by viewModel.pendingFoodLogEntry.collectAsState()
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -172,11 +173,19 @@ fun UniversalAssistantScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> 
                                     .background(if (msg.isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
                                     .padding(horizontal = 14.dp, vertical = 10.dp)
                             ) {
-                                Text(
-                                    text = msg.text,
-                                    color = if (msg.isUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                                    fontSize = 14.sp
-                                )
+                                if (msg.isUser) {
+                                    Text(
+                                        text = msg.text,
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        fontSize = 14.sp
+                                    )
+                                } else {
+                                    MarkdownText(
+                                        text = msg.text,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 14.sp
+                                    )
+                                }
                             }
                         }
                     }
@@ -192,7 +201,7 @@ fun UniversalAssistantScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> 
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Thinking...", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(statusMessage ?: "Thinking...", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
                             }

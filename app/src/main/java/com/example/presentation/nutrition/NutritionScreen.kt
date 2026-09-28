@@ -56,6 +56,11 @@ fun NutritionScreen(viewModel: ShasthoViewModel, navController: NavController) {
 
     val calorieGoal = profile?.let { if (it.dailyCalorieLimit > 0) it.dailyCalorieLimit else HealthGoalCalculator.calculateCalorieGoal(it) } ?: 2000
     val macroGoals = profile?.let { HealthGoalCalculator.calculateMacroGoals(it) }
+        ?: HealthGoalCalculator.MacroGoals(
+            carbsG = ((calorieGoal * 0.45f) / 4f).roundToInt(),
+            proteinG = ((calorieGoal * 0.25f) / 4f).roundToInt(),
+            fatG = ((calorieGoal * 0.30f) / 9f).roundToInt()
+        )
 
     val todayCarbs = todayMetrics?.carbsG ?: 0f
     val todayProtein = todayMetrics?.proteinG ?: 0f

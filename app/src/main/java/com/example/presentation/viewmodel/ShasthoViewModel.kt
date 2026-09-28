@@ -1795,6 +1795,9 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     private val _isLoadingUniversalAssistant = MutableStateFlow(false)
     val isLoadingUniversalAssistant: StateFlow<Boolean> = _isLoadingUniversalAssistant.asStateFlow()
 
+    private val _universalAssistantStatus = MutableStateFlow<String?>(null)
+    val universalAssistantStatus: StateFlow<String?> = _universalAssistantStatus.asStateFlow()
+
     private var universalAssistantHistoryLoaded = false
 
     fun loadUniversalAssistantHistory() {
@@ -1812,6 +1815,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             _universalAssistantHistory.value = historyBeforeThisMessage + newUserMsg
             repository.saveAssistantChatMessage(message, true)
             _isLoadingUniversalAssistant.value = true
+            _universalAssistantStatus.value = "Thinking..."
 
             try {
                 val profile = userProfile.filterNotNull().first()
@@ -1823,7 +1827,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     chatHistory = historyBeforeThisMessage,
                     profile = profile,
                     metrics = metrics,
-                    foodLogs = foodLogs
+                    foodLogs = foodLogs,
+                    onStatusUpdate = { status -> _universalAssistantStatus.value = status }
                 )) {
                     is AppRepository.AssistantResult.Text -> {
                         _universalAssistantHistory.value = _universalAssistantHistory.value + ChatMessage(result.message, false)
@@ -1857,6 +1862,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 repository.saveAssistantChatMessage(errorText, false)
             }
             _isLoadingUniversalAssistant.value = false
+            _universalAssistantStatus.value = null
         }
     }
 

@@ -1342,12 +1342,13 @@ class AppRepository(
         chatHistory: List<ChatMessage>,
         profile: UserProfile,
         metrics: List<com.example.data.local.DailyMetric>,
-        foodLogs: List<com.example.data.local.FoodLog>
+        foodLogs: List<com.example.data.local.FoodLog>,
+        onStatusUpdate: (String) -> Unit = {}
     ): AssistantResult = withContext(Dispatchers.IO) {
         val systemInstruction = """
             You are KardIQ AI, a universal health assistant for the KardIQ app. You can log food, generate diet charts, generate workouts, suggest medicinal recipes, generate health insights, and give glucose guidance -- all through natural conversation.
 
-            Always call read_health_data first if you don't already have the user's real numbers in this conversation and their actual data would make your answer more accurate or personalized -- never guess or assume specific health numbers.
+            Only call read_health_data when the user's real numbers would genuinely change your answer (e.g. they ask about their own trends, or want a suggestion grounded in their actual data). For simple greetings, general questions, or requests that don't need personal data, just respond directly without calling any tool -- this keeps replies fast.
 
             When the user describes food they ate, use log_food once you have a reasonable estimate -- it shows them a confirmation card, so you don't need to over-clarify first.
 
@@ -1440,6 +1441,17 @@ class AppRepository(
                 }
 
                 val functionResultText: String = try {
+                    onStatusUpdate(
+                        when (fnName) {
+                            "read_health_data" -> "Checking your health data..."
+                            "get_health_insight" -> "Generating your health insight..."
+                            "get_glucose_guidance" -> "Analyzing your glucose data..."
+                            "generate_diet_chart" -> "Creating your diet chart..."
+                            "generate_workout" -> "Building your workout..."
+                            "generate_recipe" -> "Finding a recipe..."
+                            else -> "Working on it..."
+                        }
+                    )
                     when (fnName) {
                         "read_health_data" -> {
                             val metricsText = metrics.take(7).joinToString("\n") { m ->
