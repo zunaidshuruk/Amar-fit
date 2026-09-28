@@ -1,0 +1,485 @@
+package com.example.presentation.scanner
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.ImageFormat
+import android.graphics.Matrix
+import android.graphics.Rect
+import android.graphics.YuvImage
+import android.util.Base64
+import android.view.ViewGroup
+import androidx.camera.core.*
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import com.example.ui.components.MarkdownText
+import com.example.ui.components.MealTypeSelector
+import com.example.presentation.viewmodel.ShasthoViewModel
+import com.example.ui.theme.Emerald500
+import com.example.ui.theme.Slate900
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.common.InputImage
+import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
+import java.util.concurrent.Executors
+
+import org.json.JSONObject
+
+enum class ScanMode {
+    SCAN_MEAL,
+    SCAN_BARCODE
+}
+
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit, onNavigateToFoodChat: () -> Unit = {}) {
+    val cameraPermissionState = rememberPermissionState(android.Manifest.permission.CAMERA)
+    val scanResult by viewModel.scanResult.collectAsState()
+    val isScanning by viewModel.isScanning.collectAsState()
+
+    var scanMode by remember { mutableStateOf(ScanMode.SCAN_MEAL) }
+    var parsedName by remember { mutableStateOf("") }
+    var parsedCategory by remember { mutableStateOf("") }
+    var parsedCalories by remember { mutableStateOf(0) }
+    var parsedCarbs by remember { mutableStateOf(0f) }
+    var parsedProtein by remember { mutableStateOf(0f) }
+    var parsedFat by remember { mutableStateOf(0f) }
+    var parsedSodium by remember { mutableStateOf(0f) }
+    var parsedSugar by remember { mutableStateOf(0f) }
+    var parsedFiber by remember { mutableStateOf(0f) }
+    var parsedDescription by remember { mutableStateOf("") }
+    var selectedMealType by remember { mutableStateOf("Snack") }
+    var portionMultiplier by remember { mutableStateOf(1f) }
+
+    val adjustedCalories = (parsedCalories * portionMultiplier).toInt()
+    val adjustedCarbs = parsedCarbs * portionMultiplier
+    val adjustedProtein = parsedProtein * portionMultiplier
+    val adjustedFat = parsedFat * portionMultiplier
+    val adjustedSodium = parsedSodium * portionMultiplier
+    val adjustedSugar = parsedSugar * portionMultiplier
+    val adjustedFiber = parsedFiber * portionMultiplier
+
+    LaunchedEffect(scanResult) {
+        if (scanResult != null) {
+            selectedMealType = "Snack"
+            portionMultiplier = 1f
+            try {
+                // Find JSON block if AI wrapped it in markdown or something
+                val jsonString = scanResult!!.substringAfter("{").substringBeforeLast("}")
+                val json = JSONObject("{$jsonString}")
+                parsedName = json.optString("name", "Unknown Food")
+                parsedCategory = json.optString("category", "Uncategorized")
+                parsedCalories = json.optInt("calories", 0)
+                parsedCarbs = json.optDouble("carbs", 0.0).toFloat()
+                parsedProtein = json.optDouble("protein", 0.0).toFloat()
+                parsedFat = json.optDouble("fat", 0.0).toFloat()
+                parsedSodium = json.optDouble("sodium", 0.0).toFloat()
+                parsedSugar = json.optDouble("sugar", 0.0).toFloat()
+                parsedFiber = json.optDouble("fiber", 0.0).toFloat()
+                parsedDescription = json.optString("description", "")
+            } catch (e: Exception) {
+                portionMultiplier = 1f
+                parsedName = "Scan Failed"
+                parsedDescription = "Could not parse response: ${e.message}"
+                parsedCategory = "Error"
+                parsedCalories = 0
+                parsedCarbs = 0f
+                parsedProtein = 0f
+                parsedFat = 0f
+                parsedSodium = 0f
+                parsedSugar = 0f
+                parsedFiber = 0f
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (!cameraPermissionState.status.isGranted) {
+            cameraPermissionState.launchPermissionRequest()
+        }
+    }
+
+    if (cameraPermissionState.status.isGranted) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black).windowInsetsPadding(WindowInsets.safeDrawing)) {
+            CameraPreviewView(
+                onImageCaptured = { bitmap ->
+                    if (scanMode == ScanMode.SCAN_MEAL) {
+                        val base64 = encodeBitmapToBase64(bitmap)
+                        viewModel.analyzeImage(base64)
+                    } else {
+                        val image = InputImage.fromBitmap(bitmap, 0)
+                        val scanner = BarcodeScanning.getClient()
+                        scanner.process(image)
+                            .addOnSuccessListener { barcodes ->
+                                val firstBarcode = barcodes.firstOrNull { !it.rawValue.isNullOrBlank() }?.rawValue
+                                if (!firstBarcode.isNullOrBlank()) {
+                                    viewModel.lookupBarcode(firstBarcode)
+                                } else {
+                                    viewModel.setScanResultDirect("""{"name": "No barcode detected", "category": "Scan Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "No barcode detected — try again."}""")
+                                }
+                            }
+                            .addOnFailureListener { e ->
+                                viewModel.setScanResultDirect("""{"name": "Scan Failed", "category": "Scan Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "description": "Error reading barcode: ${e.message}"}""")
+                            }
+                    }
+                },
+                onClose = onNavigateBack
+            )
+
+            // Top mode toggle: "Scan Meal" vs "Scan Barcode"
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 16.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color.Black.copy(alpha = 0.65f))
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    onClick = { scanMode = ScanMode.SCAN_MEAL },
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (scanMode == ScanMode.SCAN_MEAL) Emerald500 else Color.Transparent,
+                    contentColor = Color.White
+                ) {
+                    Text(
+                        text = "Scan Meal",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        fontSize = 14.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                    )
+                }
+                Surface(
+                    onClick = { scanMode = ScanMode.SCAN_BARCODE },
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (scanMode == ScanMode.SCAN_BARCODE) Emerald500 else Color.Transparent,
+                    contentColor = Color.White
+                ) {
+                    Text(
+                        text = "Scan Barcode",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        fontSize = 14.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                    )
+                }
+            }
+
+            IconButton(
+                onClick = onNavigateToFoodChat,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 16.dp, end = 16.dp)
+                    .background(Color.Black.copy(alpha = 0.65f), CircleShape)
+            ) {
+                Icon(Icons.Default.Chat, contentDescription = "Chat with AI", tint = Color.White)
+            }
+
+            // Overlay for scanning progress
+            if (isScanning) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = Emerald500)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            if (scanMode == ScanMode.SCAN_BARCODE) "Looking up Barcode..." else "Analyzing Bangladeshi Dish...",
+                            color = Color.White,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            // Overlay for scan result
+            if (scanResult != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.8f))
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(24.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Scan Result", fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            IconButton(onClick = { 
+                                viewModel.clearScanResult() 
+                                selectedMealType = "Snack"
+                                portionMultiplier = 1f
+                            }) {
+                                Icon(Icons.Default.Close, "Close")
+                            }
+                        }
+                        
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
+
+                        MarkdownText(
+                            text = "$parsedName ($adjustedCalories kcal)\n\nCategory: $parsedCategory\n\n$parsedDescription",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.verticalScroll(rememberScrollState()).weight(1f, fill = false)
+                        )
+                        
+                        if (parsedCalories > 0) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        portionMultiplier = (portionMultiplier - 0.25f).coerceIn(0.25f, 5.0f)
+                                    },
+                                    enabled = portionMultiplier > 0.25f
+                                ) {
+                                    Text(
+                                        "−",
+                                        fontSize = 22.sp,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                        color = if (portionMultiplier > 0.25f) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                                    )
+                                }
+
+                                Text(
+                                    text = String.format(java.util.Locale.US, "%.1fx • %d kcal", portionMultiplier, adjustedCalories),
+                                    fontSize = 15.sp,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
+                                IconButton(
+                                    onClick = {
+                                        portionMultiplier = (portionMultiplier + 0.25f).coerceIn(0.25f, 5.0f)
+                                    },
+                                    enabled = portionMultiplier < 5.0f
+                                ) {
+                                    Text(
+                                        "+",
+                                        fontSize = 22.sp,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                        color = if (portionMultiplier < 5.0f) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        MealTypeSelector(
+                            selectedMealType = selectedMealType,
+                            onMealTypeSelected = { selectedMealType = it }
+                        )
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Button(
+                            onClick = { 
+                                if (parsedCalories > 0) {
+                                    viewModel.logScannedFood(
+                                        name = parsedName,
+                                        category = parsedCategory,
+                                        calories = adjustedCalories,
+                                        description = parsedDescription,
+                                        mealType = selectedMealType,
+                                        carbsG = adjustedCarbs,
+                                        proteinG = adjustedProtein,
+                                        fatG = adjustedFat,
+                                        sodiumMg = adjustedSodium,
+                                        sugarG = adjustedSugar,
+                                        fiberG = adjustedFiber
+                                    )
+                                    viewModel.clearScanResult() 
+                                    selectedMealType = "Snack"
+                                    portionMultiplier = 1f
+                                    onNavigateBack()
+                                } else {
+                                    viewModel.clearScanResult() 
+                                    selectedMealType = "Snack"
+                                    portionMultiplier = 1f
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(50.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (parsedCalories > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                            )
+                        ) {
+                            Text(if (parsedCalories > 0) "Awesome! Log this meal" else "Dismiss")
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        // Permission Denied View
+        Column(
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Camera permission is required to scan food.")
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = { cameraPermissionState.launchPermissionRequest() }) {
+                Text("Request Permission")
+            }
+        }
+    }
+}
+
+@Composable
+fun CameraPreviewView(
+    onImageCaptured: (Bitmap) -> Unit,
+    onClose: () -> Unit
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val imageCapture = remember { ImageCapture.Builder().build() }
+    val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        AndroidView(
+            factory = { ctx ->
+                val previewView = PreviewView(ctx).apply {
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                }
+
+                val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+                cameraProviderFuture.addListener({
+                    val cameraProvider = cameraProviderFuture.get()
+                    val preview = Preview.Builder().build().also {
+                        it.setSurfaceProvider(previewView.surfaceProvider)
+                    }
+
+                    try {
+                        cameraProvider.unbindAll()
+                        cameraProvider.bindToLifecycle(
+                            lifecycleOwner,
+                            CameraSelector.DEFAULT_BACK_CAMERA,
+                            preview,
+                            imageCapture
+                        )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }, ContextCompat.getMainExecutor(ctx))
+
+                previewView
+            },
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Close button
+        IconButton(
+            onClick = onClose,
+            modifier = Modifier.padding(16.dp).background(Color.Black.copy(alpha = 0.5f), CircleShape).align(Alignment.TopStart)
+        ) {
+            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+        }
+
+        // Capture button
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 32.dp)
+                .size(72.dp)
+                .background(Color.White, CircleShape)
+                .padding(8.dp)
+                .background(Emerald500, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            IconButton(
+                onClick = {
+                    imageCapture.takePicture(
+                        ContextCompat.getMainExecutor(context),
+                        object : ImageCapture.OnImageCapturedCallback() {
+                            override fun onCaptureSuccess(image: ImageProxy) {
+                                val bitmap = imageProxyToBitmap(image)
+                                image.close()
+                                if (bitmap != null) {
+                                    onImageCaptured(bitmap)
+                                }
+                            }
+                            override fun onError(exception: ImageCaptureException) {
+                                exception.printStackTrace()
+                            }
+                        }
+                    )
+                },
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Icon(Icons.Default.AddAPhoto, contentDescription = "Capture", tint = Color.White, modifier = Modifier.size(32.dp))
+            }
+        }
+    }
+}
+
+// Convert ImageProxy to Bitmap. Handling YUV_420_888 to JPEG usually provided by takePicture
+private fun imageProxyToBitmap(image: ImageProxy): Bitmap? {
+    val planeProxy = image.planes[0]
+    val buffer: ByteBuffer = planeProxy.buffer
+    val bytes = ByteArray(buffer.remaining())
+    buffer.get(bytes)
+    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    
+    // Handle rotation
+    val matrix = Matrix()
+    matrix.postRotate(image.imageInfo.rotationDegrees.toFloat())
+    return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+}
+
+private fun encodeBitmapToBase64(bitmap: Bitmap): String {
+    // Resize bitmap to reduce payload size (Gemini API limit)
+    val scaledBitmap = Bitmap.createScaledBitmap(bitmap, 512, (512.toFloat() / bitmap.width * bitmap.height).toInt(), true)
+    val outputStream = ByteArrayOutputStream()
+    scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+    return Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
+}

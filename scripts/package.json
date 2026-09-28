@@ -1,0 +1,9 @@
+{
+  "name": "kardiq-push-poller",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Polls Firestore for new DMs/challenges and sends FCM push notifications -- runs via GitHub Actions, no Cloud Functions or Blaze plan needed.",
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}
