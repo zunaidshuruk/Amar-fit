@@ -610,7 +610,7 @@ class AppRepository(
         if (metrics.isEmpty()) return@withContext "Keep logging your health data daily to unlock personalized wellness insights."
 
         val metricsText = metrics.take(7).joinToString("\n") { m ->
-            "${m.date}: steps=${m.steps}, sleepHours=${m.sleepHours}, restingHR=${m.restingHeartRate}, weightKg=${m.weightKg}, waterLiters=${m.waterLiters}/${profile.dailyWaterLimitLiters}, caloriesConsumed=${m.caloriesConsumed}/${profile.dailyCalorieLimit}, bloodGlucoseMorning=${m.bloodGlucoseMorning}, bloodGlucoseNight=${m.bloodGlucoseNight}, bloodPressure=${m.bloodPressure}, oxygenSaturation=${m.oxygenSaturation}"
+            "${m.date}: steps=${m.steps}, sleepHours=${m.sleepHours}, restingHR=${m.restingHeartRate}, weightKg=${m.weightKg}, waterLiters=${m.waterLiters}/${profile.dailyWaterLimitLiters}, caloriesConsumed=${m.caloriesConsumed}/${profile.dailyCalorieLimit}, bloodGlucose=${maxOf(m.bloodGlucoseMorning, m.bloodGlucoseNight, m.bloodGlucoseBeforeBreakfast, m.bloodGlucoseAfterBreakfast, m.bloodGlucoseBeforeLunch, m.bloodGlucoseAfterLunch, m.bloodGlucoseBeforeDinner, m.bloodGlucoseAfterDinner)}, bloodPressure=${m.bloodPressure}, oxygenSaturation=${m.oxygenSaturation}"
         }
         val foodLogsText = foodLogs.take(21).joinToString("\n") { "${it.date}: ${it.name} (${it.calories} kcal)" }
 
@@ -1430,7 +1430,7 @@ class AppRepository(
                     when (fnName) {
                         "read_health_data" -> {
                             val metricsText = metrics.take(7).joinToString("\n") { m ->
-                                "${m.date}: steps=${m.steps}, sleepHours=${m.sleepHours}, restingHR=${m.restingHeartRate}, weightKg=${m.weightKg}, waterLiters=${m.waterLiters}, caloriesConsumed=${m.caloriesConsumed}, carbsG=${m.carbsG}, proteinG=${m.proteinG}, fatG=${m.fatG}, bloodGlucoseMorning=${m.bloodGlucoseMorning}, bloodGlucoseNight=${m.bloodGlucoseNight}, bloodPressure=${m.bloodPressure}, oxygenSaturation=${m.oxygenSaturation}"
+                                "${m.date}: steps=${m.steps}, sleepHours=${m.sleepHours}, restingHR=${m.restingHeartRate}, weightKg=${m.weightKg}, waterLiters=${m.waterLiters}, caloriesConsumed=${m.caloriesConsumed}, carbsG=${m.carbsG}, proteinG=${m.proteinG}, fatG=${m.fatG}, bloodGlucose=${maxOf(m.bloodGlucoseMorning, m.bloodGlucoseNight, m.bloodGlucoseBeforeBreakfast, m.bloodGlucoseAfterBreakfast, m.bloodGlucoseBeforeLunch, m.bloodGlucoseAfterLunch, m.bloodGlucoseBeforeDinner, m.bloodGlucoseAfterDinner)}, bloodPressure=${m.bloodPressure}, oxygenSaturation=${m.oxygenSaturation}"
                             }
                             val foodLogsText = foodLogs.take(14).joinToString("\n") { "${it.date}: ${it.name} (${it.calories} kcal)" }
                             "Profile: ${profile.age}yo ${profile.gender}, ${profile.heightCm}cm, ${profile.weightKg}kg, activity level ${profile.activityLevel}, calorie goal ${profile.dailyCalorieLimit}.\n\n7-Day Metrics:\n$metricsText\n\nRecent Food Logs:\n$foodLogsText"

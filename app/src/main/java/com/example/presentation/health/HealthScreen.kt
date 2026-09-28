@@ -79,7 +79,16 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val sleepScore = resilienceResult.sleepScore
     val hrvScore = resilienceResult.hrvScore
     
-    val glucose = maxOf(metrics?.bloodGlucoseMorning ?: 0f, metrics?.bloodGlucoseNight ?: 0f)
+    val glucose = maxOf(
+        metrics?.bloodGlucoseMorning ?: 0f,
+        metrics?.bloodGlucoseNight ?: 0f,
+        metrics?.bloodGlucoseBeforeBreakfast ?: 0f,
+        metrics?.bloodGlucoseAfterBreakfast ?: 0f,
+        metrics?.bloodGlucoseBeforeLunch ?: 0f,
+        metrics?.bloodGlucoseAfterLunch ?: 0f,
+        metrics?.bloodGlucoseBeforeDinner ?: 0f,
+        metrics?.bloodGlucoseAfterDinner ?: 0f
+    )
     val heartRate = metrics?.heartRate ?: 0
     val bloodPressure = metrics?.bloodPressure ?: ""
     val weight = profile?.weightKg ?: 70f
