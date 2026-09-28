@@ -1,0 +1,1224 @@
+package com.example.presentation.health
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import com.example.data.health.HealthGoalCalculator
+import com.example.presentation.navigation.navigateToTab
+import com.example.presentation.viewmodel.ShasthoViewModel
+import com.example.ui.components.StatTileCard
+import com.example.ui.theme.*
+import com.example.util.formatHeight
+import com.example.util.formatWeight
+import android.widget.Toast
+import java.text.NumberFormat
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
+    val profile by viewModel.userProfile.collectAsState()
+    val isDark = true
+
+    val glucoseAccent = AccentTokens.glucoseAccent(isDark)
+    val heartRateAccent = AccentTokens.heartRateAccent(isDark)
+    val weightAccent = AccentTokens.weightAccent(isDark)
+    val bloodPressureAccent = AccentTokens.bloodPressureAccent(isDark)
+    val bmiAccent = AccentTokens.bmiAccent(isDark)
+    val caloriesAccent = AccentTokens.caloriesAccent(isDark)
+    val stepsAccent = AccentTokens.stepsAccent(isDark)
+    val resilienceAccent = AccentTokens.resilienceAccent(isDark)
+
+    val bmiTrackColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Emerald200
+    val bmiFillColor = if (isDark) MaterialTheme.colorScheme.primary else Emerald600
+    val resilienceTrackColor = resilienceAccent.onBg.copy(alpha = 0.2f)
+    val resilienceFillColor = resilienceAccent.onBg
+
+    val metrics by viewModel.todayMetrics.collectAsState()
+    val todayFoodLogs by viewModel.todayFoodLogs.collectAsState()
+    val metricsHistory by viewModel.metricsHistory.collectAsState()
+    val last7Days = remember(metricsHistory) {
+        metricsHistory.take(7).reversed()
+    }
+
+    // Resilience calculation
+    val resilienceResult = remember(metricsHistory) {
+        ShasthoViewModel.calculateResilienceScore(metricsHistory)
+    }
+    val resilienceScore = resilienceResult.score
+    val resilienceBucket = resilienceResult.bucket
+    val sleepScore = resilienceResult.sleepScore
+    val hrvScore = resilienceResult.hrvScore
+    
+    val glucose = maxOf(
+        metrics?.bloodGlucoseMorning ?: 0f,
+        metrics?.bloodGlucoseNight ?: 0f,
+        metrics?.bloodGlucoseBeforeBreakfast ?: 0f,
+        metrics?.bloodGlucoseAfterBreakfast ?: 0f,
+        metrics?.bloodGlucoseBeforeLunch ?: 0f,
+        metrics?.bloodGlucoseAfterLunch ?: 0f,
+        metrics?.bloodGlucoseBeforeDinner ?: 0f,
+        metrics?.bloodGlucoseAfterDinner ?: 0f
+    )
+    val heartRate = metrics?.heartRate ?: 0
+    val bloodPressure = metrics?.bloodPressure ?: ""
+    val weight = profile?.weightKg ?: 70f
+    val heightM = (profile?.heightCm ?: 170f) / 100f
+    val bmi = if (heightM > 0) weight / (heightM * heightM) else 0f
+    val bmiFillFraction = if (bmi > 0f) ((bmi - 15f) / (35f - 15f)).coerceIn(0f, 1f) else 0f
+    val bodyFatPercent = profile?.let { HealthGoalCalculator.calculateBodyFatPercent(it) }
+    
+    var showBpDialog by remember { mutableStateOf(false) }
+    var showBmiDialog by remember { mutableStateOf(false) }
+
+    val isSyncing by viewModel.isSyncing.collectAsState()
+    PullToRefreshBox(
+        isRefreshing = isSyncing,
+        onRefresh = { viewModel.syncWithHealthConnect(navController.context) },
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text("Health Vitals", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        
+        // Row 1: Glucose & Heart Rate
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            StatTileCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.WaterDrop,
+                label = "BLOOD GLUCOSE",
+                value = if (glucose > 0) "$glucose" else "--",
+                caption = "mmol/L (+ Tap to log)",
+                accent = glucoseAccent,
+                onClick = { navController.navigate("glucoselog") }
+            )
+
+            StatTileCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.MonitorHeart,
+                label = "HEART RATE",
+                value = if (heartRate > 0) "$heartRate bpm" else "--",
+                caption = "(Synced automatically)",
+                accent = heartRateAccent
+            )
+        }
+
+        // Row 2: Weight & Blood Pressure
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            StatTileCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.MonitorWeight,
+                label = "WEIGHT",
+                value = formatWeight(weight, profile?.useImperialUnits ?: false),
+                caption = "(+ Tap to log)",
+                accent = weightAccent,
+                onClick = { navController.navigate("weightlog") }
+            )
+
+            StatTileCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.Timeline,
+                label = "BLOOD PRESSURE",
+                value = metrics?.bloodPressure?.takeIf { it.isNotBlank() } ?: "--",
+                caption = "mmHg (+ Tap to log)",
+                accent = bloodPressureAccent,
+                onClick = { showBpDialog = true }
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { navController.navigate("metric_detail/bloodPressure") }
+                .padding(vertical = 4.dp, horizontal = 8.dp),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "View Blood Pressure Trend",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "View Blood Pressure Trend",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+
+        // BMI Card
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clickable { showBmiDialog = true }
+                .padding(16.dp)
+        ) {
+            Column {
+                Text(text = "BMI", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(text = String.format("%.1f", bmi), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = bmiAccent.onBg)
+                Spacer(modifier = Modifier.height(6.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(CircleShape)
+                        .background(bmiTrackColor)
+                ) {
+                    if (bmiFillFraction > 0f) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(bmiFillFraction)
+                                .fillMaxHeight()
+                                .clip(CircleShape)
+                                .background(bmiFillColor)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Body Fat % Card
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .padding(16.dp)
+        ) {
+            Column {
+                Text(text = "BODY FAT %", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(16.dp))
+                if (bodyFatPercent != null) {
+                    Text(text = String.format("%.1f%%", bodyFatPercent), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = weightAccent.onBg)
+                } else {
+                    Text(text = "--", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = weightAccent.onBg)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = "Add waist & neck measurements in Settings", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = weightAccent.onBg)
+                }
+            }
+        }
+
+        // Resilience Card
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .padding(16.dp)
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "RESILIENCE",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (resilienceBucket != null) {
+                        Text(
+                            text = resilienceBucket,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = resilienceAccent.onBg
+                        )
+                    }
+                }
+                if (resilienceScore == null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Log your sleep to see your Resilience score",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "$resilienceScore",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = resilienceAccent.onBg
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(CircleShape)
+                            .background(resilienceTrackColor)
+                    ) {
+                        val fillFraction = (resilienceScore / 100f).coerceIn(0f, 1f)
+                        if (fillFraction > 0f) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(fillFraction)
+                                    .fillMaxHeight()
+                                    .clip(CircleShape)
+                                    .background(resilienceFillColor)
+                            )
+                        }
+                    }
+                    if (hrvScore == null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Based on sleep only — sync Health Connect HRV for a fuller score",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = resilienceAccent.onBg.copy(alpha = 0.85f)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Protocol Module
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
+                .clickable { navController.navigate("lifestyle") }
+                .padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(imageVector = Icons.Default.MenuBook, contentDescription = "Protocol", tint = MaterialTheme.colorScheme.primary)
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "Lifestyle Protocol", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text(text = "Read the health guidelines", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                    }
+                }
+                Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Go", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
+        // Key metrics section
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "Key metrics",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        val validWeights = remember(last7Days) { last7Days.filter { it.weightKg > 0f } }
+        val latestWeight = validWeights.lastOrNull()?.weightKg
+        val weightCallout = if (latestWeight != null) {
+            formatWeight(latestWeight, profile?.useImperialUnits ?: false)
+        } else {
+            "--"
+        }
+
+        val caloriesData = remember(last7Days) { last7Days.map { it.activeCaloriesBurned } }
+        val hasCalories = caloriesData.any { it > 0 }
+        val todayCalories = metrics?.activeCaloriesBurned ?: caloriesData.lastOrNull() ?: 0
+        val caloriesCallout = if (hasCalories) {
+            "Today: ${NumberFormat.getIntegerInstance().format(todayCalories)} kcal"
+        } else {
+            "--"
+        }
+
+        val stepsData = remember(last7Days) { last7Days.map { it.steps } }
+        val hasSteps = stepsData.any { it > 0 }
+        val todaySteps = metrics?.steps ?: stepsData.lastOrNull() ?: 0
+        val stepsCallout = if (hasSteps) {
+            "Today: ${NumberFormat.getIntegerInstance().format(todaySteps)} steps"
+        } else {
+            "--"
+        }
+
+        val hasExercise = last7Days.any { it.exerciseMinutes > 0 }
+        val activeDaysCount = last7Days.count { it.exerciseMinutes > 0 }
+        val exerciseCallout = if (hasExercise) {
+            "$activeDaysCount of ${last7Days.size} days"
+        } else {
+            "--"
+        }
+
+        // Row 1: Weight & Calories Burned
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Card 1: Weight
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { navController.navigate("weightlog") },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp)
+                ) {
+                    Text(
+                        text = "Weight",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = weightCallout,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    if (validWeights.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No data available",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        Canvas(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp)
+                        ) {
+                            val minW = (validWeights.minOfOrNull { it.weightKg } ?: 50f) - 1f
+                            val maxW = (validWeights.maxOfOrNull { it.weightKg } ?: 100f) + 1f
+                            val range = (maxW - minW).takeIf { it > 0.001f } ?: 1f
+                            val width = size.width
+                            val height = size.height
+                            val count = last7Days.size
+
+                            val stepX = if (count > 1) width / (count - 1) else 0f
+                            val weightPath = Path()
+                            var lastValidIndex: Int? = null
+
+                            last7Days.forEachIndexed { index, metric ->
+                                if (metric.weightKg > 0f) {
+                                    val x = if (count > 1) index * stepX else width / 2f
+                                    val normY = ((metric.weightKg - minW) / range).coerceIn(0f, 1f)
+                                    val y = height - (normY * (height - 16.dp.toPx())) - 8.dp.toPx()
+
+                                    if (lastValidIndex == null || lastValidIndex != index - 1) {
+                                        weightPath.moveTo(x, y)
+                                    } else {
+                                        weightPath.lineTo(x, y)
+                                    }
+                                    lastValidIndex = index
+                                    drawCircle(
+                                        color = weightAccent.onBg,
+                                        radius = 4.dp.toPx(),
+                                        center = Offset(x, y)
+                                    )
+                                }
+                            }
+                            drawPath(
+                                path = weightPath,
+                                color = weightAccent.onBg,
+                                style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Card 2: Calories Burned
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { navController.navigate("metric_detail/activeCaloriesBurned") },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp)
+                ) {
+                    Text(
+                        text = "Calories Burned",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = caloriesCallout,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    if (!hasCalories) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No data available",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        Canvas(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp)
+                        ) {
+                            val maxCal = (caloriesData.maxOrNull() ?: 500).coerceAtLeast(100).toFloat()
+                            val count = caloriesData.size
+                            val width = size.width
+                            val height = size.height
+                            val barWidth = 8.dp.toPx()
+                            val spacing = if (count > 1) (width - (count * barWidth)) / (count - 1) else 0f
+
+                            caloriesData.forEachIndexed { index, cal ->
+                                val x = if (count > 1) index * (barWidth + spacing) else (width - barWidth) / 2f
+                                val ratio = (cal.toFloat() / maxCal).coerceIn(0f, 1f)
+                                val barHeight = (ratio * (height - 8.dp.toPx())).coerceAtLeast(4.dp.toPx())
+                                val y = height - barHeight
+
+                                drawRoundRect(
+                                    color = if (cal > 0) caloriesAccent.onBg else caloriesAccent.onBg.copy(alpha = 0.2f),
+                                    topLeft = Offset(x, y),
+                                    size = Size(barWidth, barHeight),
+                                    cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Row 2: Steps & Exercise Days
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Card 3: Steps
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { navController.navigate("metric_detail/steps") },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp)
+                ) {
+                    Text(
+                        text = "Steps",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = stepsCallout,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    if (!hasSteps) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No data available",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        Canvas(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp)
+                        ) {
+                            val maxSteps = (stepsData.maxOrNull() ?: 10000).coerceAtLeast(1000).toFloat()
+                            val count = stepsData.size
+                            val width = size.width
+                            val height = size.height
+                            val barWidth = 8.dp.toPx()
+                            val spacing = if (count > 1) (width - (count * barWidth)) / (count - 1) else 0f
+
+                            stepsData.forEachIndexed { index, st ->
+                                val x = if (count > 1) index * (barWidth + spacing) else (width - barWidth) / 2f
+                                val ratio = (st.toFloat() / maxSteps).coerceIn(0f, 1f)
+                                val barHeight = (ratio * (height - 8.dp.toPx())).coerceAtLeast(4.dp.toPx())
+                                val y = height - barHeight
+
+                                drawRoundRect(
+                                    color = if (st > 0) stepsAccent.onBg else stepsAccent.onBg.copy(alpha = 0.2f),
+                                    topLeft = Offset(x, y),
+                                    size = Size(barWidth, barHeight),
+                                    cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Card 4: Exercise Days
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { navController.navigate("metric_detail/exerciseDays") },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp)
+                ) {
+                    Text(
+                        text = "Exercise Days",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = exerciseCallout,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    if (!hasExercise) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No data available",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        Canvas(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp)
+                        ) {
+                            val count = last7Days.size
+                            val width = size.width
+                            val height = size.height
+                            val pillWidth = 8.dp.toPx()
+                            val pillHeight = 28.dp.toPx()
+                            val spacing = if (count > 1) (width - (count * pillWidth)) / (count - 1) else 0f
+                            val y = (height - pillHeight) / 2f
+
+                            last7Days.forEachIndexed { index, metric ->
+                                val x = if (count > 1) index * (pillWidth + spacing) else (width - pillWidth) / 2f
+                                val isMoved = metric.exerciseMinutes > 0
+
+                                drawRoundRect(
+                                    color = if (isMoved) stepsAccent.onBg else stepsAccent.onBg.copy(alpha = 0.38f),
+                                    topLeft = Offset(x, y),
+                                    size = Size(pillWidth, pillHeight),
+                                    cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Additional Health Vitals section
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "More Health Vitals",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        val additionalMetrics = listOf(
+            Triple("Water", metrics?.waterLiters?.let { if (it > 0f) "${String.format(java.util.Locale.US, "%.1f", it)} L" else null } ?: "--", "waterLiters"),
+            Triple("Calories Consumed", metrics?.caloriesConsumed?.let { if (it > 0) "${NumberFormat.getIntegerInstance().format(it)} kcal" else null } ?: "--", "caloriesConsumed"),
+            Triple("Heart Rate", if (heartRate > 0) "$heartRate bpm" else "--", "heartRate"),
+            Triple("Blood Oxygen (SpO2)", metrics?.oxygenSaturation?.let { if (it > 0f) "${String.format(java.util.Locale.US, "%.1f", it)}%" else null } ?: "--", "oxygenSaturation"),
+            Triple("Heart Rate Variability (HRV)", metrics?.heartRateVariability?.let { if (it > 0f) "${String.format(java.util.Locale.US, "%.1f", it)} ms" else null } ?: "--", "heartRateVariability"),
+            Triple("Skin Temperature", metrics?.skinTemperatureCelsius?.let { if (it > 0f) "${String.format(java.util.Locale.US, "%.1f", it)} °C" else null } ?: "--", "skinTemperatureCelsius"),
+            Triple("Respiratory Rate", metrics?.respiratoryRate?.let { if (it > 0f) "${String.format(java.util.Locale.US, "%.1f", it)} rpm" else null } ?: "--", "respiratoryRate")
+        )
+
+        additionalMetrics.forEach { (label, value, key) ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { navController.navigate("metric_detail/$key") },
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = label,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = value,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Details",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Health Correlations entry point
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { navController.navigate("health_correlations") },
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("Health Correlations", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("See patterns across your metrics", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                }
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "Details",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        // Focus areas section
+        Spacer(modifier = Modifier.height(4.dp))
+        Text("Focus areas", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+
+        data class FocusAreaItem(
+            val title: String,
+            val isTracked: Boolean,
+            val accent: AccentColors,
+            val onClick: () -> Unit
+        )
+
+        val focusAreas = listOf(
+            FocusAreaItem("Heart", heartRate > 0, AccentTokens.heartRateAccent(isDark)) { navigateToTab(navController, "health") },
+            FocusAreaItem("Metabolic", glucose > 0f, AccentTokens.glucoseAccent(isDark)) { navController.navigate("glucoselog") },
+            FocusAreaItem("Fitness", (metrics?.steps ?: 0) > 0 || (metrics?.exerciseMinutes ?: 0) > 0, AccentTokens.stepsAccent(isDark)) { navigateToTab(navController, "fitness") },
+            FocusAreaItem("Sleep", (metrics?.sleepHours ?: 0f) > 0f, AccentTokens.sleepAccent(isDark)) { navigateToTab(navController, "sleep") },
+            FocusAreaItem("Nutrition", todayFoodLogs.isNotEmpty() || (metrics?.caloriesConsumed ?: 0) > 0, AccentTokens.foodLogAccent(isDark)) { navController.navigate("foodlog") },
+            FocusAreaItem("Vitals", bloodPressure.isNotBlank(), AccentTokens.bloodPressureAccent(isDark)) { showBpDialog = true },
+            FocusAreaItem("Respiratory", false, AccentTokens.waterAccent(isDark)) {},
+            FocusAreaItem("Temperature", false, AccentTokens.caloriesAccent(isDark)) {},
+            FocusAreaItem("Mental wellbeing", false, AccentTokens.coachAccent(isDark)) {}
+        )
+
+        focusAreas.chunked(2).forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                rowItems.forEach { item ->
+                    val bg = if (item.isTracked) item.accent.bg else MaterialTheme.colorScheme.surfaceVariant
+                    val contentColor = if (item.isTracked) item.accent.onBg else MaterialTheme.colorScheme.onSurfaceVariant
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 72.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(bg)
+                            .then(if (item.isTracked) Modifier.clickable { item.onClick() } else Modifier)
+                            .padding(16.dp)
+                    ) {
+                        Column {
+                            Text(
+                                text = item.title,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = contentColor,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = if (item.isTracked) "Tracked" else "Not tracked",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = contentColor.copy(alpha = if (item.isTracked) 1f else 0.7f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+                if (rowItems.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+
+        // Health checks section
+        Spacer(modifier = Modifier.height(4.dp))
+        Text("Health checks", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+
+        val isHighHeartRate = heartRate > 100
+        val isLowHeartRate = heartRate in 1..59
+        val hrAccent = AccentTokens.heartRateAccent(isDark)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            val highBg = if (isHighHeartRate) hrAccent.bg else MaterialTheme.colorScheme.surfaceVariant
+            val highColor = if (isHighHeartRate) hrAccent.onBg else MaterialTheme.colorScheme.onSurfaceVariant
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(highBg)
+                    .padding(16.dp)
+            ) {
+                Column {
+                    Text(text = "High heart rate", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = highColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (isHighHeartRate) "$heartRate bpm" else "Not available",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = highColor.copy(alpha = if (isHighHeartRate) 1f else 0.7f)
+                    )
+                }
+            }
+
+            val lowBg = if (isLowHeartRate) hrAccent.bg else MaterialTheme.colorScheme.surfaceVariant
+            val lowColor = if (isLowHeartRate) hrAccent.onBg else MaterialTheme.colorScheme.onSurfaceVariant
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(lowBg)
+                    .padding(16.dp)
+            ) {
+                Column {
+                    Text(text = "Low heart rate", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = lowColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (isLowHeartRate) "$heartRate bpm" else "Not available",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = lowColor.copy(alpha = if (isLowHeartRate) 1f else 0.7f)
+                    )
+                }
+            }
+        }
+
+        // Personal info section
+        Spacer(modifier = Modifier.height(4.dp))
+        Text("Personal info", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            val profileAccent = AccentTokens.pointsAccent(isDark)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(profileAccent.bg)
+                    .clickable { navController.navigate("settings") }
+                    .padding(16.dp)
+            ) {
+                Column {
+                    Text(text = "Profile", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = profileAccent.onBg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = "Account & Settings", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = profileAccent.onBg.copy(alpha = 0.8f))
+                }
+            }
+
+            val chatAccent = AccentTokens.dietChartAccent(isDark)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(chatAccent.bg)
+                    .clickable { navController.navigate("chat?openSavedChats=true") }
+                    .padding(16.dp)
+            ) {
+                Column {
+                    Text(text = "Chat history", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = chatAccent.onBg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = "Saved AI chats", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = chatAccent.onBg.copy(alpha = 0.8f))
+                }
+            }
+        }
+
+        val medicalAccent = AccentTokens.medicalAccent(isDark)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(medicalAccent.bg)
+                .clickable { navController.navigate("medical_records") }
+                .padding(16.dp)
+        ) {
+            Column {
+                Text(text = "Medical", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = medicalAccent.onBg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = "Health records", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = medicalAccent.onBg.copy(alpha = 0.8f))
+            }
+        }
+    }
+    }
+
+    if (showBpDialog) {
+        var systolicInput by remember { mutableStateOf("") }
+        var diastolicInput by remember { mutableStateOf("") }
+        var bodyPosition by remember { mutableStateOf("Not set") }
+        var armLocation by remember { mutableStateOf("Not set") }
+        var expandedBodyPosition by remember { mutableStateOf(false) }
+        var expandedArmLocation by remember { mutableStateOf(false) }
+        val bodyPositionOptions = listOf("Not set", "Standing", "Sitting", "Lying down", "Reclining")
+        val armLocationOptions = listOf("Not set", "Left wrist", "Right wrist", "Left upper arm", "Right upper arm")
+
+        AlertDialog(
+            onDismissRequest = { showBpDialog = false },
+            title = {
+                Text(
+                    text = "Log Blood Pressure",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = systolicInput,
+                            onValueChange = { systolicInput = it },
+                            label = { Text("Systolic") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        OutlinedTextField(
+                            value = diastolicInput,
+                            onValueChange = { diastolicInput = it },
+                            label = { Text("Diastolic") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+
+                    Text(
+                        text = "MEASUREMENT DETAILS",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    ExposedDropdownMenuBox(
+                        expanded = expandedBodyPosition,
+                        onExpandedChange = { expandedBodyPosition = !expandedBodyPosition },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = bodyPosition,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Body position") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedBodyPosition) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expandedBodyPosition,
+                            onDismissRequest = { expandedBodyPosition = false }
+                        ) {
+                            bodyPositionOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        bodyPosition = option
+                                        expandedBodyPosition = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    ExposedDropdownMenuBox(
+                        expanded = expandedArmLocation,
+                        onExpandedChange = { expandedArmLocation = !expandedArmLocation },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = armLocation,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Arm location") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedArmLocation) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expandedArmLocation,
+                            onDismissRequest = { expandedArmLocation = false }
+                        ) {
+                            armLocationOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        armLocation = option
+                                        expandedArmLocation = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val sys = systolicInput.toIntOrNull()
+                    val dia = diastolicInput.toIntOrNull()
+                    if (sys != null && sys > 0 && dia != null && dia > 0) {
+                        viewModel.setBloodPressure(sys, dia, bodyPosition, armLocation) { success ->
+                            if (!success) {
+                                Toast.makeText(
+                                    navController.context,
+                                    "Blood pressure logged (didn't sync to Health Connect)",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                        bodyPosition = "Not set"
+                        armLocation = "Not set"
+                        showBpDialog = false
+                    }
+                }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    bodyPosition = "Not set"
+                    armLocation = "Not set"
+                    showBpDialog = false
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showBmiDialog) {
+        var weightInput by remember { mutableStateOf(profile?.weightKg?.takeIf { it > 0 }?.toString() ?: "70.0") }
+        var heightInput by remember { mutableStateOf(profile?.heightCm?.takeIf { it > 0 }?.toString() ?: "170.0") }
+        var showWeightDialog by remember { mutableStateOf(false) }
+        var showHeightDialog by remember { mutableStateOf(false) }
+
+        if (showWeightDialog) {
+            com.example.ui.components.HeightWeightPickerDialog(
+                mode = com.example.ui.components.PickerMode.WEIGHT,
+                initialValue = weightInput.toFloatOrNull() ?: 70f,
+                useImperialUnits = profile?.useImperialUnits ?: false,
+                onDismiss = { showWeightDialog = false },
+                onConfirm = { kg ->
+                    weightInput = kg.toString()
+                    showWeightDialog = false
+                }
+            )
+        }
+
+        if (showHeightDialog) {
+            com.example.ui.components.HeightWeightPickerDialog(
+                mode = com.example.ui.components.PickerMode.HEIGHT,
+                initialValue = heightInput.toFloatOrNull() ?: 170f,
+                useImperialUnits = profile?.useImperialUnits ?: false,
+                onDismiss = { showHeightDialog = false },
+                onConfirm = { cm ->
+                    heightInput = cm.toString()
+                    showHeightDialog = false
+                }
+            )
+        }
+        
+        val w = weightInput.toFloatOrNull() ?: 0f
+        val h = heightInput.toFloatOrNull()?.div(100f) ?: 0f
+        val calcBmi = if (h > 0) w / (h * h) else 0f
+        
+        AlertDialog(
+            onDismissRequest = { showBmiDialog = false },
+            title = { Text("BMI Calculator") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = formatWeight(weightInput.toFloatOrNull() ?: 70f, profile?.useImperialUnits ?: false),
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Weight") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Box(modifier = Modifier.matchParentSize().clickable { showWeightDialog = true })
+                    }
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = formatHeight(heightInput.toFloatOrNull() ?: 170f, profile?.useImperialUnits ?: false),
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Height") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Box(modifier = Modifier.matchParentSize().clickable { showHeightDialog = true })
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(text = "BMI: ${String.format("%.1f", calcBmi)}", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    val status = when {
+                        calcBmi == 0f -> ""
+                        calcBmi < 18.5f -> "Underweight"
+                        calcBmi < 25f -> "Normal"
+                        calcBmi < 30f -> "Overweight"
+                        else -> "Obese"
+                    }
+                    Text(text = status, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showBmiDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
+}

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <array name="health_permissions">
+        <item>android.permission.health.READ_STEPS</item>
+        <item>android.permission.health.READ_SLEEP</item>
+        <item>android.permission.health.READ_BLOOD_PRESSURE</item>
+        <item>android.permission.health.READ_BLOOD_GLUCOSE</item>
+        <item>android.permission.health.READ_HEART_RATE</item>
+        <item>android.permission.health.READ_DISTANCE</item>
+        <item>android.permission.health.READ_EXERCISE</item>
+        <item>android.permission.health.READ_NUTRITION</item>
+         <item>android.permission.health.READ_ACTIVE_CALORIES_BURNED</item>
+        <item>android.permission.health.READ_HEART_RATE_VARIABILITY</item>
+        <item>android.permission.health.READ_OXYGEN_SATURATION</item>
+        <item>android.permission.health.READ_SKIN_TEMPERATURE</item>
+        <item>android.permission.health.READ_RESPIRATORY_RATE</item>
+        <item>android.permission.health.READ_MINDFULNESS</item>
+        <item>android.permission.health.READ_SPEED</item>
+        <item>android.permission.health.READ_TOTAL_CALORIES_BURNED</item>
+        <item>android.permission.health.READ_BASAL_METABOLIC_RATE</item>
+        <item>android.permission.health.READ_HYDRATION</item>
+        <item>android.permission.health.WRITE_NUTRITION</item>
+        <item>android.permission.health.WRITE_HYDRATION</item>
+        <item>android.permission.health.WRITE_SLEEP</item>
+        <item>android.permission.health.WRITE_EXERCISE</item>
+        <item>android.permission.health.WRITE_MINDFULNESS</item>
+        <item>android.permission.health.WRITE_TOTAL_CALORIES_BURNED</item>
+        <item>android.permission.health.WRITE_BASAL_METABOLIC_RATE</item>
+    </array>
+</resources>
