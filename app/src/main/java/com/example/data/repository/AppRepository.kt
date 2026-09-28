@@ -1459,7 +1459,7 @@ class AppRepository(
 
                 val callId = functionCall.optString("id", "")
                 contents.put(org.json.JSONObject().apply {
-                    put("role", "user")
+                    put("role", "function")
                     put("parts", org.json.JSONArray().put(org.json.JSONObject().apply {
                         put("functionResponse", org.json.JSONObject().apply {
                             if (callId.isNotBlank()) put("id", callId)
