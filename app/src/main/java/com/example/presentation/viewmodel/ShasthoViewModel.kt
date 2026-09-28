@@ -151,7 +151,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         database.activityEventDao(),
         database.youtubeVideoCacheDao(),
         database.medicalRecordDao(),
-        database.foodChatMessageDao()
+        database.foodChatMessageDao(),
+        database.assistantChatMessageDao()
     )
 
     private val startOfDayMillis: Long
@@ -1794,11 +1795,22 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     private val _isLoadingUniversalAssistant = MutableStateFlow(false)
     val isLoadingUniversalAssistant: StateFlow<Boolean> = _isLoadingUniversalAssistant.asStateFlow()
 
+    private var universalAssistantHistoryLoaded = false
+
+    fun loadUniversalAssistantHistory() {
+        if (universalAssistantHistoryLoaded) return
+        universalAssistantHistoryLoaded = true
+        viewModelScope.launch {
+            _universalAssistantHistory.value = repository.getAssistantChatHistoryOnce()
+        }
+    }
+
     fun sendUniversalAssistantMessage(message: String) {
         viewModelScope.launch {
             val newUserMsg = ChatMessage(message, true)
             val historyBeforeThisMessage = _universalAssistantHistory.value
             _universalAssistantHistory.value = historyBeforeThisMessage + newUserMsg
+            repository.saveAssistantChatMessage(message, true)
             _isLoadingUniversalAssistant.value = true
 
             try {
@@ -1815,11 +1827,14 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 )) {
                     is AppRepository.AssistantResult.Text -> {
                         _universalAssistantHistory.value = _universalAssistantHistory.value + ChatMessage(result.message, false)
+                        repository.saveAssistantChatMessage(result.message, false)
                     }
                     is AppRepository.AssistantResult.PendingFoodLog -> {
+                        val confirmationText = "I've prepared a food log entry for you to review below."
                         _universalAssistantHistory.value = _universalAssistantHistory.value + ChatMessage(
-                            "I've prepared a food log entry for you to review below.", false
+                            confirmationText, false
                         )
+                        repository.saveAssistantChatMessage(confirmationText, false)
                         _pendingFoodLogEntry.value = PendingFoodLogEntry(
                             name = result.name,
                             category = result.category,
@@ -1837,9 +1852,9 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 }
             } catch (e: Exception) {
                 android.util.Log.e("UniversalAssistant", "sendUniversalAssistantMessage failed", e)
-                _universalAssistantHistory.value = _universalAssistantHistory.value + ChatMessage(
-                    "Sorry, something went wrong: ${e.message ?: e.toString()}", false
-                )
+                val errorText = "Sorry, something went wrong: ${e.message ?: e.toString()}"
+                _universalAssistantHistory.value = _universalAssistantHistory.value + ChatMessage(errorText, false)
+                repository.saveAssistantChatMessage(errorText, false)
             }
             _isLoadingUniversalAssistant.value = false
         }

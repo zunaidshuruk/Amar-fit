@@ -25,7 +25,8 @@ class AppRepository(
     private val activityEventDao: com.example.data.local.ActivityEventDao? = null,
     private val youtubeVideoCacheDao: com.example.data.local.YoutubeVideoCacheDao? = null,
     private val medicalRecordDao: com.example.data.local.MedicalRecordDao? = null,
-    private val foodChatMessageDao: com.example.data.local.FoodChatMessageDao? = null
+    private val foodChatMessageDao: com.example.data.local.FoodChatMessageDao? = null,
+    private val assistantChatMessageDao: com.example.data.local.AssistantChatMessageDao? = null
 ) {
 
     suspend fun logActivityEvent(type: String, description: String, timestamp: Long = System.currentTimeMillis(), source: String = "app", externalId: String? = null) {
@@ -52,6 +53,18 @@ class AppRepository(
 
     suspend fun getFoodChatHistoryOnce(): List<com.example.presentation.viewmodel.ChatMessage> {
         return foodChatMessageDao?.getAll()?.map {
+            com.example.presentation.viewmodel.ChatMessage(it.text, it.isUser)
+        } ?: emptyList()
+    }
+
+    suspend fun saveAssistantChatMessage(text: String, isUser: Boolean) {
+        assistantChatMessageDao?.insert(
+            com.example.data.local.AssistantChatMessage(text = text, isUser = isUser)
+        )
+    }
+
+    suspend fun getAssistantChatHistoryOnce(): List<com.example.presentation.viewmodel.ChatMessage> {
+        return assistantChatMessageDao?.getAll()?.map {
             com.example.presentation.viewmodel.ChatMessage(it.text, it.isUser)
         } ?: emptyList()
     }
@@ -1439,12 +1452,39 @@ class AppRepository(
                         "get_glucose_guidance" -> generateGlucoseGuidance(profile, metrics)
                         "generate_diet_chart" -> {
                             val days = fnArgs.optInt("durationDays", 7)
-                            generateDietChart(profile, days)
+                            val chartContent = generateDietChart(profile, days)
+                            val chartName = "AI Diet Chart (${days} days) - ${java.text.SimpleDateFormat("MMM d", java.util.Locale.US).format(java.util.Date())}"
+                            val saved = saveDietChart(
+                                com.example.data.local.SavedDietChart(
+                                    name = chartName,
+                                    chartContent = chartContent
+                                )
+                            )
+                            if (saved) {
+                                "Diet chart generated and saved to My Diet Charts as \"$chartName\":\n\n$chartContent"
+                            } else {
+                                "Diet chart generated (could not be saved, please try again from the Diet Chart screen):\n\n$chartContent"
+                            }
                         }
                         "generate_workout" -> {
                             val result = generateStructuredWorkout(profile)
                             result.getOrNull()?.let { plan ->
-                                "Generated workout: ${plan.title}. Warmup: ${plan.warmup.size} exercises, Main: ${plan.mainExercises.size} exercises, Cooldown: ${plan.cooldown.size} exercises."
+                                val structuredJson = try {
+                                    RetrofitClient.moshi.adapter(com.example.data.model.WorkoutPlan::class.java).toJson(plan)
+                                } catch (e: Exception) { "" }
+                                val summary = "Warmup: ${plan.warmup.joinToString(", ") { it.name }}. Main: ${plan.mainExercises.joinToString(", ") { it.name }}. Cooldown: ${plan.cooldown.joinToString(", ") { it.name }}."
+                                val saved = saveWorkout(
+                                    com.example.data.local.SavedWorkout(
+                                        title = plan.title,
+                                        content = summary,
+                                        structuredJson = structuredJson
+                                    )
+                                )
+                                if (saved) {
+                                    "Workout \"${plan.title}\" generated and saved to My Saved Workouts. $summary"
+                                } else {
+                                    "Workout \"${plan.title}\" generated (could not be saved, please try again from the Fitness screen). $summary"
+                                }
                             } ?: "Could not generate a workout right now."
                         }
                         "generate_recipe" -> {

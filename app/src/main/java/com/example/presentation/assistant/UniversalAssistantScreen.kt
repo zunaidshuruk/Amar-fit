@@ -75,6 +75,7 @@ fun UniversalAssistantScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> 
         viewModel.discardPendingFoodLog()
     }
 
+    LaunchedEffect(Unit) { viewModel.loadUniversalAssistantHistory() }
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
     }

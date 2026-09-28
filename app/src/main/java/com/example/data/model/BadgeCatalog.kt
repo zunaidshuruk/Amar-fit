@@ -44,7 +44,7 @@ val ALL_BADGES: List<BadgeDefinition> = listOf(
     BadgeDefinition(
         id = "Consistency Starter",
         displayName = "Consistency Starter",
-        description = "Log your health data to get started.",
+        description = "Log your health data for 3 days in a row.",
         icon = Icons.Default.EventAvailable,
         points = 20,
         tier = BadgeTier.BRONZE
