@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">KardIQ</string>
+    <string name="default_web_client_id" translatable="false">770523805126-okcd8k1916pe6ghd6rqulhj0pd7tcmdr.apps.googleusercontent.com</string>
+    <string name="gcm_defaultSenderId" translatable="false">770523805126</string>
+    <string name="google_api_key" translatable="false">AIzaSyDVjxNGR5a1OGdb6QLRzZJo-WoDFmNG6h8</string>
+    <string name="google_app_id" translatable="false">1:770523805126:android:d9e8a58c8ea60902e92ec7</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyDVjxNGR5a1OGdb6QLRzZJo-WoDFmNG6h8</string>
+    <string name="google_storage_bucket" translatable="false">amar-fit-c3335.firebasestorage.app</string>
+    <string name="project_id" translatable="false">amar-fit-c3335</string>
 </resources>
