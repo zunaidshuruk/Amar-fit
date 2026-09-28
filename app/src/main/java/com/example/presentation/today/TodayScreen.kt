@@ -396,43 +396,11 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                         }
                     }
 
-                    if (badges.isEmpty()) {
-                        Text(
-                            text = "Keep logging to earn your first badge!",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            badges.forEach { badge ->
-                                val badgeIcon = ALL_BADGES.find { it.id == badge }?.icon ?: Icons.Default.EmojiEvents
-                                Row(
-                                    modifier = Modifier
-                                        .clip(CircleShape)
-                                        .background(badgesAccent.onBg.copy(alpha = 0.12f))
-                                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = badgeIcon,
-                                        contentDescription = null,
-                                        tint = badgesAccent.onBg,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Text(
-                                        text = badge,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = badgesAccent.onBg
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    Text(
+                        text = if (badges.isEmpty()) "Keep logging to earn your first badge!" else "${badges.size} badge${if (badges.size == 1) "" else "s"} earned",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
@@ -574,55 +542,6 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     )
                 }
             }
-        }
-
-        // Quick Actions 2x2 Grid
-        Text("Quick Actions", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            QuickActionCard(
-                modifier = Modifier.weight(1f),
-                title = "Scan Food",
-                icon = Icons.Default.AddAPhoto,
-                bgColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface,
-                iconColor = if (isDark) MaterialTheme.colorScheme.primary else Primary,
-                textColor = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
-                onClick = { navController.navigate("scanner") }
-            )
-            QuickActionCard(
-                modifier = Modifier.weight(1f),
-                title = "Log Workout",
-                icon = Icons.Default.FitnessCenter,
-                bgColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface,
-                iconColor = if (isDark) MaterialTheme.colorScheme.primary else Primary,
-                textColor = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
-                onClick = { navigateToTab(navController, "fitness") }
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            QuickActionCard(
-                modifier = Modifier.weight(1f),
-                title = "Diet Chart",
-                icon = Icons.Default.RestaurantMenu,
-                bgColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface,
-                iconColor = if (isDark) MaterialTheme.colorScheme.primary else Primary,
-                textColor = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
-                onClick = { navController.navigate("dietplan") }
-            )
-            QuickActionCard(
-                modifier = Modifier.weight(1f),
-                title = "Water Log",
-                icon = Icons.Default.LocalDrink,
-                bgColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface,
-                iconColor = if (isDark) MaterialTheme.colorScheme.primary else Primary,
-                textColor = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
-                onClick = { showWaterDialog = true }
-            )
         }
 
         // Today's Activity Timeline Feed
