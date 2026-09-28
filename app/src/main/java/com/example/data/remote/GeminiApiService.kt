@@ -55,8 +55,9 @@ interface GeminiApiService {
     ): GenerateContentResponse
 
     @retrofit2.http.Streaming
-    @POST("v1beta/models/gemini-3.5-flash:streamGenerateContent")
+    @POST("v1beta/models/{model}:streamGenerateContent")
     suspend fun streamGenerateContent(
+        @Path("model") model: String = "gemini-3.1-flash-lite-preview",
         @Query("key") apiKey: String,
         @Query("alt") alt: String = "sse",
         @Body request: GenerateContentRequest

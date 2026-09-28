@@ -1857,7 +1857,15 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 }
             } catch (e: Exception) {
                 android.util.Log.e("UniversalAssistant", "sendUniversalAssistantMessage failed", e)
-                val errorText = "Sorry, something went wrong: ${e.message ?: e.toString()}"
+                val rawMsg = e.message ?: ""
+                val errorText = when {
+                    rawMsg.contains("429") || rawMsg.contains("quota", ignoreCase = true) ->
+                        "The AI assistant is momentarily busy due to high traffic. Please try again in a moment."
+                    rawMsg.contains("403") ->
+                        "Access to the AI service was temporarily refused. Retrying automatically..."
+                    else ->
+                        "Sorry, I encountered an issue processing your request. Please try asking again."
+                }
                 _universalAssistantHistory.value = _universalAssistantHistory.value + ChatMessage(errorText, false)
                 repository.saveAssistantChatMessage(errorText, false)
             }

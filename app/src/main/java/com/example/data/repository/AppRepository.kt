@@ -128,74 +128,92 @@ class AppRepository(
         return apiKeys
     }
 
+    private val candidateModels = listOf(
+        "gemini-3.1-flash-lite-preview",
+        "gemini-2.5-flash",
+        "gemini-flash-lite-latest",
+        "gemini-3.5-flash-lite",
+        "gemini-flash-latest"
+    )
+
     private suspend fun executeGeminiCallWithBackoff(
         request: GenerateContentRequest,
-        maxRetries: Int = 3,
-        model: String = "gemini-3.5-flash"
+        maxRetries: Int = 2,
+        model: String? = null
     ): GenerateContentResponse {
         val apiKeys = resolveApiKeys()
 
         if (apiKeys.isEmpty()) {
-            throw Exception("API Key is missing or invalid. Please configure GEMINI_API_KEY_3 in the Secrets panel.")
+            throw Exception("API Key is missing or invalid. Please configure GEMINI_API_KEY in the Secrets panel.")
+        }
+
+        val modelsToTry = if (!model.isNullOrBlank()) {
+            listOf(model) + candidateModels.filter { it != model }
+        } else {
+            candidateModels
         }
 
         var currentDelay = 1000L
+        var lastException: Exception? = null
+
         for (attempt in 0..maxRetries) {
-            for (apiKey in apiKeys) {
-                try {
-                    return RetrofitClient.service.generateContent(model, apiKey, request)
-                } catch (e: HttpException) {
-                    val code = e.code()
-                    if (code == 429 || code == 403 || code == 503) {
-                        continue // try next key
+            for (currModel in modelsToTry) {
+                for (apiKey in apiKeys) {
+                    try {
+                        return RetrofitClient.service.generateContent(currModel, apiKey, request)
+                    } catch (e: HttpException) {
+                        val code = e.code()
+                        if (code == 429 || code == 403 || code == 404 || code == 503) {
+                            lastException = e
+                            continue // try next key or model
+                        }
+                        throw e
+                    } catch (e: Exception) {
+                        lastException = e
+                        continue
                     }
-                    throw e
-                } catch (e: Exception) {
-                    if (attempt == maxRetries && apiKey == apiKeys.last()) throw e
-                    continue
                 }
             }
-            // All keys failed with 429/403 for this attempt
             if (attempt < maxRetries) {
                 kotlinx.coroutines.delay(currentDelay)
                 currentDelay *= 2
-            } else {
-                throw HttpException(retrofit2.Response.error<Any>(429, okhttp3.ResponseBody.create(null, "Quota exceeded across all keys")))
             }
         }
-        throw Exception("Max retries exceeded")
+        throw lastException ?: Exception("AI service temporarily unavailable. Please try again.")
     }
 
     private fun streamGeminiCall(request: GenerateContentRequest): kotlinx.coroutines.flow.Flow<String> = kotlinx.coroutines.flow.flow {
         val apiKeys = resolveApiKeys()
         if (apiKeys.isEmpty()) throw Exception("API Key is missing or invalid.")
         var lastError: Exception? = null
-        for (apiKey in apiKeys) {
-            try {
-                val responseBody = RetrofitClient.service.streamGenerateContent(apiKey = apiKey, request = request)
-                responseBody.source().use { source ->
-                    while (true) {
-                        val line = source.readUtf8Line() ?: break
-                        if (line.startsWith("data: ")) {
-                            val jsonPart = line.removePrefix("data: ").trim()
-                            if (jsonPart.isEmpty()) continue
-                            try {
-                                val adapter = RetrofitClient.moshi.adapter(GenerateContentResponse::class.java)
-                                val parsed = adapter.fromJson(jsonPart)
-                                val textChunk = parsed?.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
-                                if (!textChunk.isNullOrEmpty()) {
-                                    emit(textChunk)
+        for (currModel in candidateModels) {
+            for (apiKey in apiKeys) {
+                try {
+                    val responseBody = RetrofitClient.service.streamGenerateContent(model = currModel, apiKey = apiKey, request = request)
+                    responseBody.source().use { source ->
+                        while (true) {
+                            val line = source.readUtf8Line() ?: break
+                            if (line.startsWith("data: ")) {
+                                val jsonPart = line.removePrefix("data: ").trim()
+                                if (jsonPart.isEmpty()) continue
+                                try {
+                                    val adapter = RetrofitClient.moshi.adapter(GenerateContentResponse::class.java)
+                                    val parsed = adapter.fromJson(jsonPart)
+                                    val textChunk = parsed?.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
+                                    if (!textChunk.isNullOrEmpty()) {
+                                        emit(textChunk)
+                                    }
+                                } catch (e: Exception) {
+                                    // skip a malformed/partial chunk, keep reading
                                 }
-                            } catch (e: Exception) {
-                                // skip a malformed/partial chunk, keep reading
                             }
                         }
                     }
+                    return@flow
+                } catch (e: Exception) {
+                    lastError = e
+                    continue
                 }
-                return@flow
-            } catch (e: Exception) {
-                lastError = e
-                continue
             }
         }
         if (lastError != null) throw lastError
@@ -766,10 +784,10 @@ class AppRepository(
         )
 
         try {
-            val response = executeGeminiCallWithBackoff(request, model = "gemini-3.5-flash-lite")
+            val response = executeGeminiCallWithBackoff(request)
             response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "sodium": 0, "sugar": 0, "fiber": 0, "description": "Could not analyze the image."}"""
         } catch (e: HttpException) {
-            val msg = if (e.code() == 429) "AI quota exceeded. Retries exhausted (429)." else "Error: ${e.message}"
+            val msg = if (e.code() == 429) "AI quota exceeded. Retrying shortly..." else "Error: ${e.message}"
             """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "sodium": 0, "sugar": 0, "fiber": 0, "description": "$msg"}"""
         } catch (e: Exception) {
             """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "sodium": 0, "sugar": 0, "fiber": 0, "description": "Error: ${e.message}"}"""
@@ -1304,29 +1322,31 @@ class AppRepository(
         val maxRetries = 2
 
         for (attempt in 0..maxRetries) {
-            for (apiKey in apiKeys) {
-                try {
-                    val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
-                    val requestBodyOkHttp = requestBody.toString()
-                        .toRequestBody("application/json; charset=UTF-8".toMediaTypeOrNull())
-                    val request = okhttp3.Request.Builder()
-                        .url(url)
-                        .post(requestBodyOkHttp)
-                        .build()
-                    val response = RetrofitClient.okHttpClient.newCall(request).execute()
-                    val bodyString = response.body?.string() ?: ""
-                    if (!response.isSuccessful) {
-                        val code = response.code
-                        if (code == 429 || code == 403 || code == 503) {
-                            lastError = Exception("HTTP $code: $bodyString")
-                            continue // try next key
+            for (currModel in candidateModels) {
+                for (apiKey in apiKeys) {
+                    try {
+                        val url = "https://generativelanguage.googleapis.com/v1beta/models/$currModel:generateContent?key=$apiKey"
+                        val requestBodyOkHttp = requestBody.toString()
+                            .toRequestBody("application/json; charset=UTF-8".toMediaTypeOrNull())
+                        val request = okhttp3.Request.Builder()
+                            .url(url)
+                            .post(requestBodyOkHttp)
+                            .build()
+                        val response = RetrofitClient.okHttpClient.newCall(request).execute()
+                        val bodyString = response.body?.string() ?: ""
+                        if (!response.isSuccessful) {
+                            val code = response.code
+                            if (code == 429 || code == 403 || code == 404 || code == 503) {
+                                lastError = Exception("HTTP $code: $bodyString")
+                                continue // try next key or model
+                            }
+                            throw Exception("HTTP $code: $bodyString")
                         }
-                        throw Exception("HTTP $code: $bodyString")
+                        return@withContext org.json.JSONObject(bodyString)
+                    } catch (e: Exception) {
+                        lastError = e
+                        continue
                     }
-                    return@withContext org.json.JSONObject(bodyString)
-                } catch (e: Exception) {
-                    lastError = e
-                    continue
                 }
             }
             if (attempt < maxRetries) {
