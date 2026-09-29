@@ -43,6 +43,7 @@ import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.SkinTemperatureRecord
 import androidx.health.connect.client.units.BloodGlucose
 import androidx.health.connect.client.units.Energy
+import androidx.health.connect.client.units.Mass
 import androidx.health.connect.client.units.Pressure
 import androidx.health.connect.client.units.Volume
 
@@ -1622,7 +1623,13 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                         endZoneOffset = zoneOffset,
                         energy = Energy.kilocalories(calories.toDouble()),
                         name = name,
-                        mealType = hcMealType
+                        mealType = hcMealType,
+                        totalCarbohydrate = if (carbsG > 0f) Mass.grams(carbsG.toDouble()) else null,
+                        protein = if (proteinG > 0f) Mass.grams(proteinG.toDouble()) else null,
+                        totalFat = if (fatG > 0f) Mass.grams(fatG.toDouble()) else null,
+                        sodium = if (sodiumMg > 0f) Mass.milligrams(sodiumMg.toDouble()) else null,
+                        sugar = if (sugarG > 0f) Mass.grams(sugarG.toDouble()) else null,
+                        dietaryFiber = if (fiberG > 0f) Mass.grams(fiberG.toDouble()) else null
                     )
                     healthConnectClient.insertRecords(listOf(nutritionRecord))
                 }
