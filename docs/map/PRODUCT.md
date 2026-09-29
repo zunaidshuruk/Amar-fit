@@ -27,7 +27,7 @@ All paths under `app/src/main/java/com/example/` unless noted. Find the area, op
 | Room | `data/local/AppDatabase.kt` (version + migrations), `Entities.kt`, `Daos.kt`, per-entity files | | schema JSON in `app/schemas/` |
 | Health Connect | `data/health/HealthConnectManager.kt` (permissions), `HealthGoalCalculator.kt` | | |
 | Remote APIs | `data/remote/GeminiApiService.kt`, `RetrofitClient.kt`, `GoogleDrive*`, `YouTube*` | | |
-| Theme, shared UI | `ui/theme/Color.kt`, `Theme.kt`, `AccentTokens.kt`, `Type.kt`; `ui/components/*`; `util/UnitConverter.kt` | | tokens, never literals |
+| Theme, shared UI | `ui/theme/Color.kt`, `Theme.kt`, `AccentTokens.kt`, `Type.kt`; `ui/components/*`; `util/UnitConverter.kt` | | tokens, never literals; `MarkdownText.kt` renders all AI text: tables → cards, `---` → divider, `YOUTUBE_SEARCH: <query>` line → Watch button |
 | Unit tests | `app/src/test/java/com/example/` | | |
 
 Not app code: root `fix_*.py`, `update_*.py`, `rewrite_*.py`, `add_*.py`, `remove_fit.py`, `test_compile.kt`, `test_fit.kt` are historical one-off AI Studio scripts. `design-refs/` holds Part R reference images.

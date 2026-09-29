@@ -2,10 +2,10 @@
 
 Only open or unverified work lives here. Budget ~12 KB — when a Part closes, move its notes to `archive/` and leave one line in [INDEX.md](INDEX.md).
 
-Current as of `994c07c` (2026-09-29). Statuses marked *code-checked* were confirmed by reading the code at that commit, not from a push-verification.
+Current as of `8a79a86` (2026-09-29). Statuses marked *code-checked* were confirmed by reading the code at that commit, not from a push-verification.
 
-## 🔴 Hazard — debug.keystore
-Missing from `main` since `8d06c8b` ("refactor: fix formatting in UniversalAssistantScreen"); last good copy at `0537d66`. `app/build.gradle.kts` still points the debug signing config at `${rootDir}/debug.keystore`. Restore via GitHub web upload, then confirm sha256 `4d6742b2662bfcbbb8e0a6f693d3fb939f4d2d10a446336af85a619f275f0faa`. Full incident history: [archive/00-tracker-preamble.md](archive/00-tracker-preamble.md).
+## debug.keystore
+Restored 2026-09-29 by web upload (`46dbc23`/`bdb2a43`), checksum verified, and unchanged through `8a79a86`. Keep checking after every push. Incident history: [archive/00-tracker-preamble.md](archive/00-tracker-preamble.md).
 
 ## Untracked work since 8037b30
 ~175 commits landed after the tracker's last verified commit. The major ones (from `git log`, not item-by-item verified in this tracker):
@@ -33,11 +33,12 @@ Shipped: friend codes, QR scan, requests, leaderboard, friend stats, challenges,
 - [x] Phase 2e calorie-ring large tile landed (*code-checked*: `"large_calories"` in `TodayTiles.kt`); whether it's in the default set is unverified.
 - Decision still open: none recorded.
 
-## Part T — Measurement metadata
-Remaining gaps (*code-checked* in `presentation/viewmodel/ShasthoViewModel.kt`):
-- [ ] `NutritionRecord(...)` write sets only `energy`/`name` — `FoodLog.mealType` not passed.
-- [ ] Workout writes use `ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT`.
-- [ ] `WeightRecord` is never written to Health Connect.
+## Session fixes — 2026-09-29
+- [x] **Undeclared Health Connect permissions** (`48b82a5`): `READ_RESTING_HEART_RATE`, `WRITE_BLOOD_PRESSURE` and `WRITE_BLOOD_GLUCOSE` were requested but never declared in the manifest, so blood pressure/glucose writes and resting-HR reads had silently failed since they were built. Users must tap Settings → Health Connect → Connect once to grant them (and `WRITE_WEIGHT`, below).
+- [x] **Markdown renderer** (`48b82a5`): `MarkdownText` now renders tables as one card per row, `---` as dividers, and `YOUTUBE_SEARCH: <query>` lines as a red Watch button. Applies to every screen that uses it.
+- [x] **Diet chart video links** (`0851817`): both diet chart prompts emit a `YOUTUBE_SEARCH:` line after each meal's recipe. Charts saved before this have no buttons.
+- [ ] **Permission labels bug:** `HealthConnectManager.getPermissionDisplayName` checks names like `"HeartRate"`, but the real strings are `…READ_HEART_RATE`, so Heart Rate, Blood Pressure, Blood Glucose, SpO2, HRV, Resting HR, Active/Total Calories, Skin Temp, Respiratory Rate and BMR show raw names in Settings' denied-permissions dialog. Cosmetic.
+- [ ] **Assistant recipe links:** the Universal Assistant's `generate_recipe` returns a `YOUTUBE_SEARCH:` line to Gemini, but Gemini's final answer may paraphrase it away. Not yet addressed.
 
 ## Part U — Graph types
 - [ ] Phase 2 Blood Pressure range-bar chart appears landed (`3524ab4`; `MetricDetailScreen.kt` routes `bloodPressure` through the range-bar branch) — needs a proper diff verification.

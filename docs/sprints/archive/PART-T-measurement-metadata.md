@@ -28,3 +28,19 @@ Zunaid's request, triggered by the Blood Pressure "Body position"/"Arm location"
 
 **Sources consulted for the record-type field research:** [BloodGlucoseRecord.kt](https://raw.githubusercontent.com/androidx/androidx/androidx-main/health/connect/connect-client/src/main/java/androidx/health/connect/client/records/BloodGlucoseRecord.kt), [SleepSessionRecord.kt](https://raw.githubusercontent.com/androidx/androidx/androidx-main/health/connect/connect-client/src/main/java/androidx/health/connect/client/records/SleepSessionRecord.kt), [MealType.kt](https://raw.githubusercontent.com/androidx/androidx/androidx-main/health/connect/connect-client/src/main/java/androidx/health/connect/client/records/MealType.kt), [SkinTemperatureRecord.kt](https://raw.githubusercontent.com/androidx/androidx/androidx-main/health/connect/connect-client/src/main/java/androidx/health/connect/client/records/SkinTemperatureRecord.kt), [Android Health Connect data types reference](https://developer.android.com/health-and-fitness/health-connect/data-types), [android/health-samples HealthConnectManager.kt](https://github.com/android/health-samples/blob/main/health-connect/HealthConnectSample/app/src/main/java/com/example/healthconnectsample/data/HealthConnectManager.kt).
 
+
+
+---
+<!-- Moved verbatim from docs/sprints/ACTIVE.md when Part T closed (2026-09-29). -->
+
+## Part T — Measurement metadata
+Remaining gaps (*code-checked* in `presentation/viewmodel/ShasthoViewModel.kt`):
+- [ ] `NutritionRecord(...)` write sets only `energy`/`name` — `FoodLog.mealType` not passed.
+- [ ] Workout writes use `ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT`.
+- [ ] `WeightRecord` is never written to Health Connect.
+
+**Part T closed (2026-09-29).** All three gaps shipped and verified:
+- `363de6c` — `FoodLog.mealType` passed into the `NutritionRecord` write.
+- `dd2334f` — macro breakdown (carbs, protein, fat in g; sodium in mg; sugar, fiber in g) added to the same write; each field null when 0 (unknown).
+- `0a00f9b` — workout exercise type: `WorkoutPlan.workoutType` (nullable, AI-provided via the `generateStructuredWorkout` schema), resolved by `resolveHealthConnectExerciseType` (AI value → title keywords → `EXERCISE_TYPE_OTHER_WORKOUT`; keywords deliberately exclude "run" and "weight").
+- `8a79a86` — `WeightRecord` written on Weight Log saves (`setWeightAndHeight`, `setWeight`) via `writeWeightToHealthConnect`; `WRITE_WEIGHT` declared and requested. Profile-form and onboarding weight edits intentionally don't write (would duplicate weigh-ins).

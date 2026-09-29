@@ -15,5 +15,5 @@ Names only; never values. Never open `.env`, keystores or `google-services.json`
 | Firestore rules | Repo copy may lag the console — social collections aren't covered by it (see ACTIVE.md, Part Q). Rules are published manually in the console. | `firestore.rules` |
 | Room migrations | Bump `version` and append a `MIGRATION_X_Y` to `.addMigrations(...)`; never destructive. Read the current version there, don't copy it into docs. | `data/local/AppDatabase.kt`, `app/schemas/` |
 | Gemini keys / models | Multiple keys and candidate models with fallback on failure. Key names from `.env.example` only. | `data/repository/AppRepository.kt` (`resolveApiKeys`), `.env.example` |
-| Health Connect permissions | One permission set; adding a record type = add read/write permission here. | `data/health/HealthConnectManager.kt` |
+| Health Connect permissions | A permission only works if it is BOTH declared in the manifest (`android.permission.health.READ_*`/`WRITE_*`) AND in `REQUIRED_PERMISSIONS`. Adding a record type = add both, in the same change. New permissions need the user to tap Connect again. | `data/health/HealthConnectManager.kt`, `app/src/main/AndroidManifest.xml` |
 | Rollback | Revert the commit or re-release a previous tag. Deleted keystore → restore via GitHub web upload from the last good commit. | — |

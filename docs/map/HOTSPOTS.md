@@ -11,7 +11,8 @@ Each of these costs roughly 8k–30k tokens to read in full. Locate the region w
 | 〃 | food logging (incl. HC NutritionRecord write) | `fun logScannedFood`, `NutritionRecord(` |
 | 〃 | food chat | `fun sendFoodChatMessage`, `fun confirmPendingFoodLog` |
 | 〃 | Universal Assistant | `fun sendUniversalAssistantMessage`, `fun openAssistantSession` |
-| 〃 | workouts (HC exercise write) | `fun saveCompletedWorkoutSession`, `EXERCISE_TYPE_OTHER_WORKOUT` |
+| 〃 | workouts (HC exercise write) | `fun saveCompletedWorkoutSession`, `fun resolveHealthConnectExerciseType` |
+| 〃 | weight (HC weight write) | `fun setWeightAndHeight`, `fun writeWeightToHealthConnect` |
 | 〃 | social | `fun sendFriendRequestByCode`, `fun fetchLeaderboard`, `fun createChallengeWithFriend`, `fun sendMessage` |
 | 〃 | Drive backup | `fun backupToDrive`, `fun applyDriveBackup` |
 | `data/repository/AppRepository.kt` | Gemini plumbing + key/model fallback | `fun resolveApiKeys`, `fun executeGeminiCallWithBackoff`, `fun streamGeminiCall` |
