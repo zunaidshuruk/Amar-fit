@@ -1608,13 +1608,21 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     val healthConnectClient = HealthConnectClient.getOrCreate(getApplication())
                     val now = Instant.now()
                     val zoneOffset = ZoneId.systemDefault().rules.getOffset(now)
+                    val hcMealType = when (mealType.trim().lowercase()) {
+                        "breakfast" -> MealType.MEAL_TYPE_BREAKFAST
+                        "lunch" -> MealType.MEAL_TYPE_LUNCH
+                        "dinner" -> MealType.MEAL_TYPE_DINNER
+                        "snack" -> MealType.MEAL_TYPE_SNACK
+                        else -> MealType.MEAL_TYPE_UNKNOWN
+                    }
                     val nutritionRecord = NutritionRecord(
                         startTime = now,
                         startZoneOffset = zoneOffset,
                         endTime = now,
                         endZoneOffset = zoneOffset,
                         energy = Energy.kilocalories(calories.toDouble()),
-                        name = name
+                        name = name,
+                        mealType = hcMealType
                     )
                     healthConnectClient.insertRecords(listOf(nutritionRecord))
                 }
