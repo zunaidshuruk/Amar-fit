@@ -18,5 +18,6 @@ data class WorkoutPlan(
     val title: String,
     val warmup: List<WorkoutExercise> = emptyList(),
     val mainExercises: List<WorkoutExercise> = emptyList(),
-    val cooldown: List<WorkoutExercise> = emptyList()
+    val cooldown: List<WorkoutExercise> = emptyList(),
+    val workoutType: String? = null
 )

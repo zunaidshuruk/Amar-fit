@@ -690,12 +690,42 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private fun resolveHealthConnectExerciseType(workoutType: String?, planTitle: String): Int {
+        when (workoutType?.trim()?.lowercase()) {
+            "strength_training" -> return ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING
+            "hiit" -> return ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING
+            "yoga" -> return ExerciseSessionRecord.EXERCISE_TYPE_YOGA
+            "pilates" -> return ExerciseSessionRecord.EXERCISE_TYPE_PILATES
+            "stretching" -> return ExerciseSessionRecord.EXERCISE_TYPE_STRETCHING
+            "calisthenics" -> return ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS
+            "running" -> return ExerciseSessionRecord.EXERCISE_TYPE_RUNNING
+            "walking" -> return ExerciseSessionRecord.EXERCISE_TYPE_WALKING
+            "biking" -> return ExerciseSessionRecord.EXERCISE_TYPE_BIKING
+            "dancing" -> return ExerciseSessionRecord.EXERCISE_TYPE_DANCING
+        }
+        val t = planTitle.lowercase()
+        return when {
+            listOf("hiit", "interval", "tabata").any { it in t } -> ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING
+            "yoga" in t -> ExerciseSessionRecord.EXERCISE_TYPE_YOGA
+            "pilates" in t -> ExerciseSessionRecord.EXERCISE_TYPE_PILATES
+            listOf("stretch", "mobility", "flexibility").any { it in t } -> ExerciseSessionRecord.EXERCISE_TYPE_STRETCHING
+            listOf("running", "jog").any { it in t } -> ExerciseSessionRecord.EXERCISE_TYPE_RUNNING
+            "walk" in t -> ExerciseSessionRecord.EXERCISE_TYPE_WALKING
+            listOf("cycling", "bike", "biking").any { it in t } -> ExerciseSessionRecord.EXERCISE_TYPE_BIKING
+            listOf("dance", "zumba").any { it in t } -> ExerciseSessionRecord.EXERCISE_TYPE_DANCING
+            listOf("calisthenic", "bodyweight").any { it in t } -> ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS
+            listOf("strength", "muscle", "resistance", "dumbbell", "lifting").any { it in t } -> ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING
+            else -> ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT
+        }
+    }
+
     suspend fun saveCompletedWorkoutSession(
         planTitle: String,
         startTime: Instant,
         endTime: Instant,
         totalElapsedSeconds: Int,
-        caloriesBurned: Double?
+        caloriesBurned: Double?,
+        workoutType: String? = null
     ) = withContext(Dispatchers.IO) {
         val sessionKey = "${planTitle}_${startTime.toEpochMilli()}"
         if (savedWorkoutSessionKeys.contains(sessionKey)) {
@@ -740,7 +770,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 startZoneOffset = startOffset,
                 endTime = effectiveEndTime,
                 endZoneOffset = endOffset,
-                exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT,
+                exerciseType = resolveHealthConnectExerciseType(workoutType, planTitle),
                 title = planTitle
             )
             healthConnectClient.insertRecords(listOf(exerciseSession))

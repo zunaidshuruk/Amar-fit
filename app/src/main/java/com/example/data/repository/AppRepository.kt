@@ -1003,6 +1003,7 @@ class AppRepository(
             You MUST return ONLY a raw JSON object matching this schema with NO markdown formatting, NO commentary, and NO code fences:
             {
               "title": "String",
+              "workoutType": "String, exactly one of: strength_training, hiit, yoga, pilates, stretching, calisthenics, running, walking, biking, dancing, other",
               "warmup": [
                 {
                   "name": "String",

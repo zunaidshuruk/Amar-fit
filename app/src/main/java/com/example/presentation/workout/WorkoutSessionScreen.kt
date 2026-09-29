@@ -218,7 +218,8 @@ fun WorkoutSessionScreen(
                 startTime = sessionStartTime,
                 endTime = end,
                 totalElapsedSeconds = totalSessionElapsedSeconds,
-                caloriesBurned = computeCalories()
+                caloriesBurned = computeCalories(),
+                workoutType = plan.workoutType
             )
         }
     }
