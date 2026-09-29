@@ -1410,6 +1410,8 @@ class AppRepository(
 
             When the user describes food they ate, use log_food once you have a reasonable estimate -- it shows them a confirmation card, so you don't need to over-clarify first.
 
+            When a tool result contains a line starting with "YOUTUBE_SEARCH:", copy that line exactly, on its own line, at the end of your reply.
+
             Keep replies conversational and concise. You are not a doctor -- frame health-related suggestions as general wellness guidance, never a diagnosis, and never claim certainty about a medical condition.
         """.trimIndent()
 
@@ -1457,6 +1459,7 @@ class AppRepository(
 
         val tools = buildAssistantToolsJson()
         var iterations = 0
+        val recipeVideoLines = mutableListOf<String>()
 
         try {
             while (iterations < 5) {
@@ -1567,6 +1570,13 @@ class AppRepository(
                     "Error executing $fnName: ${e.message}"
                 }
 
+                if (fnName == "generate_recipe") {
+                    functionResultText.lines()
+                        .map { it.trim() }
+                        .filter { it.startsWith("YOUTUBE_SEARCH:") && it.substringAfter("YOUTUBE_SEARCH:").isNotBlank() }
+                        .forEach { if (it !in recipeVideoLines) recipeVideoLines.add(it) }
+                }
+
                 val callId = functionCall.optString("id", "")
                 contents.put(org.json.JSONObject().apply {
                     put("role", "function")
@@ -1586,7 +1596,11 @@ class AppRepository(
 
             val text = firstPart?.optString("text")
             if (!text.isNullOrBlank()) {
-                return@withContext AssistantResult.Text(text.trim())
+                val finalText = text.trim()
+                val missingVideoLines = recipeVideoLines.filter { it !in finalText }
+                val replyText = if (missingVideoLines.isEmpty()) finalText
+                    else finalText + "\n\n" + missingVideoLines.joinToString("\n")
+                return@withContext AssistantResult.Text(replyText)
             }
             return@withContext AssistantResult.Text("Sorry, I couldn't process that. Please try again.")
         }

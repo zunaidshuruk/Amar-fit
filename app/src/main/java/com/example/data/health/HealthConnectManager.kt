@@ -88,27 +88,31 @@ object HealthConnectManager {
     }
 
     fun getPermissionDisplayName(permission: String): String {
-        return when {
-            permission.contains("Hydration", ignoreCase = true) -> "Hydration"
-            permission.contains("Steps", ignoreCase = true) -> "Steps"
-            permission.contains("Sleep", ignoreCase = true) -> "Sleep"
-            permission.contains("Exercise", ignoreCase = true) -> "Exercise"
-            permission.contains("Nutrition", ignoreCase = true) -> "Nutrition"
-            permission.contains("HeartRateVariability", ignoreCase = true) -> "Heart Rate Variability (HRV)"
-            permission.contains("RestingHeartRate", ignoreCase = true) -> "Resting Heart Rate"
-            permission.contains("HeartRate", ignoreCase = true) -> "Heart Rate"
-            permission.contains("BloodPressure", ignoreCase = true) -> "Blood Pressure"
-            permission.contains("BloodGlucose", ignoreCase = true) -> "Blood Glucose"
-            permission.contains("Distance", ignoreCase = true) -> "Distance"
-            permission.contains("ActiveCaloriesBurned", ignoreCase = true) -> "Active Calories"
-            permission.contains("OxygenSaturation", ignoreCase = true) -> "Oxygen Saturation (SpO2)"
-            permission.contains("SkinTemperature", ignoreCase = true) -> "Skin Temperature"
-            permission.contains("RespiratoryRate", ignoreCase = true) -> "Respiratory Rate"
-            permission.contains("Mindfulness", ignoreCase = true) -> "Mindfulness"
-            permission.contains("Speed", ignoreCase = true) -> "Speed"
-            permission.contains("TotalCaloriesBurned", ignoreCase = true) -> "Total Calories Burned"
-            permission.contains("BasalMetabolicRate", ignoreCase = true) -> "Basal Metabolic Rate"
-            permission.contains("Weight", ignoreCase = true) -> "Weight"
+        val key = permission.substringAfterLast('.')
+            .removePrefix("READ_").removePrefix("WRITE_")
+            .replace("_", "")
+            .lowercase()
+        return when (key) {
+            "steps" -> "Steps"
+            "sleep" -> "Sleep"
+            "exercise" -> "Exercise"
+            "nutrition" -> "Nutrition"
+            "hydration" -> "Hydration"
+            "heartrate" -> "Heart Rate"
+            "restingheartrate" -> "Resting Heart Rate"
+            "heartratevariability" -> "Heart Rate Variability (HRV)"
+            "bloodpressure" -> "Blood Pressure"
+            "bloodglucose" -> "Blood Glucose"
+            "distance" -> "Distance"
+            "activecaloriesburned" -> "Active Calories"
+            "totalcaloriesburned" -> "Total Calories Burned"
+            "oxygensaturation" -> "Oxygen Saturation (SpO2)"
+            "skintemperature" -> "Skin Temperature"
+            "respiratoryrate" -> "Respiratory Rate"
+            "mindfulness" -> "Mindfulness"
+            "speed" -> "Speed"
+            "basalmetabolicrate" -> "Basal Metabolic Rate"
+            "weight" -> "Weight"
             else -> permission.substringAfterLast('.').replace("Record", "")
         }
     }
