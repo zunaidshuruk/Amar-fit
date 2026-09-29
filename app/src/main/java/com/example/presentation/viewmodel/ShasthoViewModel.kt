@@ -41,6 +41,7 @@ import androidx.health.connect.client.records.MealType
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.SkinTemperatureRecord
+import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.units.BloodGlucose
 import androidx.health.connect.client.units.Energy
 import androidx.health.connect.client.units.Mass
@@ -855,6 +856,23 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
     
+    private suspend fun writeWeightToHealthConnect(weightKg: Float) {
+        if (weightKg <= 0f) return
+        try {
+            val healthConnectClient = HealthConnectClient.getOrCreate(getApplication())
+            val now = Instant.now()
+            val zoneOffset = ZoneId.systemDefault().rules.getOffset(now)
+            val record = WeightRecord(
+                time = now,
+                zoneOffset = zoneOffset,
+                weight = Mass.kilograms(weightKg.toDouble())
+            )
+            healthConnectClient.insertRecords(listOf(record))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     fun setWeightAndHeight(weight: Float, height: Float) {
         viewModelScope.launch {
             val currentProfile = userProfile.value ?: return@launch
@@ -866,6 +884,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("weight", "Logged weight: ${weight}kg")
+            writeWeightToHealthConnect(weight)
         }
     }
     
@@ -880,6 +899,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("weight", "Logged weight: ${value}kg")
+            writeWeightToHealthConnect(value)
         }
     }
     

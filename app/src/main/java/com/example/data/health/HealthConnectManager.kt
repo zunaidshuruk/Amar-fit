@@ -22,6 +22,7 @@ import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.SpeedRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
+import androidx.health.connect.client.records.WeightRecord
 
 object HealthConnectManager {
     val REQUIRED_PERMISSIONS: Set<String> = setOf(
@@ -52,7 +53,8 @@ object HealthConnectManager {
         HealthPermission.getWritePermission(ExerciseSessionRecord::class),
         HealthPermission.getWritePermission(MindfulnessSessionRecord::class),
         HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class),
-        HealthPermission.getWritePermission(BasalMetabolicRateRecord::class)
+        HealthPermission.getWritePermission(BasalMetabolicRateRecord::class),
+        HealthPermission.getWritePermission(WeightRecord::class)
     )
 
     fun isAvailable(context: Context): Boolean {
@@ -106,6 +108,7 @@ object HealthConnectManager {
             permission.contains("Speed", ignoreCase = true) -> "Speed"
             permission.contains("TotalCaloriesBurned", ignoreCase = true) -> "Total Calories Burned"
             permission.contains("BasalMetabolicRate", ignoreCase = true) -> "Basal Metabolic Rate"
+            permission.contains("Weight", ignoreCase = true) -> "Weight"
             else -> permission.substringAfterLast('.').replace("Record", "")
         }
     }
