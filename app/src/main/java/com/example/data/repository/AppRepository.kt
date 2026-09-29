@@ -1089,6 +1089,9 @@ class AppRepository(
             - For each day, provide Breakfast, Lunch, Snack, and Dinner.
             - Keep it structured and easy to read using Markdown.
             - IMPORTANT: Include written step-by-step recipes for the meals directly in the plan.
+            - Write each meal's recipe as normal text, never inside a table.
+            - Directly after each meal's recipe, on its own new line, output exactly: YOUTUBE_SEARCH: <English name of the dish> recipe
+            - Never put a YOUTUBE_SEARCH line inside a table and never output one without a dish name.
             
             $contextPrompt
         """.trimIndent()
@@ -1118,6 +1121,9 @@ class AppRepository(
             - For each day, provide Breakfast, Lunch, Snack, and Dinner.
             - Keep it structured and easy to read using Markdown.
             - IMPORTANT: Include written step-by-step recipes for the meals directly in the plan.
+            - Write each meal's recipe as normal text, never inside a table.
+            - Directly after each meal's recipe, on its own new line, output exactly: YOUTUBE_SEARCH: <English name of the dish> recipe
+            - Never put a YOUTUBE_SEARCH line inside a table and never output one without a dish name.
             
             $contextPrompt
         """.trimIndent()
