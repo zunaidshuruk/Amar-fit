@@ -352,7 +352,21 @@ fun MetricDetailScreen(
         null
     }
 
-    val displayAverage = if (averageVal != null) {
+    val bloodPressureAverage = remember(chronologicalData, metricKey) {
+        if (metricKey != "bloodPressure") return@remember null
+        val readings = chronologicalData.mapNotNull { metric ->
+            val parts = metric.bloodPressure.split("/")
+            if (parts.size == 2) {
+                val sys = parts[0].trim().toIntOrNull()
+                val dia = parts[1].trim().toIntOrNull()
+                if (sys != null && dia != null && sys > 0 && dia > 0) Pair(sys, dia) else null
+            } else null
+        }
+        if (readings.isEmpty()) null
+        else "${readings.map { it.first }.average().roundToInt()}/${readings.map { it.second }.average().roundToInt()} mmHg"
+    }
+
+    val displayAverage = if (metricKey == "bloodPressure") bloodPressureAverage else if (averageVal != null) {
         when (metricKey) {
             "steps" -> "${String.format(java.util.Locale.US, "%,.0f", averageVal)} steps"
             "activeCaloriesBurned" -> "${String.format(java.util.Locale.US, "%.0f", averageVal)} kcal"
