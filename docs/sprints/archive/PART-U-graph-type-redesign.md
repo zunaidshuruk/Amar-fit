@@ -22,3 +22,15 @@ Zunaid's request: too many metrics render through the same generic chart — red
 
 **Sources consulted:** [Google Health sleep tracking](https://support.google.com/fitbit/answer/14236407?hl=en), [Google Health sleep stages](https://support.google.com/googlehealth/answer/14236712?hl=en), [Google Health glucose logging](https://support.google.com/fitbit/answer/14236603?hl=en) (confirms user-adjustable target ranges exist).
 
+
+
+---
+<!-- Moved verbatim from docs/sprints/ACTIVE.md when Part U closed (2026-09-29). -->
+
+## Part U — Graph types
+- [ ] Phase 2 Blood Pressure range-bar chart appears landed (`3524ab4`; `MetricDetailScreen.kt` routes `bloodPressure` through the range-bar branch) — needs a proper diff verification.
+
+**Part U closed (2026-09-29).**
+- Phase 2 verified on `main` (landed in `3524ab4`, `MetricDetailScreen.kt` untouched by the two later full-project restores): Health Vitals' Blood Pressure tile opens `metric_detail/bloodPressure`; `ZoneBarChart` draws one systolic→diastolic range bar per day (one reading per day — `DailyMetric` stores a single `"sys/dia"` string), auto-scaled axis, 3 gridlines, grey stub for empty days. Both write paths (`setBloodPressure`, Health Connect sync) store whole-number `"sys/dia"`, which the chart parses.
+- `4900cc9` — added the missing "Average: sys/dia mmHg" line (`bloodPressureAverage`, rounded, ignores malformed readings).
+- Left for Part R: `ZoneBarChart`'s hardcoded bar colors (shared by heart rate and blood pressure).

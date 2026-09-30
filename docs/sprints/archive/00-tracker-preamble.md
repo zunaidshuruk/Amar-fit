@@ -18,5 +18,5 @@ Last verified: current session, against commit `8037b30` ("style: adjust padding
 <!-- Moved verbatim from docs/sprints/ACTIVE.md when resolved (2026-09-29): restored via web upload in 46dbc23/bdb2a43, checksum verified. -->
 
 ## 🔴 Hazard — debug.keystore
-Missing from `main` since `8d06c8b` ("refactor: fix formatting in UniversalAssistantScreen"); last good copy at `0537d66`. `app/build.gradle.kts` still points the debug signing config at `${rootDir}/debug.keystore`. Restore via GitHub web upload, then confirm sha256 `4d6742b2662bfcbbb8e0a6f693d3fb939f4d2d10a446336af85a619f275f0faa`. Full incident history: [archive/00-tracker-preamble.md](archive/00-tracker-preamble.md).
+Missing from `main` since `8d06c8b` ("refactor: fix formatting in UniversalAssistantScreen"); last good copy at `0537d66`. `app/build.gradle.kts` still points the debug signing config at `${rootDir}/debug.keystore`. Restore via GitHub web upload, then confirm sha256 `4d6742b2662bfcbbb8e0a6f693d3fb939f4d2d10a446336af85a619f275f0faa`. Full incident history: this file (above).
 

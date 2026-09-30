@@ -87,3 +87,7 @@ Read the full current `TodayScreen.kt` to compare against the reference before s
 
 Both reference images saved locally (`design-refs/part-r-today-screen-pinterest-ref.jpg`, `design-refs/part-r-nutrition-caloricam-ref.jpg`) for use when scoping these phases.
 
+
+
+---
+**Correction (2026-09-29):** the shipped signature accent is `#BBE800` (commit `6300106`, confirmed by Zunaid), not the Chartreuse `#E0FF4F` recorded above. Current state: [ACTIVE.md](../ACTIVE.md#part-r--dark-theme-redesign).

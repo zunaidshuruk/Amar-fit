@@ -24,7 +24,7 @@ Open work: [ACTIVE.md](ACTIVE.md). Closed Parts link to their verbatim archive. 
 | R | Dark theme redesign | 🔲 open | `91d52c4` | [ACTIVE](ACTIVE.md#part-r--dark-theme-redesign) · [archive](archive/PART-R-dark-theme-redesign.md) |
 | S | Urgent dark-mode / header / notification fixes | ✅ closed | `8ee76e9` | [archive](archive/PART-S-urgent-dark-mode-fixes.md) |
 | T | Measurement metadata | ✅ closed | `8a79a86` | [archive](archive/PART-T-measurement-metadata.md) |
-| U | Per-metric graph types | 🟡 Phase 2 appears landed, unverified | `3524ab4` | [ACTIVE](ACTIVE.md#part-u--graph-types) · [archive](archive/PART-U-graph-type-redesign.md) |
+| U | Per-metric graph types | ✅ closed | `4900cc9` | [archive](archive/PART-U-graph-type-redesign.md) |
 | V | Glucose meal context + AI guidance | ✅ closed (5/5) | `0d00d33` | [archive](archive/PART-V-glucose-meal-context.md) |
 | W | Backdated glucose entry + CSV | ✅ closed | `3bf4ac2` | [archive](archive/PART-W-backdated-glucose-entry.md) |
 | Z | Universal AI Assistant | 🔲 Phase 1 shipped, Phase 2 deferred | `994c07c` | [ACTIVE](ACTIVE.md#part-z--universal-ai-assistant) |
