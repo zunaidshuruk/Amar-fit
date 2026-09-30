@@ -1092,6 +1092,8 @@ private fun StepsCaloriesBarChart(
     profile: UserProfile?,
     isDark: Boolean
 ) {
+    val accentColor = MaterialTheme.colorScheme.primary
+    val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
     val goalLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
     val rawGoal = when (metricKey) {
         "steps" -> profile?.stepGoal?.toFloat()
@@ -1130,16 +1132,7 @@ private fun StepsCaloriesBarChart(
 
                 val maxVal = if (goalValue != null) maxOf(dataMax, goalValue) else dataMax
 
-                val barColor = when (metricKey) {
-                    "steps" -> AccentTokens.stepsAccent(isDark).onBg
-                    "activeCaloriesBurned" -> AccentTokens.caloriesAccent(isDark).onBg
-                    "caloriesConsumed" -> if (isDark) Color(0xFFFFB27D) else Orange700
-                    "carbsG" -> if (isDark) Color(0xFFFCD34D) else Color(0xFFD97706)
-                    "proteinG" -> if (isDark) Color(0xFF6EE7B7) else Emerald700
-                    "fatG" -> if (isDark) Color(0xFFC4B5FD) else Color(0xFF7C3AED)
-                    "waterLiters" -> AccentTokens.waterAccent(isDark).onBg
-                    else -> AccentTokens.stepsAccent(isDark).onBg
-                }
+                val barColor = accentColor
 
                 val count = data.size
                 val width = size.width
@@ -1173,7 +1166,7 @@ private fun StepsCaloriesBarChart(
                     } else {
                         val x = if (count > 1) index * (barWidth + spacing) else (width - barWidth) / 2f
                         drawRoundRect(
-                            color = (if (isDark) Slate400 else Slate600).copy(alpha = 0.35f),
+                            color = mutedColor.copy(alpha = 0.35f),
                             topLeft = Offset(x, height - 8.dp.toPx()),
                             size = Size(barWidth, 8.dp.toPx()),
                             cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
@@ -1458,6 +1451,7 @@ private fun LineChartMetric(
     metricKey: String,
     isDark: Boolean
 ) {
+    val accentColor = MaterialTheme.colorScheme.primary
     val validValues = remember(data, metricKey) {
         data.mapNotNull {
             val value = when (metricKey) {
@@ -1528,10 +1522,10 @@ private fun LineChartMetric(
                             path.lineTo(x, y)
                         }
                         lastValidIndex = index
-                        drawCircle(color = if (isDark) Emerald500 else Emerald600, radius = 6.dp.toPx(), center = Offset(x, y))
+                        drawCircle(color = accentColor, radius = 6.dp.toPx(), center = Offset(x, y))
                     }
                 }
-                drawPath(path, color = if (isDark) Emerald500 else Emerald600, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
+                drawPath(path, color = accentColor, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
             }
         }
     }
@@ -1883,6 +1877,8 @@ private fun IntradayStepsChart(
     buckets: List<Pair<Instant, Int>>,
     isDark: Boolean
 ) {
+    val accentColor = MaterialTheme.colorScheme.primary
+    val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -1946,7 +1942,7 @@ private fun IntradayStepsChart(
                     val barWidth = slotWidth * (1f - totalSpacingRatio)
                     val spacing = slotWidth * totalSpacingRatio
 
-                    val barColor = if (isDark) Emerald500 else Emerald600
+                    val barColor = accentColor
 
                     for (hour in 0 until 24) {
                         val steps = hourlyStepCounts[hour]
@@ -1980,7 +1976,7 @@ private fun IntradayStepsChart(
                     )
 
                     val textPaint = Paint().apply {
-                        this.color = (if (isDark) Slate400 else Slate600).toArgb()
+                        this.color = mutedColor.toArgb()
                         this.textSize = 10.sp.toPx()
                         this.isAntiAlias = true
                         this.textAlign = Paint.Align.CENTER
@@ -2005,6 +2001,8 @@ private fun IntradayActiveCaloriesChart(
     buckets: List<Pair<Instant, Int>>,
     isDark: Boolean
 ) {
+    val accentColor = MaterialTheme.colorScheme.primary
+    val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -2067,7 +2065,7 @@ private fun IntradayActiveCaloriesChart(
                     val barWidth = slotWidth * (1f - totalSpacingRatio)
                     val spacing = slotWidth * totalSpacingRatio
 
-                    val barColor = AccentTokens.caloriesAccent(isDark).onBg
+                    val barColor = accentColor
 
                     for (hour in 0 until 24) {
                         val calories = hourlyCounts[hour]
@@ -2101,7 +2099,7 @@ private fun IntradayActiveCaloriesChart(
                     )
 
                     val textPaint = Paint().apply {
-                        this.color = (if (isDark) Slate400 else Slate600).toArgb()
+                        this.color = mutedColor.toArgb()
                         this.textSize = 10.sp.toPx()
                         this.isAntiAlias = true
                         this.textAlign = Paint.Align.CENTER
@@ -2126,6 +2124,8 @@ private fun IntradayWaterChart(
     buckets: List<Pair<Instant, Float>>,
     isDark: Boolean
 ) {
+    val accentColor = MaterialTheme.colorScheme.primary
+    val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -2188,7 +2188,7 @@ private fun IntradayWaterChart(
                     val barWidth = slotWidth * (1f - totalSpacingRatio)
                     val spacing = slotWidth * totalSpacingRatio
 
-                    val barColor = AccentTokens.waterAccent(isDark).onBg
+                    val barColor = accentColor
 
                     for (hour in 0 until 24) {
                         val water = hourlyWaterCounts[hour]
@@ -2222,7 +2222,7 @@ private fun IntradayWaterChart(
                     )
 
                     val textPaint = Paint().apply {
-                        this.color = (if (isDark) Slate400 else Slate600).toArgb()
+                        this.color = mutedColor.toArgb()
                         this.textSize = 10.sp.toPx()
                         this.isAntiAlias = true
                         this.textAlign = Paint.Align.CENTER
