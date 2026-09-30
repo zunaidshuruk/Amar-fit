@@ -900,7 +900,7 @@ private fun TodayPillCard(
         else -> if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface
     }
     val contentTint = when {
-        isMuted -> if (isDark) Slate500 else Slate400
+        isMuted -> if (isDark) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else Slate400
         accent != null -> accent.onBg
         else -> if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
     }
@@ -949,7 +949,7 @@ private fun TodayPillCard(
                     text = label,
                     fontSize = if (featured) 12.sp else 11.sp,
                     fontWeight = FontWeight.Medium,
-                    color = if (isDark) Slate400 else Slate500,
+                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate500,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -957,7 +957,7 @@ private fun TodayPillCard(
                     text = value,
                     fontSize = if (featured) 16.sp else 14.sp,
                     fontWeight = if (isMuted) FontWeight.Normal else FontWeight.Bold,
-                    color = if (isMuted) (if (isDark) Slate500 else Slate400) else if (accent != null) accent.onBg else (if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary),
+                    color = if (isMuted) (if (isDark) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else Slate400) else if (accent != null) accent.onBg else (if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

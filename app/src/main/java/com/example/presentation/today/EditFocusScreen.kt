@@ -98,7 +98,7 @@ fun EditFocusScreen(
                 Text(
                     text = "Tiles currently showing on your Today tab.",
                     fontSize = 13.sp,
-                    color = if (isDark) Slate400 else Slate500,
+                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate500,
                     modifier = Modifier.padding(top = 2.dp, bottom = 12.dp)
                 )
 
@@ -114,7 +114,7 @@ fun EditFocusScreen(
                         Text(
                             text = "No tiles added. Choose from below to customize your focus.",
                             fontSize = 14.sp,
-                            color = if (isDark) Slate400 else Slate600
+                            color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate600
                         )
                     }
                 } else {
@@ -151,7 +151,7 @@ fun EditFocusScreen(
                 Text(
                     text = "Full-width circular ring gauges for high-priority daily goals.",
                     fontSize = 13.sp,
-                    color = if (isDark) Slate400 else Slate500,
+                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate500,
                     modifier = Modifier.padding(top = 2.dp, bottom = 12.dp)
                 )
 
@@ -201,7 +201,7 @@ fun EditFocusScreen(
                 Text(
                     text = "Compact metric cards displaying health vitals and activity logs.",
                     fontSize = 13.sp,
-                    color = if (isDark) Slate400 else Slate500,
+                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate500,
                     modifier = Modifier.padding(top = 2.dp, bottom = 12.dp)
                 )
 
@@ -350,7 +350,7 @@ private fun ActiveTileRow(
                                 text = "Large",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isDark) Slate300 else Slate600
+                                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate600
                             )
                         }
                     }
@@ -359,7 +359,7 @@ private fun ActiveTileRow(
                     Text(
                         text = value,
                         fontSize = 12.sp,
-                        color = if (isDark) Slate400 else Slate500
+                        color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate500
                     )
                 }
             }
@@ -376,7 +376,7 @@ private fun ActiveTileRow(
             Icon(
                 imageVector = Icons.Default.Remove,
                 contentDescription = "Remove $title",
-                tint = if (isDark) Slate300 else Slate600,
+                tint = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate600,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -451,7 +451,7 @@ private fun TileOptionCard(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Add $title",
-                            tint = if (isDark) Color.White else TextPrimary,
+                            tint = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
                             modifier = Modifier.size(14.dp)
                         )
                     }
@@ -462,7 +462,7 @@ private fun TileOptionCard(
                 text = value,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
-                color = if (isDark) Slate400 else Slate500,
+                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate500,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -542,7 +542,7 @@ private fun SmallTileOptionCard(
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = "Added",
-                            tint = if (isDark) Slate300 else Slate600,
+                            tint = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate600,
                             modifier = Modifier.size(12.dp)
                         )
                     }
@@ -557,7 +557,7 @@ private fun SmallTileOptionCard(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Add $label",
-                            tint = if (isDark) Color.White else TextPrimary,
+                            tint = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
                             modifier = Modifier.size(12.dp)
                         )
                     }
@@ -568,7 +568,7 @@ private fun SmallTileOptionCard(
                 text = label,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
-                color = if (isDark) Slate400 else Slate500,
+                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate500,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
