@@ -1267,6 +1267,9 @@ private fun ZoneBarChart(
     age: Int = 0,
     isDark: Boolean
 ) {
+    val accentColor = MaterialTheme.colorScheme.primary
+    val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val alertColor = MaterialTheme.colorScheme.tertiary
     val goalLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
     val goalValue = if (metricKey == "heartRate") {
         (HealthGoalCalculator.maxHeartRate(age) * 0.5f)
@@ -1327,7 +1330,7 @@ private fun ZoneBarChart(
                         return height - 8.dp.toPx() - ratio * (height - 16.dp.toPx())
                     }
 
-                    val barColor = if (isDark) Color(0xFFFF6B6B) else Red500
+                    val barColor = accentColor
 
                     data.forEachIndexed { index, metric ->
                         val x = if (count > 1) index * (barWidth + spacing) else (chartWidth - barWidth) / 2f
@@ -1354,7 +1357,7 @@ private fun ZoneBarChart(
                             )
                         } else {
                             drawRoundRect(
-                                color = (if (isDark) Slate400 else Slate600).copy(alpha = 0.35f),
+                                color = mutedColor.copy(alpha = 0.35f),
                                 topLeft = Offset(x, height - 16.dp.toPx()),
                                 size = Size(barWidth, 8.dp.toPx()),
                                 cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
@@ -1363,9 +1366,9 @@ private fun ZoneBarChart(
                     }
 
                     val dashEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-                    val gridColor = (if (isDark) Slate400 else Slate600).copy(alpha = 0.3f)
+                    val gridColor = mutedColor.copy(alpha = 0.3f)
                     val gridTextPaint = Paint().apply {
-                        this.color = (if (isDark) Slate400 else Slate600).toArgb()
+                        this.color = mutedColor.toArgb()
                         this.textSize = 10.sp.toPx()
                         this.isAntiAlias = true
                     }
@@ -1420,9 +1423,8 @@ private fun ZoneBarChart(
                         val value = metric.oxygenSaturation
                         if (value > 0) {
                             val color = when {
-                                value < 90f -> if (isDark) Color(0xFFFF6B6B) else Red500
-                                value < 95f -> if (isDark) Color(0xFFFFB074) else Orange500
-                                else -> if (isDark) Color(0xFF6EE7B7) else Emerald500
+                                value < 95f -> alertColor
+                                else -> accentColor
                             }
                             val x = if (count > 1) index * (barWidth + spacing) else (width - barWidth) / 2f
                             val ratio = (value / effectiveMax).coerceIn(0f, 1f)
@@ -1437,7 +1439,7 @@ private fun ZoneBarChart(
                         } else {
                             val x = if (count > 1) index * (barWidth + spacing) else (width - barWidth) / 2f
                             drawRoundRect(
-                                color = (if (isDark) Slate400 else Slate600).copy(alpha = 0.35f),
+                                color = mutedColor.copy(alpha = 0.35f),
                                 topLeft = Offset(x, height - 8.dp.toPx()),
                                 size = Size(barWidth, 8.dp.toPx()),
                                 cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
@@ -1762,6 +1764,8 @@ private fun IntradayRangeBarChart(
     samples: List<Pair<Instant, Int>>,
     isDark: Boolean
 ) {
+    val accentColor = MaterialTheme.colorScheme.primary
+    val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -1819,7 +1823,7 @@ private fun IntradayRangeBarChart(
                         return topPadding + chartHeight * (1f - ratio)
                     }
 
-                    val barColor = if (isDark) Color(0xFFFF6B6B) else Red500
+                    val barColor = accentColor
                     val slotWidth = chartWidth / 24
                     val barWidth = (slotWidth * 0.4f).coerceAtLeast(3.dp.toPx())
 
@@ -1840,9 +1844,9 @@ private fun IntradayRangeBarChart(
                     // Dashed gridlines + labels at axisMin, midpoint, axisMax (matching the
                     // reference's 3-line y-axis)
                     val dashEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-                    val gridColor = (if (isDark) Slate400 else Slate600).copy(alpha = 0.3f)
+                    val gridColor = mutedColor.copy(alpha = 0.3f)
                     val textPaint = Paint().apply {
-                        this.color = (if (isDark) Slate400 else Slate600).toArgb()
+                        this.color = mutedColor.toArgb()
                         this.textSize = 10.sp.toPx()
                         this.isAntiAlias = true
                     }
