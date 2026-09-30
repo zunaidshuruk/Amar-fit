@@ -1592,6 +1592,12 @@ private fun IntradayHeartRateChart(
     selectedDate: LocalDate,
     isDark: Boolean
 ) {
+    val cardColor = MaterialTheme.colorScheme.surface
+    val zoneLightColor = androidx.compose.ui.graphics.lerp(cardColor, MaterialTheme.colorScheme.primary, 0.45f)
+    val zoneModerateColor = androidx.compose.ui.graphics.lerp(cardColor, MaterialTheme.colorScheme.primary, 0.70f)
+    val zoneVigorousColor = MaterialTheme.colorScheme.primary
+    val zonePeakColor = MaterialTheme.colorScheme.tertiary
+    val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -1662,9 +1668,9 @@ private fun IntradayHeartRateChart(
 
                     // Draw 3 horizontal dashed reference lines with zone labels
                     val zones = listOf(
-                        Triple(peakBpm.toFloat(), "Peak ($peakBpm)", if (isDark) Color(0xFFFF6B6B) else Red500),
-                        Triple(vigorousBpm.toFloat(), "Vigorous ($vigorousBpm)", if (isDark) Color(0xFFFFB074) else Orange500),
-                        Triple(moderateBpm.toFloat(), "Moderate ($moderateBpm)", if (isDark) Color(0xFF6EE7B7) else Emerald600)
+                        Triple(peakBpm.toFloat(), "Peak ($peakBpm)", zonePeakColor),
+                        Triple(vigorousBpm.toFloat(), "Vigorous ($vigorousBpm)", zoneVigorousColor),
+                        Triple(moderateBpm.toFloat(), "Moderate ($moderateBpm)", zoneModerateColor)
                     )
 
                     zones.forEach { (bpm, label, color) ->
@@ -1705,10 +1711,10 @@ private fun IntradayHeartRateChart(
 
                         val zone = HealthGoalCalculator.heartRateZoneFor(sample.second, age)
                         val dotColor = when (zone) {
-                            HealthGoalCalculator.HeartRateZone.PEAK -> if (isDark) Color(0xFFFF6B6B) else Red500
-                            HealthGoalCalculator.HeartRateZone.VIGOROUS -> if (isDark) Color(0xFFFFB074) else Orange500
-                            HealthGoalCalculator.HeartRateZone.MODERATE -> if (isDark) Color(0xFF6EE7B7) else Emerald600
-                            else -> if (isDark) Slate400 else Slate600
+                            HealthGoalCalculator.HeartRateZone.PEAK -> zonePeakColor
+                            HealthGoalCalculator.HeartRateZone.VIGOROUS -> zoneVigorousColor
+                            HealthGoalCalculator.HeartRateZone.MODERATE -> zoneModerateColor
+                            else -> zoneLightColor
                         }
 
                         drawCircle(
@@ -1720,7 +1726,7 @@ private fun IntradayHeartRateChart(
 
                     drawPath(
                         path = path,
-                        color = (if (isDark) Emerald500 else Emerald600).copy(alpha = 0.75f),
+                        color = mutedColor.copy(alpha = 0.6f),
                         style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
                     )
 
@@ -1734,7 +1740,7 @@ private fun IntradayHeartRateChart(
                     )
 
                     val timePaint = Paint().apply {
-                        this.color = (if (isDark) Slate400 else Slate600).toArgb()
+                        this.color = mutedColor.toArgb()
                         this.textSize = 10.sp.toPx()
                         this.isAntiAlias = true
                         this.textAlign = Paint.Align.CENTER
@@ -2248,6 +2254,11 @@ private fun HeartRateZonesCard(
     age: Int,
     isDark: Boolean
 ) {
+    val cardColor = MaterialTheme.colorScheme.surface
+    val zoneLightColor = androidx.compose.ui.graphics.lerp(cardColor, MaterialTheme.colorScheme.primary, 0.45f)
+    val zoneModerateColor = androidx.compose.ui.graphics.lerp(cardColor, MaterialTheme.colorScheme.primary, 0.70f)
+    val zoneVigorousColor = MaterialTheme.colorScheme.primary
+    val zonePeakColor = MaterialTheme.colorScheme.tertiary
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -2281,10 +2292,10 @@ private fun HeartRateZonesCard(
             }
 
             val zoneDefs = listOf(
-                Triple(HealthGoalCalculator.HeartRateZone.PEAK, "Peak (≥85%)", if (isDark) Color(0xFFFF6B6B) else Red500),
-                Triple(HealthGoalCalculator.HeartRateZone.VIGOROUS, "Vigorous (70-84%)", if (isDark) Color(0xFFFFB074) else Orange500),
-                Triple(HealthGoalCalculator.HeartRateZone.MODERATE, "Moderate (50-69%)", if (isDark) Color(0xFF6EE7B7) else Emerald600),
-                Triple(HealthGoalCalculator.HeartRateZone.LIGHT, "Light (<50%)", if (isDark) Slate400 else Slate600)
+                Triple(HealthGoalCalculator.HeartRateZone.PEAK, "Peak (≥85%)", zonePeakColor),
+                Triple(HealthGoalCalculator.HeartRateZone.VIGOROUS, "Vigorous (70-84%)", zoneVigorousColor),
+                Triple(HealthGoalCalculator.HeartRateZone.MODERATE, "Moderate (50-69%)", zoneModerateColor),
+                Triple(HealthGoalCalculator.HeartRateZone.LIGHT, "Light (<50%)", zoneLightColor)
             )
 
             val activeZones = zoneDefs.mapNotNull { (zone, label, color) ->
