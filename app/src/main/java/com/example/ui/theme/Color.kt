@@ -9,7 +9,6 @@ val Secondary = Color(0xFF2ECC71)
 val TextPrimary = Color(0xFF1E1E1E)
 
 val GunMetal = Color(0xFF00272B)
-val GraphiteBlack = Color(0xFF27292B) // Today-screen background experiment
 val SignatureAccent = Color(0xFFBBE800)
 val SecondaryAccent = Color(0xFFCDD2D7)
 val AlertAccent = Color(0xFFF5A623)
