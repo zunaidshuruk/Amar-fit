@@ -110,7 +110,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
     PullToRefreshBox(
         isRefreshing = isSyncing,
         onRefresh = { viewModel.syncWithHealthConnect(navController.context) },
-        modifier = Modifier.fillMaxSize().background(GraphiteBlack)
+        modifier = Modifier.fillMaxSize()
     ) {
         Column(
             modifier = Modifier
