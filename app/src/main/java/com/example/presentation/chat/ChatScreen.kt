@@ -30,6 +30,7 @@ import com.example.data.local.SavedChat
 import com.example.presentation.viewmodel.ChatMessage
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
+import com.example.ui.components.AiMessageCard
 import com.example.ui.components.MarkdownText
 import java.text.SimpleDateFormat
 import java.util.*
@@ -203,23 +204,27 @@ fun ChatScreen(viewModel: ShasthoViewModel, initialTab: Int = 0, onNavigateBack:
                         contentAlignment = if (message.isUser) Alignment.CenterEnd else Alignment.CenterStart
                     ) {
                         Column(horizontalAlignment = if (message.isUser) Alignment.End else Alignment.Start) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(
-                                        topStart = 16.dp,
-                                        topEnd = 16.dp,
-                                        bottomStart = if (message.isUser) 16.dp else 0.dp,
-                                        bottomEnd = if (message.isUser) 0.dp else 16.dp
-                                    ))
-                                    .background(if (message.isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                                    .padding(16.dp)
-                                    .widthIn(max = 280.dp)
-                            ) {
-                                if (message.isUser) {
-                                    Text(text = displayMsg, color = MaterialTheme.colorScheme.onPrimary)
-                                } else {
-                                    MarkdownText(text = displayMsg, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (message.isUser) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(
+                                            topStart = 16.dp,
+                                            topEnd = 16.dp,
+                                            bottomStart = if (message.isUser) 16.dp else 0.dp,
+                                            bottomEnd = if (message.isUser) 0.dp else 16.dp
+                                        ))
+                                        .background(if (message.isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                                        .padding(16.dp)
+                                        .widthIn(max = 280.dp)
+                                ) {
+                                    if (message.isUser) {
+                                        Text(text = displayMsg, color = MaterialTheme.colorScheme.onPrimary)
+                                    } else {
+                                        MarkdownText(text = displayMsg, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
                                 }
+                            } else {
+                                AiMessageCard(text = displayMsg, modifier = Modifier.fillMaxWidth())
                             }
                             
                             if (hasYouTubeSearch && youtubeQuery.isNotBlank()) {
@@ -427,28 +432,32 @@ fun SavedChatDetailView(chat: SavedChat, onBack: () -> Unit) {
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             items(messages) { message ->
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = if (message.isUser) Alignment.CenterEnd else Alignment.CenterStart
-                ) {
+                if (message.isUser) {
                     Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(
-                                topStart = 16.dp,
-                                topEnd = 16.dp,
-                                bottomStart = if (message.isUser) 16.dp else 0.dp,
-                                bottomEnd = if (message.isUser) 0.dp else 16.dp
-                            ))
-                            .background(if (message.isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(16.dp)
-                            .widthIn(max = 280.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = if (message.isUser) Alignment.CenterEnd else Alignment.CenterStart
                     ) {
-                        if (message.isUser) {
-                            Text(text = message.text, color = MaterialTheme.colorScheme.onPrimary)
-                        } else {
-                            MarkdownText(text = message.text, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(
+                                    topStart = 16.dp,
+                                    topEnd = 16.dp,
+                                    bottomStart = if (message.isUser) 16.dp else 0.dp,
+                                    bottomEnd = if (message.isUser) 0.dp else 16.dp
+                                ))
+                                .background(if (message.isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(16.dp)
+                                .widthIn(max = 280.dp)
+                        ) {
+                            if (message.isUser) {
+                                Text(text = message.text, color = MaterialTheme.colorScheme.onPrimary)
+                            } else {
+                                MarkdownText(text = message.text, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     }
+                } else {
+                    AiMessageCard(text = message.text, modifier = Modifier.fillMaxWidth())
                 }
             }
         }

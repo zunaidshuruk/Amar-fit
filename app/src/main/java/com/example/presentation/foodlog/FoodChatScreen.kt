@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.presentation.viewmodel.ShasthoViewModel
+import com.example.ui.components.AiMessageCard
 import com.example.ui.components.MarkdownText
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -169,30 +170,34 @@ fun FoodChatScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {})
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     items(messages) { msg ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = if (msg.isUser) Arrangement.End else Arrangement.Start
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(if (msg.isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                        if (msg.isUser) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = if (msg.isUser) Arrangement.End else Arrangement.Start
                             ) {
-                                if (msg.isUser) {
-                                    Text(
-                                        text = msg.text,
-                                        color = MaterialTheme.colorScheme.onPrimary,
-                                        fontSize = 14.sp
-                                    )
-                                } else {
-                                    MarkdownText(
-                                        text = msg.text,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        fontSize = 14.sp
-                                    )
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(if (msg.isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                                ) {
+                                    if (msg.isUser) {
+                                        Text(
+                                            text = msg.text,
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            fontSize = 14.sp
+                                        )
+                                    } else {
+                                        MarkdownText(
+                                            text = msg.text,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            fontSize = 14.sp
+                                        )
+                                    }
                                 }
                             }
+                        } else {
+                            AiMessageCard(text = msg.text, modifier = Modifier.fillMaxWidth())
                         }
                     }
                     if (isLoading) {
