@@ -229,7 +229,7 @@ fun ChatScreen(viewModel: ShasthoViewModel, initialTab: Int = 0, onNavigateBack:
                                         val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://www.youtube.com/results?search_query=How+to+cook+$youtubeQuery"))
                                         context.startActivity(intent)
                                     },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Orange700),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Red500),
                                     modifier = Modifier.padding(start = 8.dp)
                                 ) {
                                     Icon(Icons.Default.PlayArrow, contentDescription = "Watch", tint = Color.White)

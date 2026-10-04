@@ -207,7 +207,7 @@ fun DailyPlanCard(plan: DailyPlan) {
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=${Uri.encode(meal.videoQuery)}"))
                                 context.startActivity(intent)
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Red500),
+                            colors = ButtonDefaults.buttonColors(containerColor = Red500, contentColor = Color.White),
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                             modifier = Modifier.height(36.dp)
