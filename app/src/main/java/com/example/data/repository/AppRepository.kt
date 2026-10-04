@@ -132,10 +132,12 @@ class AppRepository(
     }
 
     private fun resolveApiKeys(): List<String> {
+        val youtubeKey = try { BuildConfig.YOUTUBE_API_KEY } catch (e: Throwable) { null }
         fun isValidKey(key: String?): Boolean {
             if (key.isNullOrBlank()) return false
             val trimmed = key.trim()
             if (trimmed.startsWith("MY_GEMINI_API_KEY") || trimmed == "default" || trimmed.length < 10) return false
+            if (!youtubeKey.isNullOrBlank() && trimmed == youtubeKey.trim()) return false
             return true
         }
 
@@ -162,7 +164,7 @@ class AppRepository(
         // 4. Any other fields dynamically in BuildConfig that look like Gemini API keys
         try {
             for (field in BuildConfig::class.java.fields) {
-                if (field.type == String::class.java && (field.name.contains("GEMINI") || field.name.contains("KEY"))) {
+                if (field.type == String::class.java && field.name.contains("GEMINI") && !field.name.contains("YOUTUBE")) {
                     val value = field.get(null) as? String
                     if (isValidKey(value) && value != null && !apiKeys.contains(value)) {
                         apiKeys.add(value)
@@ -176,10 +178,11 @@ class AppRepository(
 
     private val candidateModels = listOf(
         "gemini-3.1-flash-lite-preview",
-        "gemini-2.5-flash",
         "gemini-flash-lite-latest",
         "gemini-3.5-flash-lite",
-        "gemini-flash-latest"
+        "gemini-flash-latest",
+        "gemini-3.5-flash",
+        "gemini-3.1-pro-preview"
     )
 
     private suspend fun executeGeminiCallWithBackoff(
@@ -209,7 +212,7 @@ class AppRepository(
                         return RetrofitClient.service.generateContent(currModel, apiKey, request)
                     } catch (e: HttpException) {
                         val code = e.code()
-                        if (code == 429 || code == 403 || code == 404 || code == 503) {
+                        if (code == 429 || code == 403 || code == 404 || code == 503 || code == 400) {
                             lastException = e
                             continue // try next key or model
                         }
@@ -286,7 +289,11 @@ class AppRepository(
             $contextPrompt
         """.trimIndent() + "\n\n" + aiResponseStyle(150, followUps = true)
         
-        val apiContents = chatHistory.drop(1).map { msg ->
+        val nonBlank = chatHistory.filter { it.text.isNotBlank() }
+        val sanitized = if (nonBlank.isNotEmpty() && !nonBlank.first().isUser) nonBlank.drop(1) else nonBlank
+        val finalHistory = sanitized.ifEmpty { nonBlank }.ifEmpty { listOf(ChatMessage("Hello", true)) }
+
+        val apiContents = finalHistory.map { msg ->
             Content(
                 role = if (msg.isUser) "user" else "model",
                 parts = listOf(Part(text = msg.text))
@@ -318,7 +325,11 @@ class AppRepository(
             - Only emit READY_TO_LOG once, when you are done -- not while still asking clarifying questions.
         """.trimIndent()
 
-        val apiContents = chatHistory.map { msg ->
+        val foodNonBlank = chatHistory.filter { it.text.isNotBlank() }
+        val foodSanitized = if (foodNonBlank.isNotEmpty() && !foodNonBlank.first().isUser) foodNonBlank.drop(1) else foodNonBlank
+        val foodFinalHistory = foodSanitized.ifEmpty { foodNonBlank }.ifEmpty { listOf(ChatMessage("Hello", true)) }
+
+        val apiContents = foodFinalHistory.map { msg ->
             Content(
                 role = if (msg.isUser) "user" else "model",
                 parts = listOf(Part(text = msg.text))
@@ -573,7 +584,11 @@ class AppRepository(
             $contextPrompt
         """.trimIndent() + "\n\n" + aiResponseStyle(150, followUps = true)
         
-        val apiContents = chatHistory.drop(1).map { msg ->
+        val nonBlank = chatHistory.filter { it.text.isNotBlank() }
+        val sanitized = if (nonBlank.isNotEmpty() && !nonBlank.first().isUser) nonBlank.drop(1) else nonBlank
+        val finalHistory = sanitized.ifEmpty { nonBlank }.ifEmpty { listOf(ChatMessage("Hello", true)) }
+
+        val apiContents = finalHistory.map { msg ->
             Content(
                 role = if (msg.isUser) "user" else "model",
                 parts = listOf(Part(text = msg.text))
@@ -590,9 +605,9 @@ class AppRepository(
             response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: "Could not generate response."
         } catch (e: HttpException) {
             if (e.code() == 429) "The AI is currently busy due to high traffic. Retries exhausted. Please try again in a minute."
-            else "Error: ${e.message}"
+            else "Sorry, I couldn't process that. Please try again."
         } catch (e: Exception) {
-            "Error: ${e.message}"
+            "Sorry, I couldn't process that. Please try again."
         }
     }
 
@@ -1389,7 +1404,7 @@ class AppRepository(
                         val bodyString = response.body?.string() ?: ""
                         if (!response.isSuccessful) {
                             val code = response.code
-                            if (code == 429 || code == 403 || code == 404 || code == 503) {
+                            if (code == 429 || code == 403 || code == 404 || code == 503 || code == 400) {
                                 lastError = Exception("HTTP $code: $bodyString")
                                 continue // try next key or model
                             }
@@ -1438,6 +1453,9 @@ class AppRepository(
         if (userMessage.isNotBlank()) {
             rawMessages.add(ChatMessage(userMessage, true))
         }
+        if (rawMessages.isEmpty()) {
+            rawMessages.add(ChatMessage("Hello", true))
+        }
 
         var currentRole: String? = null
         var currentParts = org.json.JSONArray()
@@ -1469,6 +1487,12 @@ class AppRepository(
             contents.put(org.json.JSONObject().apply {
                 put("role", lastRole)
                 put("parts", lastParts)
+            })
+        }
+        if (contents.length() == 0) {
+            contents.put(org.json.JSONObject().apply {
+                put("role", "user")
+                put("parts", org.json.JSONArray().put(org.json.JSONObject().put("text", userMessage.ifBlank { "Hello" })))
             })
         }
 
