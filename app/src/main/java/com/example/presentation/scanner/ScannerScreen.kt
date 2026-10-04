@@ -40,7 +40,6 @@ import androidx.core.content.ContextCompat
 import com.example.ui.components.MarkdownText
 import com.example.ui.components.MealTypeSelector
 import com.example.presentation.viewmodel.ShasthoViewModel
-import com.example.ui.theme.Emerald500
 import com.example.ui.theme.Slate900
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -170,8 +169,8 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit, onNav
                 Surface(
                     onClick = { scanMode = ScanMode.SCAN_MEAL },
                     shape = RoundedCornerShape(20.dp),
-                    color = if (scanMode == ScanMode.SCAN_MEAL) Emerald500 else Color.Transparent,
-                    contentColor = Color.White
+                    color = if (scanMode == ScanMode.SCAN_MEAL) MaterialTheme.colorScheme.primary else Color.Transparent,
+                    contentColor = if (scanMode == ScanMode.SCAN_MEAL) MaterialTheme.colorScheme.onPrimary else Color.White
                 ) {
                     Text(
                         text = "Scan Meal",
@@ -183,8 +182,8 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit, onNav
                 Surface(
                     onClick = { scanMode = ScanMode.SCAN_BARCODE },
                     shape = RoundedCornerShape(20.dp),
-                    color = if (scanMode == ScanMode.SCAN_BARCODE) Emerald500 else Color.Transparent,
-                    contentColor = Color.White
+                    color = if (scanMode == ScanMode.SCAN_BARCODE) MaterialTheme.colorScheme.primary else Color.Transparent,
+                    contentColor = if (scanMode == ScanMode.SCAN_BARCODE) MaterialTheme.colorScheme.onPrimary else Color.White
                 ) {
                     Text(
                         text = "Scan Barcode",
@@ -212,7 +211,7 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit, onNav
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = Emerald500)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             if (scanMode == ScanMode.SCAN_BARCODE) "Looking up Barcode..." else "Analyzing Bangladeshi Dish...",
@@ -433,7 +432,7 @@ fun CameraPreviewView(
                 .size(72.dp)
                 .background(Color.White, CircleShape)
                 .padding(8.dp)
-                .background(Emerald500, CircleShape),
+                .background(MaterialTheme.colorScheme.primary, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             IconButton(
@@ -456,7 +455,7 @@ fun CameraPreviewView(
                 },
                 modifier = Modifier.fillMaxSize()
             ) {
-                Icon(Icons.Default.AddAPhoto, contentDescription = "Capture", tint = Color.White, modifier = Modifier.size(32.dp))
+                Icon(Icons.Default.AddAPhoto, contentDescription = "Capture", tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(32.dp))
             }
         }
     }
