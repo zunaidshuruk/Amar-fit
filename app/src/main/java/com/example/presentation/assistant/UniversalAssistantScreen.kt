@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.AssistantChatSession
 import com.example.presentation.viewmodel.ShasthoViewModel
-import com.example.ui.components.MarkdownText
+import com.example.ui.components.AiMessageCard
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -370,42 +370,38 @@ fun UniversalAssistantScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> 
                             contentPadding = PaddingValues(vertical = 12.dp)
                         ) {
                             items(messages) { msg ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = if (msg.isUser) Arrangement.End else Arrangement.Start
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .widthIn(max = 320.dp)
-                                            .clip(
-                                                RoundedCornerShape(
-                                                    topStart = 16.dp,
-                                                    topEnd = 16.dp,
-                                                    bottomStart = if (msg.isUser) 16.dp else 4.dp,
-                                                    bottomEnd = if (msg.isUser) 4.dp else 16.dp
-                                                )
-                                            )
-                                            .background(
-                                                if (msg.isUser) MaterialTheme.colorScheme.primary
-                                                else MaterialTheme.colorScheme.surfaceVariant
-                                            )
-                                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                                if (msg.isUser) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.End
                                     ) {
-                                        if (msg.isUser) {
+                                        Box(
+                                            modifier = Modifier
+                                                .widthIn(max = 320.dp)
+                                                .clip(
+                                                    RoundedCornerShape(
+                                                        topStart = 16.dp,
+                                                        topEnd = 16.dp,
+                                                        bottomStart = 16.dp,
+                                                        bottomEnd = 4.dp
+                                                    )
+                                                )
+                                                .background(MaterialTheme.colorScheme.primary)
+                                                .padding(horizontal = 14.dp, vertical = 10.dp)
+                                        ) {
                                             Text(
                                                 text = msg.text,
                                                 color = MaterialTheme.colorScheme.onPrimary,
                                                 fontSize = 14.sp,
                                                 lineHeight = 20.sp
                                             )
-                                        } else {
-                                            MarkdownText(
-                                                text = msg.text,
-                                                color = MaterialTheme.colorScheme.onSurface,
-                                                fontSize = 14.sp
-                                            )
                                         }
                                     }
+                                } else {
+                                    AiMessageCard(
+                                        text = msg.text,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
                                 }
                             }
                             if (isLoading) {
