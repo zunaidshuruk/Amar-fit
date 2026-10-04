@@ -14,7 +14,7 @@ android {
     applicationId = "com.aistudio.amarfit.app"
     minSdk = 26
     targetSdk = 36
-    versionCode = 3
+    versionCode = 4
     versionName = "1.2"
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
