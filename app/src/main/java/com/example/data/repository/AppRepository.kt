@@ -16,6 +16,18 @@ import kotlinx.coroutines.withContext
 
 import com.example.presentation.viewmodel.ChatMessage
 
+private fun aiResponseStyle(maxWords: Int): String = """
+    RESPONSE STYLE (this overrides any earlier formatting instructions):
+    - Open with ONE short sentence that directly answers the question. No greeting, and do not restate the question.
+    - If the answer needs more, add at most 3 sections. Start each with a markdown heading line like "## Short title" (2 to 4 words). Short answers need no headings.
+    - Under a heading, use bullet lines that start with "- " (at most 4 per section). Each bullet is one short sentence and begins with the key term in **bold**. Use a numbered list ("1. ", "2. ") only for steps that must happen in order.
+    - Use plain, simple language. If you use a medical term, explain it in a few words. Prefer Bangladeshi foods, local units and everyday examples where relevant.
+    - When the user's own numbers or goals are known, use them directly instead of generic ranges.
+    - If there is one clear next action, finish with exactly one line in this form: > **Next step:** one concrete action.
+    - Do not use tables, emojis or horizontal rules in chat replies. Add a one-line safety caveat only when the topic involves a health risk or condition.
+    - Keep the whole reply under about $maxWords words unless the user asks for a detailed plan, recipe or explanation.
+""".trimIndent()
+
 class AppRepository(
     private val userDao: UserDao,
     private val metricsDao: MetricsDao,
@@ -269,7 +281,7 @@ class AppRepository(
             - Use markdown (bolding, bullet points) to format your advice for readability.
             
             $contextPrompt
-        """.trimIndent()
+        """.trimIndent() + "\n\n" + aiResponseStyle(150)
         
         val apiContents = chatHistory.drop(1).map { msg ->
             Content(
@@ -556,7 +568,7 @@ class AppRepository(
             - Use markdown (bolding, bullet points) to format your advice for readability.
             
             $contextPrompt
-        """.trimIndent()
+        """.trimIndent() + "\n\n" + aiResponseStyle(150)
         
         val apiContents = chatHistory.drop(1).map { msg ->
             Content(
@@ -941,7 +953,7 @@ class AppRepository(
             - Use bullet points for actionable steps to make it easily readable.
             - Explain WHY this habit works biologically or psychologically.
             - Keep it highly engaging, well-organized, and professional.
-        """.trimIndent()
+        """.trimIndent() + "\n\n" + aiResponseStyle(250)
         
         val request = GenerateContentRequest(
             contents = listOf(
@@ -970,7 +982,7 @@ class AppRepository(
             - Use bullet points for actionable steps to make it easily readable.
             - Explain WHY this habit works biologically or psychologically.
             - Keep it highly engaging, well-organized, and professional.
-        """.trimIndent()
+        """.trimIndent() + "\n\n" + aiResponseStyle(250)
         
         val request = GenerateContentRequest(
             contents = listOf(
@@ -1413,7 +1425,7 @@ class AppRepository(
             When a tool result contains a line starting with "YOUTUBE_SEARCH:", copy that line exactly, on its own line, at the end of your reply.
 
             Keep replies conversational and concise. You are not a doctor -- frame health-related suggestions as general wellness guidance, never a diagnosis, and never claim certainty about a medical condition.
-        """.trimIndent()
+        """.trimIndent() + "\n\n" + aiResponseStyle(150)
 
         val contents = org.json.JSONArray()
         val rawMessages = mutableListOf<ChatMessage>()
@@ -1619,7 +1631,7 @@ class AppRepository(
                     just have a normal, helpful conversation and give general guidance based on
                     what the user tells you. You are not a doctor -- frame suggestions as general
                     wellness guidance, never a diagnosis, and never claim certainty about a medical condition.
-                """.trimIndent()
+                """.trimIndent() + "\n\n" + aiResponseStyle(150)
                 val fallbackRequest = GenerateContentRequest(
                     contents = (chatHistory + ChatMessage(userMessage, true)).map { msg ->
                         Content(role = if (msg.isUser) "user" else "model", parts = listOf(Part(text = msg.text)))
