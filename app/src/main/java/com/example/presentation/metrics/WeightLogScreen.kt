@@ -80,11 +80,11 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
     val weightDiff = currentWeight - idealWeight
 
     val (bmiStatus, statusColor) = when {
-        bmi == 0f -> Pair("Enter Data", Slate500)
-        bmi < 18.5f -> Pair("Underweight", Orange500)
-        bmi < 25f -> Pair("Normal", Emerald500)
-        bmi < 30f -> Pair("Overweight", Orange500)
-        else -> Pair("Very Overweight", Red500)
+        bmi == 0f -> Pair("Enter Data", MaterialTheme.colorScheme.onSurfaceVariant)
+        bmi < 18.5f -> Pair("Underweight", MaterialTheme.colorScheme.tertiary)
+        bmi < 25f -> Pair("Normal", MaterialTheme.colorScheme.primary)
+        bmi < 30f -> Pair("Overweight", MaterialTheme.colorScheme.tertiary)
+        else -> Pair("Very Overweight", MaterialTheme.colorScheme.tertiary)
     }
 
     Column(
