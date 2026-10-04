@@ -791,7 +791,7 @@ fun MetricDetailScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(if (isDark) Orange900.copy(alpha = 0.35f) else Orange50)
+                        .background(if (isDark) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.16f) else Orange50)
                         .padding(16.dp)
                 ) {
                     Row(
@@ -801,7 +801,7 @@ fun MetricDetailScreen(
                         Icon(
                             imageVector = Icons.Default.Warning,
                             contentDescription = "Warning",
-                            tint = if (isDark) Orange100 else Orange500,
+                            tint = if (isDark) MaterialTheme.colorScheme.tertiary else Orange500,
                             modifier = Modifier
                                 .size(24.dp)
                                 .padding(top = 2.dp)
@@ -812,20 +812,20 @@ fun MetricDetailScreen(
                                 text = "Resting heart rate is elevated today",
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isDark) Orange100 else Orange900
+                                color = if (isDark) MaterialTheme.colorScheme.tertiary else Orange900
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "${restingHrAlert.todayBpm} bpm vs your 30-day average of ${restingHrAlert.baselineAvg.roundToInt()} bpm",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = if (isDark) Orange100.copy(alpha = 0.9f) else Orange700
+                                color = if (isDark) MaterialTheme.colorScheme.onSurface else Orange700
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "This is not a medical diagnosis. Consult a healthcare professional if you have concerns.",
                                 fontSize = 11.sp,
-                                color = if (isDark) Orange100.copy(alpha = 0.7f) else Orange900.copy(alpha = 0.7f),
+                                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Orange900.copy(alpha = 0.7f),
                                 lineHeight = 14.sp
                             )
                         }

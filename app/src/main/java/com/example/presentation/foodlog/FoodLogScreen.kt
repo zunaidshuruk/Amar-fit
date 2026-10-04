@@ -232,7 +232,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, navController: androidx.navigatio
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(24.dp))
-                            .background(if (isDark) Slate800 else Slate100)
+                            .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Slate100)
                             .padding(4.dp),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
@@ -242,7 +242,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, navController: androidx.navigatio
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(20.dp),
                             color = if (manualEntryMode == "Describe") MaterialTheme.colorScheme.primary else Color.Transparent,
-                            contentColor = if (manualEntryMode == "Describe") MaterialTheme.colorScheme.onPrimary else (if (isDark) Slate300 else Slate700)
+                            contentColor = if (manualEntryMode == "Describe") MaterialTheme.colorScheme.onPrimary else (if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate700)
                         ) {
                             Text(
                                 text = "Describe",
@@ -257,7 +257,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, navController: androidx.navigatio
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(20.dp),
                             color = if (manualEntryMode == "Enter Values") MaterialTheme.colorScheme.primary else Color.Transparent,
-                            contentColor = if (manualEntryMode == "Enter Values") MaterialTheme.colorScheme.onPrimary else (if (isDark) Slate300 else Slate700)
+                            contentColor = if (manualEntryMode == "Enter Values") MaterialTheme.colorScheme.onPrimary else (if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate700)
                         ) {
                             Text(
                                 text = "Enter Values",

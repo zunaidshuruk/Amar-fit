@@ -206,6 +206,7 @@ fun NutritionScreen(viewModel: ShasthoViewModel, navController: NavController) {
 private fun WeeklyCaloriesBarChart(data: List<DailyMetric>, goalCalories: Float?, isDark: Boolean) {
     val goalLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
     val barColor = MaterialTheme.colorScheme.primary
+    val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(180.dp)) {
         val totalWidth = maxWidth
@@ -240,7 +241,7 @@ private fun WeeklyCaloriesBarChart(data: List<DailyMetric>, goalCalories: Float?
                         )
                     } else {
                         drawRoundRect(
-                            color = (if (isDark) Slate400 else Slate600).copy(alpha = 0.35f),
+                            color = mutedColor.copy(alpha = 0.35f),
                             topLeft = Offset(x, height - 8.dp.toPx()),
                             size = Size(barWidth, 8.dp.toPx()),
                             cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())

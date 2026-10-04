@@ -234,7 +234,7 @@ fun SleepScreen(viewModel: ShasthoViewModel, navController: NavController) {
                   },
                   colors = ButtonDefaults.buttonColors(
                     containerColor = sleepAccent.onBg,
-                    contentColor = if (isDark) Color(0xFF1E1E1E) else Color.White
+                    contentColor = if (isDark) MaterialTheme.colorScheme.onPrimary else Color.White
                   ),
                   shape = RoundedCornerShape(12.dp),
                   modifier = Modifier.height(56.dp)
@@ -258,6 +258,7 @@ fun SleepScreen(viewModel: ShasthoViewModel, navController: NavController) {
 private fun SleepWeekBarChart(data: List<DailyMetric>, goalHours: Float?, isDark: Boolean) {
     val goalLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
     val barColor = AccentTokens.sleepAccent(isDark).onBg
+    val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(180.dp)) {
         val totalWidth = maxWidth
@@ -292,7 +293,7 @@ private fun SleepWeekBarChart(data: List<DailyMetric>, goalHours: Float?, isDark
                         )
                     } else {
                         drawRoundRect(
-                            color = (if (isDark) Slate400 else Slate600).copy(alpha = 0.35f),
+                            color = mutedColor.copy(alpha = 0.35f),
                             topLeft = Offset(x, height - 8.dp.toPx()),
                             size = Size(barWidth, 8.dp.toPx()),
                             cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
