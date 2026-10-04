@@ -5,11 +5,16 @@ import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,17 +38,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AiMessageCard(
     text: String,
     modifier: Modifier = Modifier,
-    fontSize: TextUnit = 14.sp
+    fontSize: TextUnit = 14.sp,
+    showFollowUps: Boolean = false,
+    onFollowUp: ((String) -> Unit)? = null
 ) {
     val context = LocalContext.current
     var copied by remember { mutableStateOf(false) }
@@ -54,6 +63,8 @@ fun AiMessageCard(
             copied = false
         }
     }
+
+    val (bodyText, followUps) = remember(text) { splitFollowUps(text) }
 
     val shape = RoundedCornerShape(
         topStart = 16.dp,
@@ -117,12 +128,57 @@ fun AiMessageCard(
 
         Box(modifier = Modifier.padding(end = 8.dp)) {
             MarkdownText(
-                text = text,
+                text = bodyText,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontSize = fontSize
             )
         }
+
+        if (showFollowUps && onFollowUp != null && followUps.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            FlowRow(
+                modifier = Modifier.padding(end = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                followUps.forEach { question ->
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(16.dp))
+                            .clickable(role = Role.Button) { onFollowUp(question) }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = question,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+        }
     }
+}
+
+private fun splitFollowUps(text: String): Pair<String, List<String>> {
+    val lines = text.lines()
+    val followUpLine = lines.findLast { it.trimStart().startsWith("FOLLOWUPS:") }
+        ?: return text to emptyList()
+
+    val rawQuestions = followUpLine.trimStart().removePrefix("FOLLOWUPS:")
+    val questions = rawQuestions.split("|")
+        .map { it.trim().trim('"') }
+        .filter { it.isNotBlank() && it.length <= 80 }
+        .take(3)
+
+    val body = lines
+        .filterNot { it.trimStart().startsWith("FOLLOWUPS:") }
+        .joinToString("\n")
+        .replace(Regex("\n{3,}"), "\n\n")
+        .trim()
+
+    return body to questions
 }
 
 private fun cleanTextForCopy(text: String): String {

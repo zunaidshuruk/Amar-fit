@@ -224,7 +224,12 @@ fun ChatScreen(viewModel: ShasthoViewModel, initialTab: Int = 0, onNavigateBack:
                                     }
                                 }
                             } else {
-                                AiMessageCard(text = displayMsg, modifier = Modifier.fillMaxWidth())
+                                AiMessageCard(
+                                    text = displayMsg,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    showFollowUps = !isLoading && message === chatHistory.last(),
+                                    onFollowUp = { question -> viewModel.sendChatMessage(question) }
+                                )
                             }
                             
                             if (hasYouTubeSearch && youtubeQuery.isNotBlank()) {

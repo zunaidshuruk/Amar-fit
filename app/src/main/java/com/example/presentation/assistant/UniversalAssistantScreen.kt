@@ -400,7 +400,9 @@ fun UniversalAssistantScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> 
                                 } else {
                                     AiMessageCard(
                                         text = msg.text,
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier.fillMaxWidth(),
+                                        showFollowUps = !isLoading && msg === messages.last(),
+                                        onFollowUp = { question -> viewModel.sendUniversalAssistantMessage(question) }
                                     )
                                 }
                             }

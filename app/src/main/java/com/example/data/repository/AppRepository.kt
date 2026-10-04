@@ -16,17 +16,20 @@ import kotlinx.coroutines.withContext
 
 import com.example.presentation.viewmodel.ChatMessage
 
-private fun aiResponseStyle(maxWords: Int): String = """
-    RESPONSE STYLE (this overrides any earlier formatting instructions):
-    - Open with ONE short sentence that directly answers the question. No greeting, and do not restate the question.
-    - If the answer needs more, add at most 3 sections. Start each with a markdown heading line like "## Short title" (2 to 4 words). Short answers need no headings.
-    - Under a heading, use bullet lines that start with "- " (at most 4 per section). Each bullet is one short sentence and begins with the key term in **bold**. Use a numbered list ("1. ", "2. ") only for steps that must happen in order.
-    - Use plain, simple language. If you use a medical term, explain it in a few words. Prefer Bangladeshi foods, local units and everyday examples where relevant.
-    - When the user's own numbers or goals are known, use them directly instead of generic ranges.
-    - If there is one clear next action, finish with exactly one line in this form: > **Next step:** one concrete action.
-    - Do not use tables, emojis or horizontal rules in chat replies. Add a one-line safety caveat only when the topic involves a health risk or condition.
-    - Keep the whole reply under about $maxWords words unless the user asks for a detailed plan, recipe or explanation.
-""".trimIndent()
+private fun aiResponseStyle(maxWords: Int, followUps: Boolean = false): String {
+    val base = """
+        RESPONSE STYLE (this overrides any earlier formatting instructions):
+        - Open with ONE short sentence that directly answers the question. No greeting, and do not restate the question.
+        - If the answer needs more, add at most 3 sections. Start each with a markdown heading line like "## Short title" (2 to 4 words). Short answers need no headings.
+        - Under a heading, use bullet lines that start with "- " (at most 4 per section). Each bullet is one short sentence and begins with the key term in **bold**. Use a numbered list ("1. ", "2. ") only for steps that must happen in order.
+        - Use plain, simple language. If you use a medical term, explain it in a few words. Prefer Bangladeshi foods, local units and everyday examples where relevant.
+        - When the user's own numbers or goals are known, use them directly instead of generic ranges.
+        - If there is one clear next action, finish with exactly one line in this form: > **Next step:** one concrete action.
+        - Do not use tables, emojis or horizontal rules in chat replies. Add a one-line safety caveat only when the topic involves a health risk or condition.
+        - Keep the whole reply under about $maxWords words unless the user asks for a detailed plan, recipe or explanation.
+    """.trimIndent()
+    return if (followUps) base + "\n- After everything else, on the very last line, output exactly: FOLLOWUPS: <question 1> | <question 2>. These are two short follow-up questions the user is likely to ask next, each under 8 words, written the way the user would say them, with no numbering. Skip this line for simple confirmations and errors." else base
+}
 
 class AppRepository(
     private val userDao: UserDao,
@@ -281,7 +284,7 @@ class AppRepository(
             - Use markdown (bolding, bullet points) to format your advice for readability.
             
             $contextPrompt
-        """.trimIndent() + "\n\n" + aiResponseStyle(150)
+        """.trimIndent() + "\n\n" + aiResponseStyle(150, followUps = true)
         
         val apiContents = chatHistory.drop(1).map { msg ->
             Content(
@@ -568,7 +571,7 @@ class AppRepository(
             - Use markdown (bolding, bullet points) to format your advice for readability.
             
             $contextPrompt
-        """.trimIndent() + "\n\n" + aiResponseStyle(150)
+        """.trimIndent() + "\n\n" + aiResponseStyle(150, followUps = true)
         
         val apiContents = chatHistory.drop(1).map { msg ->
             Content(
@@ -1425,7 +1428,7 @@ class AppRepository(
             When a tool result contains a line starting with "YOUTUBE_SEARCH:", copy that line exactly, on its own line, at the end of your reply.
 
             Keep replies conversational and concise. You are not a doctor -- frame health-related suggestions as general wellness guidance, never a diagnosis, and never claim certainty about a medical condition.
-        """.trimIndent() + "\n\n" + aiResponseStyle(150)
+        """.trimIndent() + "\n\n" + aiResponseStyle(150, followUps = true)
 
         val contents = org.json.JSONArray()
         val rawMessages = mutableListOf<ChatMessage>()
@@ -1631,7 +1634,7 @@ class AppRepository(
                     just have a normal, helpful conversation and give general guidance based on
                     what the user tells you. You are not a doctor -- frame suggestions as general
                     wellness guidance, never a diagnosis, and never claim certainty about a medical condition.
-                """.trimIndent() + "\n\n" + aiResponseStyle(150)
+                """.trimIndent() + "\n\n" + aiResponseStyle(150, followUps = true)
                 val fallbackRequest = GenerateContentRequest(
                     contents = (chatHistory + ChatMessage(userMessage, true)).map { msg ->
                         Content(role = if (msg.isUser) "user" else "model", parts = listOf(Part(text = msg.text)))
