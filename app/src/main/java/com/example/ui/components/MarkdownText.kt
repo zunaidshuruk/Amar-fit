@@ -3,16 +3,23 @@ package com.example.ui.components
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -22,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -29,6 +37,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -38,13 +48,22 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.theme.Red500
 
 private sealed class MarkdownBlock {
-    data class Text(val lines: List<String>) : MarkdownBlock()
+    data class Heading(val level: Int, val text: String) : MarkdownBlock()
+    data class Paragraph(val lines: List<String>) : MarkdownBlock()
+    data class Bullets(val items: List<Pair<Int, String>>) : MarkdownBlock()      // (indent level 0..2, text)
+    data class Numbered(val items: List<Pair<String, String>>) : MarkdownBlock()  // (number as written, text)
+    data class Callout(val lines: List<String>) : MarkdownBlock()
     data class Table(val lines: List<String>) : MarkdownBlock()
     object Rule : MarkdownBlock()
     data class Video(val query: String) : MarkdownBlock()
 }
 
 private val separatorRegex = Regex("^:?-{2,}:?$")
+private val headingRegex = Regex("""^\s{0,3}(#{1,6})\s+(.+)$""")
+private val bulletRegex = Regex("""^(\s*)[*\-•]\s+(.+)$""")
+private val numberedRegex = Regex("""^\s*(\d{1,2})[.)]\s+(.+)$""")
+private val quoteRegex = Regex("""^\s*>\s?(.*)$""")
+private val calloutLabelRegex = Regex("""^\*\*(.+?)\*\*:?\s*(.*)$""")
 
 @Composable
 fun MarkdownText(
@@ -58,16 +77,178 @@ fun MarkdownText(
     val textColor = if (color != Color.Unspecified) color else MaterialTheme.colorScheme.onSurface
     val context = LocalContext.current
 
+    val baseSize = if (fontSize != TextUnit.Unspecified) fontSize else 16.sp
+    val bodyLineHeight = if (lineHeight != TextUnit.Unspecified) lineHeight else baseSize * 1.45f
+    val accent = MaterialTheme.colorScheme.primary
+    val codeBg = textColor.copy(alpha = 0.12f)
+
     Column(modifier = modifier) {
-        for (block in blocks) {
+        for ((index, block) in blocks.withIndex()) {
+            val topPadding = when {
+                index == 0 -> 0.dp
+                block is MarkdownBlock.Table || block is MarkdownBlock.Rule || block is MarkdownBlock.Video -> 0.dp
+                blocks[index - 1] is MarkdownBlock.Heading -> 6.dp
+                block is MarkdownBlock.Heading -> 14.dp
+                block is MarkdownBlock.Callout -> 12.dp
+                else -> 8.dp
+            }
+
             when (block) {
-                is MarkdownBlock.Text -> {
+                is MarkdownBlock.Heading -> {
+                    Row(
+                        modifier = Modifier
+                            .padding(top = topPadding)
+                            .height(IntrinsicSize.Min),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(3.dp)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(accent)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = buildInlineAnnotated(block.text, codeBg),
+                            fontWeight = FontWeight.Bold,
+                            color = textColor,
+                            fontSize = baseSize * (if (block.level == 1) 1.25f else 1.1f),
+                            lineHeight = bodyLineHeight
+                        )
+                    }
+                }
+                is MarkdownBlock.Paragraph -> {
                     Text(
-                        text = buildMarkdownAnnotated(block.lines, fontSize),
-                        color = color,
+                        text = buildInlineAnnotated(block.lines.joinToString("\n"), codeBg),
+                        color = textColor,
                         fontSize = fontSize,
-                        lineHeight = lineHeight
+                        lineHeight = bodyLineHeight,
+                        modifier = Modifier.padding(top = topPadding)
                     )
+                }
+                is MarkdownBlock.Bullets -> {
+                    Column(modifier = Modifier.padding(top = topPadding)) {
+                        block.items.forEachIndexed { itemIndex, (indent, itemText) ->
+                            Row(
+                                verticalAlignment = Alignment.Top,
+                                modifier = Modifier.padding(
+                                    start = (indent * 16).dp,
+                                    top = if (itemIndex == 0) 0.dp else 4.dp
+                                )
+                            ) {
+                                Text(
+                                    text = "•",
+                                    color = accent,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = fontSize,
+                                    modifier = Modifier.width(14.dp)
+                                )
+                                Text(
+                                    text = buildInlineAnnotated(itemText, codeBg),
+                                    color = textColor,
+                                    fontSize = fontSize,
+                                    lineHeight = bodyLineHeight,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+                is MarkdownBlock.Numbered -> {
+                    Column(modifier = Modifier.padding(top = topPadding)) {
+                        block.items.forEachIndexed { itemIndex, (number, itemText) ->
+                            Row(
+                                verticalAlignment = Alignment.Top,
+                                modifier = Modifier.padding(top = if (itemIndex == 0) 0.dp else 6.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .clip(CircleShape)
+                                        .background(accent.copy(alpha = 0.18f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = number,
+                                        color = accent,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = buildInlineAnnotated(itemText, codeBg),
+                                    color = textColor,
+                                    fontSize = fontSize,
+                                    lineHeight = bodyLineHeight,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+                is MarkdownBlock.Callout -> {
+                    val nonBlankIndex = block.lines.indexOfFirst { it.isNotBlank() }
+                    val labelMatch = if (nonBlankIndex != -1) {
+                        calloutLabelRegex.matchEntire(block.lines[nonBlankIndex].trim())
+                    } else null
+
+                    val label: String?
+                    val bodyLines = mutableListOf<String>()
+
+                    if (labelMatch != null) {
+                        label = labelMatch.groupValues[1].removeSuffix(":").trim()
+                        val remainder = labelMatch.groupValues[2]
+                        if (remainder.isNotBlank()) {
+                            bodyLines.add(remainder)
+                        }
+                        for (j in (nonBlankIndex + 1) until block.lines.size) {
+                            bodyLines.add(block.lines[j])
+                        }
+                    } else {
+                        label = null
+                        bodyLines.addAll(block.lines)
+                    }
+
+                    val bodyText = bodyLines.joinToString("\n").trim()
+
+                    Column(
+                        modifier = Modifier
+                            .padding(top = topPadding)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(accent.copy(alpha = 0.10f))
+                            .border(1.dp, accent.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                    ) {
+                        if (label != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    tint = accent,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = label,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = accent
+                                )
+                            }
+                        }
+                        if (bodyText.isNotBlank()) {
+                            Text(
+                                text = buildInlineAnnotated(bodyText, codeBg),
+                                color = textColor,
+                                fontSize = fontSize,
+                                lineHeight = bodyLineHeight,
+                                modifier = if (label != null) Modifier.padding(top = 2.dp) else Modifier
+                            )
+                        }
+                    }
                 }
                 is MarkdownBlock.Table -> {
                     RenderTable(
@@ -206,6 +387,114 @@ private fun RenderTable(
     }
 }
 
+private enum class BlockKind {
+    PARAGRAPH, BULLETS, NUMBERED, CALLOUT
+}
+
+private fun parseTextBlocks(lines: List<String>): List<MarkdownBlock> {
+    val blocks = mutableListOf<MarkdownBlock>()
+
+    var currentKind: BlockKind? = null
+    val currentParagraph = mutableListOf<String>()
+    val currentBullets = mutableListOf<Pair<Int, String>>()
+    val currentNumbered = mutableListOf<Pair<String, String>>()
+    val currentCallout = mutableListOf<String>()
+
+    fun flush() {
+        when (currentKind) {
+            BlockKind.PARAGRAPH -> {
+                if (currentParagraph.isNotEmpty()) {
+                    blocks.add(MarkdownBlock.Paragraph(currentParagraph.toList()))
+                    currentParagraph.clear()
+                }
+            }
+            BlockKind.BULLETS -> {
+                if (currentBullets.isNotEmpty()) {
+                    blocks.add(MarkdownBlock.Bullets(currentBullets.toList()))
+                    currentBullets.clear()
+                }
+            }
+            BlockKind.NUMBERED -> {
+                if (currentNumbered.isNotEmpty()) {
+                    blocks.add(MarkdownBlock.Numbered(currentNumbered.toList()))
+                    currentNumbered.clear()
+                }
+            }
+            BlockKind.CALLOUT -> {
+                if (currentCallout.isNotEmpty()) {
+                    blocks.add(MarkdownBlock.Callout(currentCallout.toList()))
+                    currentCallout.clear()
+                }
+            }
+            null -> {}
+        }
+        currentKind = null
+    }
+
+    for (line in lines) {
+        if (line.trim().isEmpty()) {
+            flush()
+            continue
+        }
+
+        val headingMatch = headingRegex.matchEntire(line)
+        if (headingMatch != null) {
+            flush()
+            val hashes = headingMatch.groupValues[1]
+            val text = headingMatch.groupValues[2].trim()
+            val level = minOf(hashes.length, 3)
+            blocks.add(MarkdownBlock.Heading(level, text))
+            continue
+        }
+
+        val trimmedStart = line.trimStart()
+        val bulletMatch = if (!trimmedStart.startsWith("**")) bulletRegex.matchEntire(line) else null
+        if (bulletMatch != null) {
+            if (currentKind != BlockKind.BULLETS) {
+                flush()
+                currentKind = BlockKind.BULLETS
+            }
+            val leadingSpaces = bulletMatch.groupValues[1].length
+            val indent = minOf(leadingSpaces / 2, 2)
+            val text = bulletMatch.groupValues[2]
+            currentBullets.add(Pair(indent, text))
+            continue
+        }
+
+        val numberedMatch = numberedRegex.matchEntire(line)
+        if (numberedMatch != null) {
+            if (currentKind != BlockKind.NUMBERED) {
+                flush()
+                currentKind = BlockKind.NUMBERED
+            }
+            val num = numberedMatch.groupValues[1]
+            val text = numberedMatch.groupValues[2]
+            currentNumbered.add(Pair(num, text))
+            continue
+        }
+
+        val quoteMatch = quoteRegex.matchEntire(line)
+        if (quoteMatch != null) {
+            if (currentKind != BlockKind.CALLOUT) {
+                flush()
+                currentKind = BlockKind.CALLOUT
+            }
+            val text = quoteMatch.groupValues[1]
+            currentCallout.add(text)
+            continue
+        }
+
+        if (currentKind != BlockKind.PARAGRAPH) {
+            flush()
+            currentKind = BlockKind.PARAGRAPH
+        }
+        currentParagraph.add(line)
+    }
+
+    flush()
+    return blocks
+}
+
 private fun parseMarkdownBlocks(text: String): List<MarkdownBlock> {
     val lines = text.split("\n")
     val blocks = mutableListOf<MarkdownBlock>()
@@ -215,7 +504,7 @@ private fun parseMarkdownBlocks(text: String): List<MarkdownBlock> {
 
     fun flushText() {
         if (currentTextLines.isNotEmpty()) {
-            blocks.add(MarkdownBlock.Text(currentTextLines.toList()))
+            blocks.addAll(parseTextBlocks(currentTextLines))
             currentTextLines.clear()
         }
     }
@@ -343,49 +632,81 @@ private fun buildInlineBoldAnnotated(text: String): AnnotatedString {
     }
 }
 
-private fun buildMarkdownAnnotated(lines: List<String>, fontSize: TextUnit): AnnotatedString {
+private fun buildInlineAnnotated(text: String, codeBackground: Color): AnnotatedString {
     return buildAnnotatedString {
-        for (i in lines.indices) {
-            var line = lines[i]
-            var isHeader = false
+        appendInlineAnnotated(this, text, codeBackground)
+    }
+}
 
-            if (line.startsWith("### ")) {
-                line = line.removePrefix("### ")
-                isHeader = true
-            } else if (line.startsWith("## ")) {
-                line = line.removePrefix("## ")
-                isHeader = true
-            } else if (line.startsWith("# ")) {
-                line = line.removePrefix("# ")
-                isHeader = true
-            }
-
-            if (line.trimStart().startsWith("* ")) {
-                line = line.replaceFirst("* ", "• ")
-            } else if (line.trimStart().startsWith("- ")) {
-                line = line.replaceFirst("- ", "• ")
-            }
-
-            val style = if (isHeader) {
-                SpanStyle(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = if (fontSize != TextUnit.Unspecified) fontSize * 1.2f else 18.sp
-                )
-            } else null
-
-            if (style != null) {
-                pushStyle(style)
-            }
-
-            appendInlineBold(this, line)
-
-            if (style != null) {
-                pop()
-            }
-
-            if (i < lines.size - 1) {
-                append("\n")
+private fun appendInlineAnnotated(
+    builder: AnnotatedString.Builder,
+    text: String,
+    codeBackground: Color
+) {
+    var i = 0
+    while (i < text.length) {
+        // 1. **bold**
+        if (text.startsWith("**", i)) {
+            val closeBold = text.indexOf("**", i + 2)
+            if (closeBold != -1) {
+                val inner = text.substring(i + 2, closeBold)
+                builder.withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                    appendInlineAnnotated(this, inner, codeBackground)
+                }
+                i = closeBold + 2
+                continue
             }
         }
+
+        // 2. `code`
+        if (text[i] == '`') {
+            val closeCode = text.indexOf('`', i + 1)
+            if (closeCode != -1) {
+                val inner = text.substring(i + 1, closeCode)
+                builder.withStyle(
+                    SpanStyle(
+                        fontFamily = FontFamily.Monospace,
+                        background = codeBackground
+                    )
+                ) {
+                    append(inner)
+                }
+                i = closeCode + 1
+                continue
+            }
+        }
+
+        // 3. *italic*
+        if (text[i] == '*') {
+            val nextChar = text.getOrNull(i + 1)
+            if (nextChar != null && nextChar != '*' && !nextChar.isWhitespace()) {
+                var closeItalic = -1
+                var search = i + 2
+                while (search < text.length) {
+                    val candidate = text.indexOf('*', search)
+                    if (candidate == -1) break
+                    val prevChar = text[candidate - 1]
+                    val nextAfterCandidate = text.getOrNull(candidate + 1)
+                    if (!prevChar.isWhitespace() && nextAfterCandidate != '*') {
+                        closeItalic = candidate
+                        break
+                    }
+                    search = candidate + 1
+                }
+
+                if (closeItalic != -1) {
+                    val inner = text.substring(i + 1, closeItalic)
+                    builder.withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
+                        appendInlineAnnotated(this, inner, codeBackground)
+                    }
+                    i = closeItalic + 1
+                    continue
+                }
+            }
+        }
+
+        // Literal character
+        builder.append(text[i])
+        i++
     }
 }
