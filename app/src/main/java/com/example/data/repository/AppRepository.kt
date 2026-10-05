@@ -173,6 +173,16 @@ class AppRepository(
             }
         } catch (e: Throwable) { /* Ignored */ }
 
+        // 5. Check environment variables as a direct fallback
+        try {
+            val env3 = System.getenv("GEMINI_API_KEY_3")
+            if (isValidKey(env3) && !apiKeys.contains(env3)) apiKeys.add(env3)
+            val env2 = System.getenv("GEMINI_API_KEY_2")
+            if (isValidKey(env2) && !apiKeys.contains(env2)) apiKeys.add(env2)
+            val env1 = System.getenv("GEMINI_API_KEY")
+            if (isValidKey(env1) && !apiKeys.contains(env1)) apiKeys.add(env1)
+        } catch (e: Throwable) { /* Ignored */ }
+
         return apiKeys
     }
 

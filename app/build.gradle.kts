@@ -1,4 +1,6 @@
 import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
+import java.util.Properties
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
@@ -68,6 +70,24 @@ android {
 }
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
 // to match the convention used in Web projects.
+val envFile = rootProject.file(".env")
+val envKeys = listOf("GEMINI_API_KEY", "GEMINI_API_KEY_2", "GEMINI_API_KEY_3", "YOUTUBE_API_KEY")
+val props = Properties()
+if (envFile.exists()) {
+  try { envFile.inputStream().use { props.load(it) } } catch (e: Exception) {}
+}
+var envUpdated = false
+for (k in envKeys) {
+  val envVal = System.getenv(k)
+  if (!envVal.isNullOrBlank() && (props.getProperty(k).isNullOrBlank() || props.getProperty(k).startsWith("MY_"))) {
+    props.setProperty(k, envVal)
+    envUpdated = true
+  }
+}
+if (envUpdated || !envFile.exists()) {
+  try { envFile.outputStream().use { props.store(it, "Auto-synced from environment") } } catch (e: Exception) {}
+}
+
 secrets {
   propertiesFileName = ".env"
   defaultPropertiesFileName = ".env.example"
