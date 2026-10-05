@@ -42,7 +42,8 @@ class AppRepository(
     private val medicalRecordDao: com.example.data.local.MedicalRecordDao? = null,
     private val foodChatMessageDao: com.example.data.local.FoodChatMessageDao? = null,
     private val assistantChatMessageDao: com.example.data.local.AssistantChatMessageDao? = null,
-    private val assistantChatSessionDao: com.example.data.local.AssistantChatSessionDao? = null
+    private val assistantChatSessionDao: com.example.data.local.AssistantChatSessionDao? = null,
+    private val healthExerciseSessionDao: com.example.data.local.HealthExerciseSessionDao? = null
 ) {
 
     suspend fun logActivityEvent(type: String, description: String, timestamp: Long = System.currentTimeMillis(), source: String = "app", externalId: String? = null) {
@@ -122,6 +123,11 @@ class AppRepository(
     fun getAllActivityEvents(): kotlinx.coroutines.flow.Flow<List<com.example.data.local.ActivityEvent>> {
         return activityEventDao?.getAllEvents() ?: kotlinx.coroutines.flow.flowOf(emptyList())
     }
+
+    fun observeHealthExerciseSessions(fromMillis: Long, toMillis: Long): kotlinx.coroutines.flow.Flow<List<com.example.data.local.HealthExerciseSession>> = healthExerciseSessionDao?.observeBetween(fromMillis, toMillis) ?: kotlinx.coroutines.flow.flowOf(emptyList())
+    suspend fun upsertHealthExerciseSessions(sessions: List<com.example.data.local.HealthExerciseSession>) { healthExerciseSessionDao?.upsertAll(sessions) }
+    suspend fun deleteHealthExerciseSessionsBetween(fromMillis: Long, toMillis: Long) { healthExerciseSessionDao?.deleteBetween(fromMillis, toMillis) }
+    suspend fun earliestHealthExerciseSessionStart(): Long? = healthExerciseSessionDao?.earliestStart()
 
     suspend fun deleteAccount(): DeleteAccountResult {
         return FirebaseManager.deleteAccount()

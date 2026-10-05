@@ -31,6 +31,8 @@ fun WorkoutPlanEditor(
     onDismiss: () -> Unit
 ) {
     var title by remember(initialPlan) { mutableStateOf(initialPlan.title) }
+    var rounds by remember(initialPlan) { mutableStateOf(initialPlan.rounds.coerceIn(1, 10)) }
+    var roundRest by remember(initialPlan) { mutableStateOf(initialPlan.roundRestSeconds.coerceIn(0, 300)) }
     val warmup = remember(initialPlan) { mutableStateListOf<WorkoutExercise>().apply { addAll(initialPlan.warmup) } }
     val main = remember(initialPlan) { mutableStateListOf<WorkoutExercise>().apply { addAll(initialPlan.mainExercises) } }
     val cooldown = remember(initialPlan) { mutableStateListOf<WorkoutExercise>().apply { addAll(initialPlan.cooldown) } }
@@ -78,7 +80,9 @@ fun WorkoutPlanEditor(
                                 title = title.trim().ifBlank { initialPlan.title },
                                 warmup = warmup.toList(),
                                 mainExercises = main.toList(),
-                                cooldown = cooldown.toList()
+                                cooldown = cooldown.toList(),
+                                rounds = rounds,
+                                roundRestSeconds = roundRest
                             )
                             onSave(updated)
                         },
@@ -155,6 +159,46 @@ fun WorkoutPlanEditor(
                                 color = MaterialTheme.colorScheme.onBackground,
                                 modifier = Modifier.padding(top = 8.dp)
                             )
+                        }
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    StepperRow(
+                                        label = "Rounds",
+                                        valueText = "$rounds",
+                                        onMinus = { rounds = (rounds - 1).coerceAtLeast(1) },
+                                        onPlus = { rounds = (rounds + 1).coerceAtMost(10) },
+                                        minusEnabled = rounds > 1,
+                                        plusEnabled = rounds < 10
+                                    )
+                                    if (rounds > 1) {
+                                        StepperRow(
+                                            label = "Rest between rounds",
+                                            valueText = "$roundRest s",
+                                            onMinus = { roundRest = (roundRest - 5).coerceAtLeast(0) },
+                                            onPlus = { roundRest = (roundRest + 5).coerceAtMost(300) },
+                                            minusEnabled = roundRest > 0,
+                                            plusEnabled = roundRest < 300
+                                        )
+                                    }
+                                    Text(
+                                        text = if (rounds == 1) {
+                                            "The main exercises run once. Raise Rounds to repeat them as a circuit."
+                                        } else {
+                                            "The main exercises run $rounds times with ${if (roundRest > 0) "$roundRest s rest" else "no rest"} between rounds. Warmup and cooldown run once."
+                                        },
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                         }
                         items(main.size) { index ->
                             val exercise = main[index]

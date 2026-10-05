@@ -141,4 +141,38 @@ object HealthConnectManager {
             else -> permission.substringAfterLast('.').replace("Record", "")
         }
     }
+
+    fun exerciseTypeLabel(type: Int): String {
+        return when (type) {
+            ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
+            ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL -> "Running"
+            ExerciseSessionRecord.EXERCISE_TYPE_WALKING -> "Walking"
+            ExerciseSessionRecord.EXERCISE_TYPE_BIKING,
+            ExerciseSessionRecord.EXERCISE_TYPE_BIKING_STATIONARY -> "Cycling"
+            ExerciseSessionRecord.EXERCISE_TYPE_HIKING -> "Hiking"
+            ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_POOL,
+            ExerciseSessionRecord.EXERCISE_TYPE_SWIMMING_OPEN_WATER -> "Swimming"
+            ExerciseSessionRecord.EXERCISE_TYPE_YOGA -> "Yoga"
+            ExerciseSessionRecord.EXERCISE_TYPE_PILATES -> "Pilates"
+            ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING -> "Strength Training"
+            ExerciseSessionRecord.EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING -> "HIIT"
+            ExerciseSessionRecord.EXERCISE_TYPE_DANCING -> "Dancing"
+            ExerciseSessionRecord.EXERCISE_TYPE_STRETCHING -> "Stretching"
+            ExerciseSessionRecord.EXERCISE_TYPE_CALISTHENICS -> "Calisthenics"
+            ExerciseSessionRecord.EXERCISE_TYPE_ROWING,
+            ExerciseSessionRecord.EXERCISE_TYPE_ROWING_MACHINE -> "Rowing"
+            ExerciseSessionRecord.EXERCISE_TYPE_ELLIPTICAL -> "Elliptical"
+            ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING,
+            ExerciseSessionRecord.EXERCISE_TYPE_STAIR_CLIMBING_MACHINE -> "Stair Climbing"
+            ExerciseSessionRecord.EXERCISE_TYPE_BADMINTON -> "Badminton"
+            ExerciseSessionRecord.EXERCISE_TYPE_TENNIS -> "Tennis"
+            ExerciseSessionRecord.EXERCISE_TYPE_TABLE_TENNIS -> "Table Tennis"
+            ExerciseSessionRecord.EXERCISE_TYPE_BASKETBALL -> "Basketball"
+            ExerciseSessionRecord.EXERCISE_TYPE_CRICKET -> "Cricket"
+            ExerciseSessionRecord.EXERCISE_TYPE_MARTIAL_ARTS -> "Martial Arts"
+            ExerciseSessionRecord.EXERCISE_TYPE_BOXING -> "Boxing"
+            ExerciseSessionRecord.EXERCISE_TYPE_GOLF -> "Golf"
+            else -> "Workout"
+        }
+    }
 }
