@@ -40,6 +40,11 @@ jobs:
           python3 -c 'import json; d=json.load(open("app/google-services.json")); assert isinstance(d, dict) and d.get("client")' || { echo "::error::app/google-services.json is not a valid Firebase config"; exit 1; }
 
       - name: Build debug APK
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
+          GEMINI_API_KEY_3: ${{ secrets.GEMINI_API_KEY_3 }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: ./gradlew assembleDebug --no-daemon
 
       - name: Locate built APK
