@@ -150,6 +150,21 @@ fun SettingsScreen(
         }
     }
 
+    var historySupported by remember { mutableStateOf(false) }
+    var historyGranted by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isHealthConnectAvailable) {
+        if (isHealthConnectAvailable) {
+            historySupported = HealthConnectManager.isHistorySupported(context)
+            historyGranted = HealthConnectManager.hasHistoryPermission(context)
+        }
+    }
+
+    val historyPermissionLauncher = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) { granted ->
+        historyGranted = HealthConnectManager.HISTORY_PERMISSION in granted
+        if (historyGranted) Toast.makeText(context, "Full history enabled", Toast.LENGTH_SHORT).show()
+    }
+
 
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
         profilePictureUri = uri?.toString()
@@ -612,6 +627,38 @@ fun SettingsScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
                         Text("Connect")
+                    }
+                }
+                if (isHealthConnectAvailable && historySupported) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                "Older exercise history",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Text(
+                                if (historyGranted) "Full history enabled" else "Allow access to data older than 30 days",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (!historyGranted) {
+                            OutlinedButton(
+                                onClick = {
+                                    historyPermissionLauncher.launch(setOf(HealthConnectManager.HISTORY_PERMISSION))
+                                }
+                            ) {
+                                Text("Allow")
+                            }
+                        }
                     }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)

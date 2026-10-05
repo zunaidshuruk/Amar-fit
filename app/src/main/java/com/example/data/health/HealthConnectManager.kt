@@ -2,6 +2,7 @@ package com.example.data.health
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
@@ -57,8 +58,31 @@ object HealthConnectManager {
         HealthPermission.getWritePermission(WeightRecord::class)
     )
 
+    val HISTORY_PERMISSION: String = HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY
+
     fun isAvailable(context: Context): Boolean {
         return HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
+    }
+
+    @OptIn(androidx.health.connect.client.feature.ExperimentalFeatureAvailabilityApi::class)
+    suspend fun isHistorySupported(context: Context): Boolean {
+        return try {
+            if (!isAvailable(context)) return false
+            val client = HealthConnectClient.getOrCreate(context)
+            client.features.getFeatureStatus(HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_HISTORY) == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun hasHistoryPermission(context: Context): Boolean {
+        return try {
+            val client = HealthConnectClient.getOrCreate(context)
+            val granted = client.permissionController.getGrantedPermissions()
+            HISTORY_PERMISSION in granted
+        } catch (e: Exception) {
+            false
+        }
     }
 
     suspend fun hasAllPermissions(context: Context): Boolean {
@@ -113,6 +137,7 @@ object HealthConnectManager {
             "speed" -> "Speed"
             "basalmetabolicrate" -> "Basal Metabolic Rate"
             "weight" -> "Weight"
+            "healthdatahistory" -> "Full Health History"
             else -> permission.substringAfterLast('.').replace("Record", "")
         }
     }
