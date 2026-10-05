@@ -4,5 +4,122 @@ service cloud.firestore {
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+
+    // --- Part Q: Social (friends, challenges, leaderboard) ---
+
+    // Public leaderboard projection: name/streak/points/badges/friendCode only,
+    // no health data. Readable by any signed-in user; writable only by its owner.
+    match /public_profiles/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Friends-only projection: today's steps/water/sleep/calories vs. goals.
+    // Readable by the owner, or by anyone with an accepted friendship with them.
+    match /friend_stats/{uid} {
+      allow read: if request.auth != null && (
+        request.auth.uid == uid ||
+        (
+          exists(/databases/$(database)/documents/friendships/$(request.auth.uid < uid ? request.auth.uid + '_' + uid : uid + '_' + request.auth.uid)) &&
+          get(/databases/$(database)/documents/friendships/$(request.auth.uid < uid ? request.auth.uid + '_' + uid : uid + '_' + request.auth.uid)).data.status == 'accepted'
+        )
+      );
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // One doc per friend pair, keyed by the two UIDs sorted and joined with "_".
+    // The requester creates it as "pending"; only the OTHER party can accept it.
+    // No cross-user writes are ever needed -- each side only ever writes documents
+    // keyed by their own uid, or creates/updates a pair-doc they're a party to.
+    match /friendships/{pairId} {
+      allow read: if request.auth != null &&
+        (resource == null || request.auth.uid == resource.data.uid1 || request.auth.uid == resource.data.uid2);
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.requestedBy
+        && (request.auth.uid == request.resource.data.uid1 || request.auth.uid == request.resource.data.uid2)
+        && request.resource.data.status == 'pending'
+        // CHANGED 2026-10-05: the doc id must be the two sorted uids, so nobody can
+        // pre-create (squat) the pair doc of two other users.
+        && request.resource.data.uid1 < request.resource.data.uid2
+        && pairId == request.resource.data.uid1 + '_' + request.resource.data.uid2;
+      allow update: if request.auth != null
+        && (request.auth.uid == resource.data.uid1 || request.auth.uid == resource.data.uid2)
+        && request.auth.uid != resource.data.requestedBy
+        && request.resource.data.status == 'accepted';
+      // CHANGED 2026-10-05: either party can delete the pair doc at ANY status --
+      // declining/cancelling a pending request, or removing an accepted friend
+      // (FirebaseManager.removeFriend). Previously only pending docs could be deleted,
+      // so removing a friend was always denied.
+      allow delete: if request.auth != null
+        && (request.auth.uid == resource.data.uid1 || request.auth.uid == resource.data.uid2);
+    }
+
+    // Reverse lookup: 5-char friend code -> uid. Claimed once via a transaction
+    // (see FirebaseManager.claimFriendCode), never overwritten or deleted.
+    match /friend_codes/{code} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // A 7-day steps challenge between two friends. Either participant can update
+    // their own progress and flip status/winnerUid on completion; identity/date
+    // fields are locked from tampering once created.
+    match /challenges/{challengeId} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.uid1 || request.auth.uid == resource.data.uid2);
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.createdBy
+        && (request.auth.uid == request.resource.data.uid1 || request.auth.uid == request.resource.data.uid2)
+        && request.resource.data.status == 'active';
+      allow update: if request.auth != null
+        && (request.auth.uid == resource.data.uid1 || request.auth.uid == resource.data.uid2)
+        && request.resource.data.uid1 == resource.data.uid1
+        && request.resource.data.uid2 == resource.data.uid2
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.startDate == resource.data.startDate;
+    }
+
+    // --- ADDED 2026-10-05: collections the app already uses that had no rules ---
+    // (Firestore denies anything not matched, so these features were failing.)
+
+    // Activity feed (FirebaseManager.postActivityEvent / getActivityFeed). Posted by
+    // the user it describes. Readable by any signed-in user: the app loads friends'
+    // events with a whereIn query, which rules cannot restrict to friends. Events are
+    // short generic messages ("Earned a new badge!"), no health data.
+    match /activity_events/{eventId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Kudos: one doc per sender/recipient/day, id = fromUid_toUid_date
+    // (FirebaseManager.sendKudos / hasSentKudosToday). Only the sender can create it.
+    match /kudos/{kudosId} {
+      allow read: if request.auth != null &&
+        (resource == null || request.auth.uid == resource.data.fromUid || request.auth.uid == resource.data.toUid);
+      allow create: if request.auth != null
+        && request.resource.data.fromUid == request.auth.uid
+        && kudosId == request.auth.uid + '_' + request.resource.data.toUid + '_' + request.resource.data.date;
+      allow update, delete: if false;
+    }
+
+    // Direct messages between ACCEPTED friends. Thread id = the friendship pair id
+    // (two sorted uids joined with "_"). Messages are immutable once sent; the
+    // push-notification job (Admin SDK) updates the "notified" flag and is not
+    // subject to these rules.
+    match /dm_threads/{pairId}/messages/{messageId} {
+      allow read: if request.auth != null
+        && request.auth.uid in pairId.split('_')
+        && get(/databases/$(database)/documents/friendships/$(pairId)).data.status == 'accepted';
+      allow create: if request.auth != null
+        && request.auth.uid in pairId.split('_')
+        && request.resource.data.senderUid == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 4000
+        && get(/databases/$(database)/documents/friendships/$(pairId)).data.status == 'accepted';
+      allow update, delete: if false;
+    }
   }
 }
