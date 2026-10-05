@@ -15,6 +15,23 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v4
 
+      - name: Pre-flight checks
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: |
+          fail=0
+          CODE=$(grep -oP 'versionCode\s*=\s*\K[0-9]+' app/build.gradle.kts | head -1)
+          TAG="${GITHUB_REF_NAME#v}"
+          if [ "$CODE" != "$TAG" ]; then echo "::error::Tag '$TAG' does not match versionCode '$CODE' in app/build.gradle.kts"; fail=1; fi
+          if [ ! -f debug.keystore ]; then echo "::error::debug.keystore is missing from the repo root"; fail=1;
+          elif [ "$(sha256sum debug.keystore | cut -d' ' -f1)" != "4d6742b2662bfcbbb8e0a6f693d3fb939f4d2d10a446336af85a619f275f0faa" ]; then echo "::error::debug.keystore checksum does not match the known-good file"; fail=1; fi
+          for v in GEMINI_API_KEY YOUTUBE_API_KEY; do
+            if [ -z "${!v}" ]; then echo "::error::Repository secret $v is missing or empty"; fail=1; fi
+          done
+          exit $fail
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
