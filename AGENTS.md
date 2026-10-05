@@ -9,6 +9,7 @@ KardIQ (formerly Amar Fit) is a native Android health and fitness app for Bangla
 - **Gemini function responses use `role: "function"`.** Do not change it to `"user"`.
 - **Auth:** never anonymous auth for DB sync.
 - **UI:** every `onClick` wires to a ViewModel or permission launcher. Colors come from `MaterialTheme.colorScheme` / `AccentTokens`, never hardcoded literals; never white-on-white text. App is dark-only.
+- **AI text:** show AI answers through `AiMessageCard` / `MarkdownText`; chat prompts get the shared `aiResponseStyle` guide. The `YOUTUBE_SEARCH:` and `FOLLOWUPS:` convention lines must each stay on their own line, never inside a table.
 - **Health Connect:** every permission needs both a manifest `<uses-permission>` and a `REQUIRED_PERMISSIONS` entry — one without the other silently never works.
 - **Imports:** `Modifier.graphicsLayer` is `androidx.compose.ui.graphics.graphicsLayer`.
 - **Scope:** change only the files a task names. Don't revert newer work by editing from an old snapshot.
