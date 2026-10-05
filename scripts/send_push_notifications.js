@@ -14,10 +14,16 @@ const db = admin.firestore();
 const messaging = admin.messaging();
 
 async function getProfileForPush(uid) {
-  const snap = await db.collection("public_profiles").doc(uid).get();
-  if (!snap.exists) return { name: "A friend", token: null };
-  const data = snap.data();
-  return { name: data.name || "A friend", token: data.fcmToken || null };
+  const [publicSnap, privateSnap] = await Promise.all([
+    db.collection("public_profiles").doc(uid).get(),
+    db.collection("users").doc(uid).get(),
+  ]);
+  const publicData = publicSnap.exists ? publicSnap.data() : {};
+  const privateData = privateSnap.exists ? privateSnap.data() : {};
+  // Prefer the private token; fall back to the old public one so users who have not
+  // updated the app yet still get notifications during the transition.
+  const token = privateData.fcmToken || publicData.fcmToken || null;
+  return { name: publicData.name || "A friend", token };
 }
 
 async function sendDataMessage(token, data) {

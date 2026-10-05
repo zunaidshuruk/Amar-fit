@@ -145,7 +145,10 @@ object FirebaseManager {
         if (user != null && token.isNotBlank()) {
             val db = FirebaseFirestore.getInstance()
             db.collection("public_profiles").document(user.uid).set(
-                mapOf("fcmToken" to token, "fcmTokenUpdatedAt" to com.google.firebase.Timestamp.now()),
+                mapOf(
+                    "fcmToken" to com.google.firebase.firestore.FieldValue.delete(),
+                    "fcmTokenUpdatedAt" to com.google.firebase.firestore.FieldValue.delete()
+                ),
                 SetOptions.merge()
             )
             db.collection("users").document(user.uid).set(
