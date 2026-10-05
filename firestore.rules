@@ -12,6 +12,13 @@ service cloud.firestore {
     match /public_profiles/{uid} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == uid;
+      // STEP 3 (enable ONLY after every user is on an app version that no longer writes
+      // fcmToken here, and the notification script reads tokens from users/{uid}):
+      // replace the "allow write" line above with these two lines. Push tokens belong in
+      // the private users/{uid} document, never in this world-readable one.
+      //   allow create, update: if request.auth != null && request.auth.uid == uid
+      //     && !request.resource.data.keys().hasAny(['fcmToken', 'fcmTokenUpdatedAt']);
+      //   allow delete: if request.auth != null && request.auth.uid == uid;
     }
 
     // Friends-only projection: today's steps/water/sleep/calories vs. goals.
@@ -62,22 +69,74 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // A 7-day steps challenge between two friends. Either participant can update
-    // their own progress and flip status/winnerUid on completion; identity/date
-    // fields are locked from tampering once created.
+    // A 7-day steps challenge between two ACCEPTED friends.
+    // HARDENED 2026-10-05 (was: either participant could rewrite anything except
+    // identity/date fields, so you could edit the other person's progress or declare
+    // yourself the winner at any time):
+    //  - create: only between accepted friends, starting at 0 / 0, no winner yet.
+    //  - progress updates: a participant may change ONLY their own progress entry,
+    //    while the challenge is active (and for up to 2 days after its end date).
+    //  - completion: only on/after the end date, only active -> completed, and
+    //    winnerUid must be the actual leader of the stored progress (null on a tie).
+    //  - a completed challenge can never be edited again by a client.
+    // Limit: steps are self-reported by the app, so a person can still inflate THEIR
+    // OWN number. No rule can verify Health Connect data; the cap below only blocks
+    // absurd values.
     match /challenges/{challengeId} {
-      allow read: if request.auth != null &&
-        (request.auth.uid == resource.data.uid1 || request.auth.uid == resource.data.uid2);
+      function pairIdOf(a, b) {
+        return a < b ? a + '_' + b : b + '_' + a;
+      }
+      // endDate is "YYYY-MM-DD" (see FirebaseManager.createChallenge)
+      function endTs() {
+        let p = resource.data.endDate.split('-');
+        return timestamp.date(int(p[0]), int(p[1]), int(p[2]));
+      }
+      function isParticipant() {
+        return request.auth != null &&
+          (request.auth.uid == resource.data.uid1 || request.auth.uid == resource.data.uid2);
+      }
+      function changedKeys() {
+        return request.resource.data.diff(resource.data).affectedKeys();
+      }
+      function ownProgressOnly() {
+        return changedKeys().hasOnly(['progress'])
+          && resource.data.status == 'active'
+          && request.time < endTs() + duration.value(2, 'd')
+          && request.resource.data.progress.diff(resource.data.progress).affectedKeys().hasOnly([request.auth.uid])
+          && request.resource.data.progress[request.auth.uid] is int
+          && request.resource.data.progress[request.auth.uid] >= 0
+          && request.resource.data.progress[request.auth.uid] <= 700000;
+      }
+      function expectedWinner() {
+        let p = resource.data.progress;
+        return p[resource.data.uid1] > p[resource.data.uid2] ? resource.data.uid1 :
+          (p[resource.data.uid2] > p[resource.data.uid1] ? resource.data.uid2 : null);
+      }
+      // 14h of slack: the app decides "is it over" on the phone's local date (up to UTC+14).
+      function completingCorrectly() {
+        return changedKeys().hasOnly(['status', 'winnerUid'])
+          && resource.data.status == 'active'
+          && request.resource.data.status == 'completed'
+          && request.time >= endTs() - duration.value(14, 'h')
+          && request.resource.data.winnerUid == expectedWinner();
+      }
+
+      allow read: if isParticipant();
       allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['uid1', 'uid2', 'createdBy', 'startDate', 'endDate', 'status', 'progress', 'winnerUid', 'createdAt', 'notifiedCreation', 'notifiedCompletion'])
         && request.auth.uid == request.resource.data.createdBy
         && (request.auth.uid == request.resource.data.uid1 || request.auth.uid == request.resource.data.uid2)
-        && request.resource.data.status == 'active';
-      allow update: if request.auth != null
-        && (request.auth.uid == resource.data.uid1 || request.auth.uid == resource.data.uid2)
-        && request.resource.data.uid1 == resource.data.uid1
-        && request.resource.data.uid2 == resource.data.uid2
-        && request.resource.data.createdBy == resource.data.createdBy
-        && request.resource.data.startDate == resource.data.startDate;
+        && request.resource.data.uid1 != request.resource.data.uid2
+        && request.resource.data.status == 'active'
+        && request.resource.data.winnerUid == null
+        && request.resource.data.progress.keys().hasOnly([request.resource.data.uid1, request.resource.data.uid2])
+        && request.resource.data.progress[request.resource.data.uid1] == 0
+        && request.resource.data.progress[request.resource.data.uid2] == 0
+        && request.resource.data.notifiedCreation == false
+        && request.resource.data.notifiedCompletion == false
+        && get(/databases/$(database)/documents/friendships/$(pairIdOf(request.resource.data.uid1, request.resource.data.uid2))).data.status == 'accepted';
+      allow update: if isParticipant() && (ownProgressOnly() || completingCorrectly());
+      allow delete: if false;
     }
 
     // --- ADDED 2026-10-05: collections the app already uses that had no rules ---
