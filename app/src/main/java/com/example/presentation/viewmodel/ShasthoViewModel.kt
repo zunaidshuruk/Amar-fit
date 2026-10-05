@@ -2240,6 +2240,18 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun updateSavedWorkoutPlan(workout: com.example.data.local.SavedWorkout, plan: com.example.data.model.WorkoutPlan): com.example.data.local.SavedWorkout {
+        val json = com.example.data.remote.RetrofitClient.moshi.adapter(com.example.data.model.WorkoutPlan::class.java).toJson(plan)
+        val updated = workout.copy(title = plan.title.ifBlank { workout.title }, structuredJson = json)
+        viewModelScope.launch(Dispatchers.IO) {
+            val success = repository.saveWorkout(updated)
+            if (!success) {
+                _syncErrorEvent.emit("Saved locally, but couldn't sync to the cloud — check your connection")
+            }
+        }
+        return updated
+    }
+
     val savedChats: StateFlow<List<com.example.data.local.SavedChat>> = repository.getAllSavedChats()
         .stateIn(
             scope = viewModelScope,

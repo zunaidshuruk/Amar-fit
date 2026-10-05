@@ -107,6 +107,11 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 workout = selectedSavedWorkout!!,
                 isDark = isDark,
                 onStartWorkout = { plan -> activeSessionPlan = plan },
+                onSavePlan = { newPlan ->
+                    selectedSavedWorkout?.let { w ->
+                        selectedSavedWorkout = viewModel.updateSavedWorkoutPlan(w, newPlan)
+                    }
+                },
                 onBack = { selectedSavedWorkout = null }
             )
         } else {
@@ -596,8 +601,10 @@ fun SavedWorkoutDetailView(
     workout: SavedWorkout,
     isDark: Boolean,
     onStartWorkout: (WorkoutPlan) -> Unit,
+    onSavePlan: (WorkoutPlan) -> Unit,
     onBack: () -> Unit
 ) {
+    var showEditor by remember { mutableStateOf(false) }
     val bodyTextColor = if (isDark) {
         android.graphics.Color.parseColor("#E2E8F0")
     } else {
@@ -695,6 +702,29 @@ fun SavedWorkoutDetailView(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Start Workout", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = { showEditor = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(Icons.Default.Edit, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Edit exercises", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        if (showEditor && parsedPlan != null) {
+            WorkoutPlanEditor(
+                initialPlan = parsedPlan,
+                onSave = { newPlan ->
+                    onSavePlan(newPlan)
+                    showEditor = false
+                },
+                onDismiss = { showEditor = false }
+            )
         }
     }
 }

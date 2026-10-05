@@ -49,7 +49,11 @@ data class SessionStep(
     val sectionName: String,
     val durationSeconds: Int?,
     val exerciseIndex: Int,
-    val totalExercises: Int
+    val totalExercises: Int,
+    val setNumber: Int = 1,
+    val totalSets: Int = 1,
+    val roundNumber: Int = 1,
+    val totalRounds: Int = 1
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,45 +75,141 @@ fun WorkoutSessionScreen(
 
     // 1. Flatten warmup + mainExercises + cooldown into ordered steps with rest periods
     val sessionSteps = remember(plan) {
-        val steps = mutableListOf<SessionStep>()
-        val exerciseList = mutableListOf<Pair<String, WorkoutExercise>>()
-        plan.warmup.forEach { exerciseList.add("Warmup" to it) }
-        plan.mainExercises.forEach { exerciseList.add("Main Exercise" to it) }
-        plan.cooldown.forEach { exerciseList.add("Cooldown" to it) }
+        val rounds = plan.rounds.coerceIn(1, 10)
+        val roundRest = plan.roundRestSeconds.coerceIn(0, 300)
+        val w = plan.warmup.size
+        val m = plan.mainExercises.size
+        val c = plan.cooldown.size
+        val totalCount = w + m + c
 
-        val totalCount = exerciseList.size
+        data class ExerciseSlot(
+            val section: String,
+            val exercise: WorkoutExercise,
+            val exerciseIndex: Int,
+            val setNumber: Int,
+            val totalSets: Int,
+            val roundNumber: Int,
+            val totalRounds: Int,
+            val endsRound: Boolean
+        )
+
+        val slots = mutableListOf<ExerciseSlot>()
+
+        // Warmup exercises once
+        plan.warmup.forEachIndexed { i, exercise ->
+            val exIndex = i + 1
+            val sets = (exercise.sets ?: 1).coerceIn(1, 10)
+            for (s in 1..sets) {
+                slots.add(
+                    ExerciseSlot(
+                        section = "Warmup",
+                        exercise = exercise,
+                        exerciseIndex = exIndex,
+                        setNumber = s,
+                        totalSets = sets,
+                        roundNumber = 1,
+                        totalRounds = 1,
+                        endsRound = false
+                    )
+                )
+            }
+        }
+
+        // Main exercises for rounds
+        for (r in 1..rounds) {
+            plan.mainExercises.forEachIndexed { i, exercise ->
+                val exIndex = w + i + 1
+                val sets = (exercise.sets ?: 1).coerceIn(1, 10)
+                val isLastMainExercise = (i == m - 1)
+                for (s in 1..sets) {
+                    val isLastSet = (s == sets)
+                    val endsRound = isLastMainExercise && isLastSet
+                    slots.add(
+                        ExerciseSlot(
+                            section = "Main Exercise",
+                            exercise = exercise,
+                            exerciseIndex = exIndex,
+                            setNumber = s,
+                            totalSets = sets,
+                            roundNumber = r,
+                            totalRounds = rounds,
+                            endsRound = endsRound
+                        )
+                    )
+                }
+            }
+        }
+
+        // Cooldown exercises once
+        plan.cooldown.forEachIndexed { i, exercise ->
+            val exIndex = w + m + i + 1
+            val sets = (exercise.sets ?: 1).coerceIn(1, 10)
+            for (s in 1..sets) {
+                slots.add(
+                    ExerciseSlot(
+                        section = "Cooldown",
+                        exercise = exercise,
+                        exerciseIndex = exIndex,
+                        setNumber = s,
+                        totalSets = sets,
+                        roundNumber = 1,
+                        totalRounds = 1,
+                        endsRound = false
+                    )
+                )
+            }
+        }
+
         var stepIdCounter = 0
-        exerciseList.forEachIndexed { index, (section, exercise) ->
+        val steps = mutableListOf<SessionStep>()
+
+        slots.forEachIndexed { slotIndex, slot ->
             stepIdCounter++
             steps.add(
                 SessionStep(
                     stepId = stepIdCounter,
                     type = SessionStepType.EXERCISE,
-                    exercise = exercise,
-                    title = exercise.name,
-                    sectionName = section,
-                    durationSeconds = exercise.durationSeconds?.takeIf { it > 0 },
-                    exerciseIndex = index + 1,
-                    totalExercises = totalCount
+                    exercise = slot.exercise,
+                    title = slot.exercise.name,
+                    sectionName = slot.section,
+                    durationSeconds = slot.exercise.durationSeconds?.takeIf { it > 0 },
+                    exerciseIndex = slot.exerciseIndex,
+                    totalExercises = totalCount,
+                    setNumber = slot.setNumber,
+                    totalSets = slot.totalSets,
+                    roundNumber = slot.roundNumber,
+                    totalRounds = slot.totalRounds
                 )
             )
 
-            // Insert rest period after each exercise using restSeconds,
-            // skipping if restSeconds <= 0 and skipping trailing rest after last exercise
-            if (exercise.restSeconds > 0 && index < totalCount - 1) {
-                stepIdCounter++
-                steps.add(
-                    SessionStep(
-                        stepId = stepIdCounter,
-                        type = SessionStepType.REST,
-                        exercise = exercise,
-                        title = "Rest Period",
-                        sectionName = "Rest",
-                        durationSeconds = exercise.restSeconds,
-                        exerciseIndex = index + 1,
-                        totalExercises = totalCount
+            // Insert rest period after each exercise slot,
+            // skipping trailing rest after last slot
+            if (slotIndex < slots.size - 1) {
+                val (rest, restTitle) = if (slot.endsRound && slot.roundNumber < slot.totalRounds) {
+                    roundRest to "Round Rest"
+                } else {
+                    slot.exercise.restSeconds to "Rest Period"
+                }
+
+                if (rest > 0) {
+                    stepIdCounter++
+                    steps.add(
+                        SessionStep(
+                            stepId = stepIdCounter,
+                            type = SessionStepType.REST,
+                            exercise = slot.exercise,
+                            title = restTitle,
+                            sectionName = "Rest",
+                            durationSeconds = rest,
+                            exerciseIndex = slot.exerciseIndex,
+                            totalExercises = totalCount,
+                            setNumber = slot.setNumber,
+                            totalSets = slot.totalSets,
+                            roundNumber = slot.roundNumber,
+                            totalRounds = slot.totalRounds
+                        )
                     )
-                )
+                }
             }
         }
         steps
@@ -299,12 +399,20 @@ fun WorkoutSessionScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        val headerText = if (currentStep.type == SessionStepType.EXERCISE) {
+                            val parts = mutableListOf("Exercise ${currentStep.exerciseIndex} of ${currentStep.totalExercises}")
+                            if (currentStep.totalSets > 1) {
+                                parts.add("Set ${currentStep.setNumber} of ${currentStep.totalSets}")
+                            }
+                            if (currentStep.totalRounds > 1) {
+                                parts.add("Round ${currentStep.roundNumber} of ${currentStep.totalRounds}")
+                            }
+                            parts.joinToString(" • ")
+                        } else {
+                            if (currentStep.title == "Round Rest") "Round Rest" else "Rest Interval"
+                        }
                         Text(
-                            text = if (currentStep.type == SessionStepType.EXERCISE) {
-                                "Exercise ${currentStep.exerciseIndex} of ${currentStep.totalExercises}"
-                            } else {
-                                "Rest Interval"
-                            },
+                            text = headerText,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -677,7 +785,10 @@ fun WorkoutSessionScreen(
                         ) {
                             Icon(Icons.Default.SkipNext, contentDescription = "Skip step")
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Skip", fontWeight = FontWeight.SemiBold)
+                            Text(
+                                if (currentStep.type == SessionStepType.EXERCISE && currentStep.durationSeconds == null) "Done" else "Skip",
+                                fontWeight = FontWeight.SemiBold
+                            )
                         }
                     }
 
@@ -935,8 +1046,15 @@ fun WorkoutCompletionSummary(
                 .padding(bottom = 12.dp)
         )
 
-        completedSteps.forEach { step ->
-            val sec = exerciseElapsedTimes[step.stepId] ?: 0
+        val groupedSteps = completedSteps.groupBy { it.exerciseIndex }.values
+        groupedSteps.forEach { group ->
+            val firstStep = group.first()
+            val sec = group.sumOf { exerciseElapsedTimes[it.stepId] ?: 0 }
+            val setsNote = when {
+                firstStep.totalRounds > 1 -> " • ${firstStep.totalSets} sets × ${firstStep.totalRounds} rounds"
+                firstStep.totalRounds == 1 && firstStep.totalSets > 1 -> " • ${firstStep.totalSets} sets"
+                else -> ""
+            }
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -953,13 +1071,13 @@ fun WorkoutCompletionSummary(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = step.title,
+                            text = firstStep.title,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = step.sectionName,
+                            text = "${firstStep.sectionName}$setsNote",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
