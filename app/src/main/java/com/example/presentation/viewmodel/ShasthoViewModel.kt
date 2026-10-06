@@ -2411,6 +2411,11 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private val _pendingProgramStart = MutableStateFlow<Pair<String, Int>?>(null)
+    val pendingProgramStart: StateFlow<Pair<String, Int>?> = _pendingProgramStart.asStateFlow()
+    fun requestProgramDayStart(programId: String, dayIndex: Int) { _pendingProgramStart.value = programId to dayIndex }
+    fun clearPendingProgramStart() { _pendingProgramStart.value = null }
+
     fun saveDietChart(name: String, content: String, shoppingList: String) {
         viewModelScope.launch {
             val success = repository.saveDietChart(

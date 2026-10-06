@@ -37,10 +37,7 @@ import androidx.navigation.compose.*
 import coil.compose.AsyncImage
 import com.example.presentation.auth.AuthScreen
 import com.example.presentation.badges.BadgeGalleryScreen
-import com.example.presentation.chat.ChatScreen
-import com.example.presentation.coach.CoachScreen
 import com.example.presentation.fitness.FitnessScreen
-import com.example.presentation.foodlog.FoodChatScreen
 import com.example.presentation.foodlog.FoodLogScreen
 import com.example.presentation.health.HealthScreen
 import com.example.presentation.lifestyle.LifestyleScreen
@@ -176,7 +173,7 @@ class MainActivity : ComponentActivity() {
               modifier = Modifier.fillMaxSize(),
               containerColor = MaterialTheme.colorScheme.background,
               floatingActionButton = {
-                  if (currentRoute !in setOf("universal_assistant?starter={starter}", "foodlog", "food_chat", "scanner")) {
+                  if (currentRoute !in setOf("universal_assistant?starter={starter}", "foodlog", "scanner")) {
                       SmallFloatingActionButton(
                           onClick = { navController.navigate("universal_assistant") },
                           containerColor = MaterialTheme.colorScheme.primary,
@@ -374,14 +371,6 @@ class MainActivity : ComponentActivity() {
                   composable(TabScreen.Health.route) { HealthScreen(viewModel, navController) }
                   
                   // SUB-DESTINATIONS
-                  composable(
-                      route = "chat?openSavedChats={openSavedChats}",
-                      arguments = listOf(androidx.navigation.navArgument("openSavedChats") { type = androidx.navigation.NavType.BoolType; defaultValue = false })
-                  ) { backStackEntry ->
-                      val openSavedChats = backStackEntry.arguments?.getBoolean("openSavedChats") ?: false
-                      ChatScreen(viewModel = viewModel, initialTab = if (openSavedChats) 1 else 0, onNavigateBack = { navController.popBackStack() })
-                  }
-                  composable("coach") { CoachScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("dietplan") { DietChartScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("lifestyle") { LifestyleScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("mealplan") { MealPlanScreen(onNavigateBack = { navController.popBackStack() }) }
@@ -424,7 +413,6 @@ class MainActivity : ComponentActivity() {
                   }
                   composable("health_goals") { HealthGoalsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("friends") { FriendsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onNavigateToLeaderboard = { navController.navigate("leaderboard") }, onNavigateToDm = { pairId, name -> navController.navigate("dm/$pairId/$name") }) }
-                  composable("food_chat") { FoodChatScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable(
                       route = "universal_assistant?starter={starter}",
                       arguments = listOf(androidx.navigation.navArgument("starter") {
@@ -452,7 +440,7 @@ class MainActivity : ComponentActivity() {
                       DirectMessageScreen(viewModel = viewModel, pairId = pairId, friendName = friendName, onNavigateBack = { navController.popBackStack() })
                   }
                   composable("leaderboard") { LeaderboardScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
-                  composable("scanner") { ScannerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onNavigateToFoodChat = { navController.navigate("food_chat") }) }
+                  composable("scanner") { ScannerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onNavigateToFoodChat = { navController.navigate("universal_assistant?starter=nutrition") }) }
                   composable("medical_records") { com.example.presentation.health.MedicalRecordsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("exercise_library") { ExerciseLibraryScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("mindfulness_timer") { com.example.presentation.mindfulness.MindfulnessTimerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }

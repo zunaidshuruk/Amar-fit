@@ -36,7 +36,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.data.health.HealthConnectManager
+import com.example.data.local.WorkoutProgram
 import com.example.data.model.ALL_BADGES
+import com.example.data.model.ProgramDaysJson
 import com.example.presentation.navigation.navigateToTab
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
@@ -87,6 +89,11 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val isLoadingHealthInsight by viewModel.isLoadingHealthInsight.collectAsState()
     val todayFoodLogs by viewModel.getFoodLogsForDateFlow(selectedDateString).collectAsState(initial = emptyList())
     val todayActivityEvents by viewModel.getActivityEventsForDateFlow(selectedDateString).collectAsState(initial = emptyList())
+    val programs by viewModel.workoutPrograms.collectAsState()
+    val activeProgram = remember(programs) {
+        programs.filter { ProgramDaysJson.parse(it.daysJson).isNotEmpty() }
+            .maxWithOrNull(compareBy<WorkoutProgram>({ it.lastCompletedAt }, { it.createdAt }))
+    }
 
     val calorieLimit = profile?.dailyCalorieLimit ?: 2000
     val totalCalories = todayFoodLogs.sumOf { it.calories }
@@ -284,6 +291,19 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
             selectedDate = selectedDate,
             onDateSelected = { selectedDate = it }
         )
+
+        if (selectedDate == java.time.LocalDate.now() && activeProgram != null) {
+            TodayWorkoutCard(
+                program = activeProgram,
+                onStart = { dayIndex ->
+                    viewModel.requestProgramDayStart(activeProgram.cloudId, dayIndex)
+                    navigateToTab(navController, "fitness")
+                },
+                onMarkRestDone = { dayIndex ->
+                    viewModel.completeProgramDay(activeProgram.cloudId, dayIndex)
+                }
+            )
+        }
 
         // Streak, Points & Badges Card
         Card(
@@ -1390,6 +1410,130 @@ fun QuickActionCard(
             Icon(imageVector = icon, contentDescription = title, tint = iconColor, modifier = Modifier.size(32.dp))
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = title, fontWeight = FontWeight.Medium, color = textColor, fontSize = 14.sp)
+        }
+    }
+}
+
+@Composable
+private fun TodayWorkoutCard(
+    program: WorkoutProgram,
+    onStart: (Int) -> Unit,
+    onMarkRestDone: (Int) -> Unit
+) {
+    val days = remember(program.daysJson) { ProgramDaysJson.parse(program.daysJson) }
+    if (days.isEmpty()) return
+    val nextIndex = program.nextDayIndex.coerceIn(0, days.lastIndex)
+    val day = days[nextIndex]
+    val label = day.label.ifBlank { day.plan?.title ?: "Rest day" }
+    val startOfToday = remember {
+        java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+    }
+    val doneToday = program.lastCompletedAt >= startOfToday
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FitnessCenter,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Today's workout",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = program.title,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 140.dp)
+                )
+            }
+            if (doneToday) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "Done for today",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Next up: Day ${nextIndex + 1} — $label",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Day ${nextIndex + 1} of ${days.size}: $label",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                val isRest = day.isRestDay || day.plan == null
+                val subtitle = if (isRest) {
+                    "Rest day"
+                } else {
+                    val plan = day.plan!!
+                    val count = plan.warmup.size + plan.mainExercises.size + plan.cooldown.size
+                    if (plan.rounds > 1) {
+                        "$count exercises • ${plan.rounds} rounds"
+                    } else {
+                        "$count exercises"
+                    }
+                }
+                Text(
+                    text = subtitle,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = {
+                        if (isRest) onMarkRestDone(nextIndex) else onStart(nextIndex)
+                    },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text(if (isRest) "Mark rest day done" else "Start workout")
+                }
+            }
         }
     }
 }

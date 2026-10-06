@@ -141,6 +141,7 @@ fun GenerateNewDietView(
     shoppingList: String?,
     isDark: Boolean
 ) {
+    val navController = com.example.LocalNavController.current
     var duration by remember { mutableStateOf("7") }
     var isEditing by remember { mutableStateOf(false) }
     var editedChart by remember { mutableStateOf("") }
@@ -168,19 +169,13 @@ fun GenerateNewDietView(
             )
             Button(
                 onClick = { 
-                    viewModel.generateDietChart(duration.toIntOrNull() ?: 7) 
-                    showShoppingList = false
-                    isEditing = false
+                    val days = (duration.toIntOrNull() ?: 7).coerceIn(1, 30)
+                    navController?.navigate("universal_assistant?starter=" + android.net.Uri.encode("Create a $days-day diet chart for me using Bangladeshi foods that fit my profile and goals."))
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                enabled = !isGenerating
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                if (isGenerating) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
-                } else {
-                    Text("Generate AI Diet Chart")
-                }
+                Text("Ask AI for a Diet Chart")
             }
         }
     }

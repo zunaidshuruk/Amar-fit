@@ -35,6 +35,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.text.util.LinkifyCompat
 import com.example.data.local.LibraryExercise
 import com.example.data.local.SavedWorkout
+import com.example.data.model.ProgramDaysJson
 import com.example.data.model.WorkoutExercise
 import com.example.data.model.WorkoutPlan
 import com.example.presentation.viewmodel.ShasthoViewModel
@@ -82,6 +83,20 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
         viewModel.syncErrorEvent.collect { message ->
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
         }
+    }
+
+    val pendingProgramStart by viewModel.pendingProgramStart.collectAsState()
+    val allPrograms by viewModel.workoutPrograms.collectAsState()
+    LaunchedEffect(pendingProgramStart, allPrograms) {
+        val request = pendingProgramStart ?: return@LaunchedEffect
+        val program = allPrograms.firstOrNull { it.cloudId == request.first }
+        if (program == null) {
+            if (allPrograms.isNotEmpty()) viewModel.clearPendingProgramStart()
+            return@LaunchedEffect
+        }
+        val plan = ProgramDaysJson.parse(program.daysJson).getOrNull(request.second)?.plan
+        viewModel.clearPendingProgramStart()
+        if (plan != null) { activeProgramRef = request; activeSessionPlan = plan }
     }
 
     if (activeSessionPlan != null) {
@@ -267,16 +282,21 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 )
                 
                 Button(
-                    onClick = { viewModel.generateAIStructuredWorkout() },
+                    onClick = { navController?.navigate("universal_assistant?starter=" + android.net.Uri.encode("Create today's workout for me based on my profile and goals, and save it to my saved workouts.")) },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    shape = RoundedCornerShape(16.dp),
-                    enabled = !isLoadingStructured
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Icon(Icons.Default.AutoAwesome, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(if (isLoadingStructured) "Generating..." else "Generate Today's Workout", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("Ask AI for Today's Workout", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "The AI Assistant builds it and saves it to the Saved tab, where you can start or customize it.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
