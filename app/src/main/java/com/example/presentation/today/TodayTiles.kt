@@ -52,7 +52,7 @@ private fun formatWeekdayLabel(isoDate: String): String {
 }
 
 fun parseTodayTileSlots(raw: String?): Pair<List<String>, List<String>> {
-    val defaultLarge = listOf("large_steps")
+    val defaultLarge = listOf("large_steps", "large_calories")
     val defaultSmall = listOf("steps", "sleep", "distance", "cal_burned", "exercise_days", "heart_rate")
 
     if (raw.isNullOrBlank()) {
@@ -120,7 +120,8 @@ data class ResolvedLargeTile(
     val accent: AccentColors,
     val onClick: () -> Unit,
     /** Label/value pairs shown on the card's flip side for extra detail. */
-    val backStats: List<Pair<String, String>> = emptyList()
+    val backStats: List<Pair<String, String>> = emptyList(),
+    val frontStats: List<Pair<String, String>> = emptyList()
 )
 
 data class ResolvedSmallTile(
@@ -144,7 +145,9 @@ fun resolveLargeTile(
     totalCalories: Int = 0,
     calorieLimit: Int = 2000,
     calorieProgress: Float = 0f,
-    onNavigateToNutrition: () -> Unit = {}
+    onNavigateToNutrition: () -> Unit = {},
+    activeBurned: Int = 0,
+    totalBurned: Int = 0
 ): ResolvedLargeTile? {
     return when (id) {
         "large_steps" -> {
@@ -200,12 +203,16 @@ fun resolveLargeTile(
             val accent = AccentTokens.caloriesAccent(isDark)
             val remaining = calorieLimit - totalCalories
             val remainingLabel = if (remaining >= 0) "$remaining kcal" else "Over by ${-remaining} kcal"
+            val active = if (activeBurned > 0) activeBurned else (metrics?.activeCaloriesBurned ?: 0)
+            val resting = if (totalBurned > active) totalBurned - active else 0
+            val burnedOut = if (totalBurned > 0) maxOf(totalBurned, active) else active
+            val net = totalCalories - burnedOut
             ResolvedLargeTile(
                 id = "large_calories",
-                title = "Daily Calories",
+                title = "Calories",
                 progress = calorieProgress,
-                insideValue = "$totalCalories",
-                insideSubtext = "of $calorieLimit kcal",
+                insideValue = String.format(Locale.US, "%,d", totalCalories),
+                insideSubtext = "of ${String.format(Locale.US, "%,d", calorieLimit)} kcal",
                 accent = accent,
                 onClick = onNavigateToNutrition,
                 backStats = listOf(
@@ -213,6 +220,11 @@ fun resolveLargeTile(
                     "Protein" to "${String.format(Locale.US, "%.0f", metrics?.proteinG ?: 0f)}g",
                     "Carbs" to "${String.format(Locale.US, "%.0f", metrics?.carbsG ?: 0f)}g",
                     "Fat" to "${String.format(Locale.US, "%.0f", metrics?.fatG ?: 0f)}g"
+                ),
+                frontStats = listOf(
+                    "Active burned" to (if (active > 0) "$active kcal" else "--"),
+                    "Resting burned" to (if (resting > 0) "$resting kcal" else "--"),
+                    "Net" to (if (burnedOut > 0) (if (net >= 0) "+$net kcal" else "-${-net} kcal") else "--")
                 )
             )
         }
