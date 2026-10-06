@@ -32,6 +32,7 @@ import com.example.data.model.WorkoutExercise
 import com.example.data.model.WorkoutPlan
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
+import com.example.util.WorkoutMusic
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -68,6 +69,14 @@ fun WorkoutSessionScreen(
     val isDark = true
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+
+    val musicContext = LocalContext.current
+    val musicControlsEnabled = remember { WorkoutMusic.isControlsEnabled(musicContext) }
+    LaunchedEffect(Unit) {
+        if (WorkoutMusic.isAutoStartEnabled(musicContext)) {
+            WorkoutMusic.play(musicContext)
+        }
+    }
 
     var allExercises by remember { mutableStateOf<List<LibraryExercise>>(emptyList()) }
     LaunchedEffect(Unit) {
@@ -791,6 +800,56 @@ fun WorkoutSessionScreen(
                                 if (currentStep.type == SessionStepType.EXERCISE && currentStep.durationSeconds == null) "Done" else "Skip",
                                 fontWeight = FontWeight.SemiBold
                             )
+                        }
+                    }
+
+                    if (musicControlsEnabled) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = { WorkoutMusic.previous(musicContext) },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SkipPrevious,
+                                    contentDescription = "Previous track",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            IconButton(
+                                onClick = { WorkoutMusic.togglePlayPause(musicContext) },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MusicNote,
+                                    contentDescription = "Play or pause music",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            IconButton(
+                                onClick = { WorkoutMusic.next(musicContext) },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SkipNext,
+                                    contentDescription = "Next track",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            IconButton(
+                                onClick = { WorkoutMusic.openPlaylist(musicContext) },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.QueueMusic,
+                                    contentDescription = "Open my playlist",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
 

@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.WindowInsets
@@ -49,6 +50,7 @@ import com.google.android.gms.auth.api.identity.Identity
 import com.example.data.repository.DriveBackupPayload
 import com.example.util.formatHeight
 import com.example.util.formatWeight
+import com.example.util.WorkoutMusic
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -174,6 +176,12 @@ fun SettingsScreen(
     var isRestoring by remember { mutableStateOf(false) }
     var showRestoreConfirmDialog by remember { mutableStateOf(false) }
     var pendingRestorePayload by remember { mutableStateOf<DriveBackupPayload?>(null) }
+
+    var musicApp by remember { mutableStateOf(WorkoutMusic.getMusicApp(context)) }
+    var musicSpotifyLink by remember { mutableStateOf(WorkoutMusic.getSpotifyLink(context)) }
+    var musicYoutubeLink by remember { mutableStateOf(WorkoutMusic.getYoutubeLink(context)) }
+    var musicControlsEnabled by remember { mutableStateOf(WorkoutMusic.isControlsEnabled(context)) }
+    var musicAutoStartEnabled by remember { mutableStateOf(WorkoutMusic.isAutoStartEnabled(context)) }
 
     val driveAuthLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -746,6 +754,147 @@ fun SettingsScreen(
                                 Text("Restore Now")
                             }
                         }
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                // Workout music
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
+                ) {
+                    Text("Workout music", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
+                    Text(
+                        "Control your music during guided workouts. Works with Spotify, YouTube Music and YouTube, including Premium.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        WorkoutMusic.MusicApp.values().forEach { appOption ->
+                            FilterChip(
+                                selected = musicApp == appOption,
+                                onClick = {
+                                    musicApp = appOption
+                                    WorkoutMusic.setMusicApp(context, appOption)
+                                },
+                                label = { Text(appOption.label) }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val isSpotifyInvalid = musicSpotifyLink.isNotBlank() && !WorkoutMusic.isValidSpotifyLink(musicSpotifyLink)
+                    OutlinedTextField(
+                        value = musicSpotifyLink,
+                        onValueChange = { newValue ->
+                            musicSpotifyLink = newValue
+                            if (newValue.isBlank() || WorkoutMusic.isValidSpotifyLink(newValue)) {
+                                WorkoutMusic.setSpotifyLink(context, newValue.trim())
+                            }
+                        },
+                        label = { Text("Spotify playlist link") },
+                        placeholder = { Text("https://open.spotify.com/playlist/...") },
+                        singleLine = true,
+                        isError = isSpotifyInvalid,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (isSpotifyInvalid) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Paste a playlist link from Spotify or YouTube",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val isYoutubeInvalid = musicYoutubeLink.isNotBlank() && !WorkoutMusic.isValidYoutubeLink(musicYoutubeLink)
+                    OutlinedTextField(
+                        value = musicYoutubeLink,
+                        onValueChange = { newValue ->
+                            musicYoutubeLink = newValue
+                            if (newValue.isBlank() || WorkoutMusic.isValidYoutubeLink(newValue)) {
+                                WorkoutMusic.setYoutubeLink(context, newValue.trim())
+                            }
+                        },
+                        label = { Text("YouTube / YouTube Music playlist link") },
+                        placeholder = { Text("https://music.youtube.com/playlist?list=...") },
+                        singleLine = true,
+                        isError = isYoutubeInvalid,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (isYoutubeInvalid) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Paste a playlist link from Spotify or YouTube",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedButton(
+                        onClick = { WorkoutMusic.openPlaylist(context) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text("Open my playlist")
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Show music controls during workouts", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                        Switch(
+                            checked = musicControlsEnabled,
+                            onCheckedChange = { checked ->
+                                musicControlsEnabled = checked
+                                WorkoutMusic.setControlsEnabled(context, checked)
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                            Text("Start music automatically when a workout begins", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                            Text(
+                                "Resumes the app that was last playing. Start a song in your music app first.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = musicAutoStartEnabled,
+                            onCheckedChange = { checked ->
+                                musicAutoStartEnabled = checked
+                                WorkoutMusic.setAutoStartEnabled(context, checked)
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            )
+                        )
                     }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
