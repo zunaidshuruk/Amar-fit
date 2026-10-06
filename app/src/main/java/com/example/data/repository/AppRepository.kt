@@ -1126,6 +1126,128 @@ class AppRepository(
         }
     }
 
+    suspend fun generateWorkoutProgram(profile: UserProfile?, dayCount: Int, notes: String): Result<Pair<String, List<com.example.data.model.ProgramDay>>> = withContext(Dispatchers.IO) {
+        val days = dayCount.coerceIn(2, 7)
+        val contextPrompt = buildString {
+            if (profile != null) {
+                append("User Context: ${profile.age}yo ${profile.gender}, Weight: ${profile.weightKg}kg, Height: ${profile.heightCm}cm, Goal: ${profile.healthGoals}. ")
+            }
+            if (notes.isNotBlank()) {
+                append("Focus: ${notes.trim().take(120)}. ")
+            }
+        }
+
+        val systemInstruction = """
+            You are 'KardIQ AI', an expert fitness coach.
+            Create a personalized numbered multi-day training program with EXACTLY $days days based on the user's profile and preferences.
+            Use rest days sensibly (at most 2 rest days, never all days).
+            You MUST return ONLY a raw JSON object matching this schema with NO markdown formatting, NO commentary, and NO code fences:
+            {
+              "title": "String (short program name)",
+              "days": [
+                {
+                  "label": "String (short name of the day, e.g. Push, Legs, Full Body, Rest)",
+                  "isRestDay": Boolean,
+                  "plan": null when isRestDay is true, otherwise a workout object with: {
+                    "title": "String",
+                    "workoutType": "String, exactly one of: strength_training, hiit, yoga, pilates, stretching, calisthenics, running, walking, biking, dancing, other",
+                    "rounds": Int (1 to 5. Use 1 for strength sessions, 2 to 4 for circuit/HIIT sessions),
+                    "roundRestSeconds": Int (0 to 90),
+                    "warmup": [
+                      {
+                        "name": "String",
+                        "sets": Int or null,
+                        "reps": "String" or null,
+                        "durationSeconds": Int or null,
+                        "restSeconds": Int,
+                        "youtubeSearchQuery": "String",
+                        "metValue": Double
+                      }
+                    ],
+                    "mainExercises": [
+                      {
+                        "name": "String",
+                        "sets": Int or null,
+                        "reps": "String" or null,
+                        "durationSeconds": Int or null,
+                        "restSeconds": Int,
+                        "youtubeSearchQuery": "String",
+                        "metValue": Double
+                      }
+                    ],
+                    "cooldown": [
+                      {
+                        "name": "String",
+                        "sets": Int or null,
+                        "reps": "String" or null,
+                        "durationSeconds": Int or null,
+                        "restSeconds": Int,
+                        "youtubeSearchQuery": "String",
+                        "metValue": Double
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+            When rounds is greater than 1, use it only for circuit/HIIT days and then give main exercises sets = 1 and short rests (10 to 20s).
+            Each workout day has 1 to 2 warmup, 4 to 6 main and 1 to 2 cooldown exercises.
+            Vary the muscle groups across days to ensure balanced training.
+            $contextPrompt
+        """.trimIndent()
+
+        val request = GenerateContentRequest(
+            contents = listOf(
+                Content(
+                    parts = listOf(Part(text = "Please generate my multi-day workout program in JSON format."))
+                )
+            ),
+            systemInstruction = Content(parts = listOf(Part(text = systemInstruction))),
+            generationConfig = GenerationConfig(responseMimeType = "application/json")
+        )
+
+        try {
+            val response = executeGeminiCallWithBackoff(request)
+            val jsonText = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
+                ?: return@withContext Result.failure(Exception("Empty response from AI service"))
+
+            val cleanedJson = jsonText.trim().removeSurrounding("```json", "```").removeSurrounding("```", "```").trim()
+            val adapter = RetrofitClient.moshi.adapter(com.example.data.model.GeneratedProgram::class.java)
+            val program = adapter.fromJson(cleanedJson)
+                ?: return@withContext Result.failure(Exception("Failed to parse generated program JSON"))
+
+            val rawDays = program.days.take(days)
+            val sanitisedDays = rawDays.map { day ->
+                if (day.isRestDay || day.plan == null) {
+                    day.copy(isRestDay = true, label = day.label.ifBlank { "Rest day" }, plan = null)
+                } else {
+                    val p = day.plan
+                    val clampedPlan = p.copy(
+                        rounds = p.rounds.coerceIn(1, 5),
+                        roundRestSeconds = p.roundRestSeconds.coerceIn(0, 300)
+                    )
+                    day.copy(isRestDay = false, plan = clampedPlan)
+                }
+            }
+
+            if (sanitisedDays.none { !it.isRestDay && it.plan != null }) {
+                return@withContext Result.failure(Exception("The AI did not return a usable program. Please try again."))
+            }
+
+            val finalTitle = program.title.ifBlank { "AI Program" }.take(40)
+            Result.success(Pair(finalTitle, sanitisedDays))
+        } catch (e: HttpException) {
+            val msg = if (e.code() == 429) {
+                "The AI is currently busy due to high traffic. Retries exhausted. Please try again in a minute."
+            } else {
+                "Error (${e.code()}): ${e.message}"
+            }
+            Result.failure(Exception(msg, e))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     fun generateDietChartStream(profile: UserProfile, durationDays: Int): kotlinx.coroutines.flow.Flow<String> {
         val bmi = profile.weightKg / ((profile.heightCm / 100f) * (profile.heightCm / 100f))
         val contextPrompt = "User Context: ${profile.age}yo ${profile.gender}, Weight: ${profile.weightKg}kg, Height: ${profile.heightCm}cm, BMI: ${"%.1f".format(bmi)}, Goal: ${profile.healthGoals}, Restrictions: ${profile.dietaryRestrictions}."

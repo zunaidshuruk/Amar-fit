@@ -40,3 +40,9 @@ object ProgramDaysJson {
     fun parse(json: String): List<ProgramDay> = try { adapter.fromJson(json) ?: emptyList() } catch (e: Exception) { emptyList() }
     fun toJson(days: List<ProgramDay>): String = adapter.toJson(days)
 }
+
+@JsonClass(generateAdapter = true)
+data class GeneratedProgram(
+    val title: String = "",
+    val days: List<ProgramDay> = emptyList()
+)

@@ -2347,6 +2347,28 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private val _isGeneratingProgram = MutableStateFlow(false)
+    val isGeneratingProgram: StateFlow<Boolean> = _isGeneratingProgram.asStateFlow()
+    private val _programGenerationError = MutableStateFlow<String?>(null)
+    val programGenerationError: StateFlow<String?> = _programGenerationError.asStateFlow()
+    fun clearProgramGenerationError() { _programGenerationError.value = null }
+    fun generateWorkoutProgramWithAI(dayCount: Int, notes: String, onCreated: (String) -> Unit) {
+        viewModelScope.launch {
+            _isGeneratingProgram.value = true
+            _programGenerationError.value = null
+            val result = repository.generateWorkoutProgram(userProfile.value, dayCount, notes)
+            result.onSuccess { (title, days) ->
+                val program = com.example.data.local.WorkoutProgram(title = title, daysJson = com.example.data.model.ProgramDaysJson.toJson(days), source = "ai")
+                val synced = repository.saveWorkoutProgram(program)
+                if (!synced) _syncErrorEvent.emit("Saved locally, but couldn't sync to the cloud — check your connection")
+                onCreated(program.cloudId)
+            }.onFailure { error ->
+                _programGenerationError.value = error.message ?: "Could not generate a program. Please try again."
+            }
+            _isGeneratingProgram.value = false
+        }
+    }
+
     private val _syncErrorEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val syncErrorEvent: SharedFlow<String> = _syncErrorEvent.asSharedFlow()
 

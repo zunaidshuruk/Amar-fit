@@ -8,11 +8,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,6 +43,12 @@ fun ProgramsSection(
     var showNewProgramDialog by remember { mutableStateOf(false) }
     var newProgramName by remember { mutableStateOf("") }
 
+    var showGenerateDialog by remember { mutableStateOf(false) }
+    var genDays by remember { mutableStateOf(4) }
+    var genNotes by remember { mutableStateOf("") }
+    val isGenerating by viewModel.isGeneratingProgram.collectAsState()
+    val genError by viewModel.programGenerationError.collectAsState()
+
     var showAddDayDialog by remember { mutableStateOf(false) }
     var showPickSavedDialog by remember { mutableStateOf(false) }
     var planToEditIndex by remember { mutableStateOf<Int?>(null) }
@@ -67,27 +75,44 @@ fun ProgramsSection(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Text(
+                text = "Programs",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Programs",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                OutlinedButton(
+                    onClick = {
+                        genNotes = ""
+                        viewModel.clearProgramGenerationError()
+                        showGenerateDialog = true
+                    },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(16.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Generate with AI", maxLines = 1)
+                }
                 Button(
                     onClick = {
                         newProgramName = ""
                         showNewProgramDialog = true
                     },
-                    shape = RoundedCornerShape(16.dp)
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(16.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("New program")
+                    Text("New program", maxLines = 1)
                 }
             }
 
@@ -420,6 +445,128 @@ fun ProgramsSection(
                 Text("Add day", fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
         }
+    }
+
+    // Dialog: Generate Program with AI
+    if (showGenerateDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!isGenerating) {
+                    showGenerateDialog = false
+                    viewModel.clearProgramGenerationError()
+                }
+            },
+            title = { Text("Generate a program") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Days",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(
+                                onClick = { genDays = (genDays - 1).coerceAtLeast(2) },
+                                enabled = !isGenerating && genDays > 2
+                            ) {
+                                Icon(
+                                    Icons.Default.Remove,
+                                    contentDescription = "Decrease days",
+                                    tint = if (!isGenerating && genDays > 2) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                )
+                            }
+                            Text(
+                                text = "$genDays",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.widthIn(min = 40.dp)
+                            )
+                            IconButton(
+                                onClick = { genDays = (genDays + 1).coerceAtMost(7) },
+                                enabled = !isGenerating && genDays < 7
+                            ) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = "Increase days",
+                                    tint = if (!isGenerating && genDays < 7) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                )
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = genNotes,
+                        onValueChange = { if (it.length <= 120) genNotes = it },
+                        label = { Text("Focus or notes (optional)") },
+                        placeholder = { Text("e.g. fat loss, home workouts, no equipment") },
+                        enabled = !isGenerating,
+                        singleLine = false,
+                        maxLines = 3,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (isGenerating) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Text(
+                                text = "Building your program… this can take up to a minute",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    if (genError != null) {
+                        Text(
+                            text = genError!!,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.generateWorkoutProgramWithAI(genDays, genNotes) { id ->
+                            showGenerateDialog = false
+                            selectedId = id
+                        }
+                    },
+                    enabled = !isGenerating
+                ) {
+                    Text("Generate")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showGenerateDialog = false
+                        viewModel.clearProgramGenerationError()
+                    },
+                    enabled = !isGenerating
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     // Dialog: New Program
