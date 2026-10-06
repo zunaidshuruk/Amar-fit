@@ -123,7 +123,7 @@ fun SleepScreen(viewModel: ShasthoViewModel, navController: NavController) {
             title = "AI Wellness Coach",
             subtitle = "Optimize your lifestyle",
             accent = coachAccent,
-            onClick = { navController.navigate("coach") }
+            onClick = { navController.navigate("universal_assistant?starter=" + android.net.Uri.encode("Act as my wellness coach. Look at my recent sleep, activity and nutrition and give me 3 specific things to improve this week.")) }
         )
 
         Spacer(modifier = Modifier.height(100.dp))

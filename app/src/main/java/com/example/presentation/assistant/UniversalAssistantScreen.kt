@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,7 +53,20 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
-fun UniversalAssistantScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
+fun UniversalAssistantScreen(
+    viewModel: ShasthoViewModel,
+    onNavigateBack: () -> Unit = {},
+    starter: String? = null
+) {
+    var starterHandled by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(starter) {
+        if (!starter.isNullOrBlank() && !starterHandled) {
+            starterHandled = true
+            viewModel.startNewAssistantChat()
+            viewModel.sendUniversalAssistantMessage(starter)
+        }
+    }
+
     val messages by viewModel.activeAssistantMessages.collectAsState()
     val sessions by viewModel.assistantSessions.collectAsState()
     val selectedTab by viewModel.universalAssistantTab.collectAsState()

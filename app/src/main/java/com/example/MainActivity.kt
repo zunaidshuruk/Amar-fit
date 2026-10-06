@@ -176,7 +176,7 @@ class MainActivity : ComponentActivity() {
               modifier = Modifier.fillMaxSize(),
               containerColor = MaterialTheme.colorScheme.background,
               floatingActionButton = {
-                  if (currentRoute !in setOf("universal_assistant", "foodlog", "food_chat", "scanner")) {
+                  if (currentRoute !in setOf("universal_assistant?starter={starter}", "foodlog", "food_chat", "scanner")) {
                       SmallFloatingActionButton(
                           onClick = { navController.navigate("universal_assistant") },
                           containerColor = MaterialTheme.colorScheme.primary,
@@ -425,7 +425,20 @@ class MainActivity : ComponentActivity() {
                   composable("health_goals") { HealthGoalsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("friends") { FriendsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onNavigateToLeaderboard = { navController.navigate("leaderboard") }, onNavigateToDm = { pairId, name -> navController.navigate("dm/$pairId/$name") }) }
                   composable("food_chat") { FoodChatScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
-                  composable("universal_assistant") { com.example.presentation.assistant.UniversalAssistantScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                  composable(
+                      route = "universal_assistant?starter={starter}",
+                      arguments = listOf(androidx.navigation.navArgument("starter") {
+                          type = androidx.navigation.NavType.StringType
+                          nullable = true
+                          defaultValue = null
+                      })
+                  ) { backStackEntry ->
+                      com.example.presentation.assistant.UniversalAssistantScreen(
+                          viewModel = viewModel,
+                          onNavigateBack = { navController.popBackStack() },
+                          starter = backStackEntry.arguments?.getString("starter")
+                      )
+                  }
                   composable("health_correlations") { com.example.presentation.correlations.HealthCorrelationsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable(
                       "dm/{pairId}/{friendName}",
