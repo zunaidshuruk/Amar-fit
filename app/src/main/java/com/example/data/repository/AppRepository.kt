@@ -43,7 +43,8 @@ class AppRepository(
     private val foodChatMessageDao: com.example.data.local.FoodChatMessageDao? = null,
     private val assistantChatMessageDao: com.example.data.local.AssistantChatMessageDao? = null,
     private val assistantChatSessionDao: com.example.data.local.AssistantChatSessionDao? = null,
-    private val healthExerciseSessionDao: com.example.data.local.HealthExerciseSessionDao? = null
+    private val healthExerciseSessionDao: com.example.data.local.HealthExerciseSessionDao? = null,
+    private val workoutProgramDao: com.example.data.local.WorkoutProgramDao? = null
 ) {
 
     suspend fun logActivityEvent(type: String, description: String, timestamp: Long = System.currentTimeMillis(), source: String = "app", externalId: String? = null) {
@@ -1721,6 +1722,11 @@ class AppRepository(
         savedWorkoutDao.deleteWorkout(workout)
         return FirebaseManager.deleteSavedWorkout(workout)
     }
+
+    fun getAllWorkoutPrograms(): kotlinx.coroutines.flow.Flow<List<com.example.data.local.WorkoutProgram>> = workoutProgramDao?.getAll() ?: kotlinx.coroutines.flow.flowOf(emptyList())
+    suspend fun getWorkoutProgramsOnce(): List<com.example.data.local.WorkoutProgram> = workoutProgramDao?.getAllOnce() ?: emptyList()
+    suspend fun saveWorkoutProgram(program: com.example.data.local.WorkoutProgram) { workoutProgramDao?.upsert(program) }
+    suspend fun deleteWorkoutProgram(cloudId: String) { workoutProgramDao?.delete(cloudId) }
 
     fun getAllSavedChats() = savedChatDao.getAllSavedChats()
 

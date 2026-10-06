@@ -160,7 +160,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         database.foodChatMessageDao(),
         database.assistantChatMessageDao(),
         database.assistantChatSessionDao(),
-        database.healthExerciseSessionDao()
+        database.healthExerciseSessionDao(),
+        database.workoutProgramDao()
     )
 
     private val startOfDayMillis: Long
@@ -2354,6 +2355,24 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         
     val savedWorkouts: kotlinx.coroutines.flow.StateFlow<List<com.example.data.local.SavedWorkout>> = repository.getAllSavedWorkouts()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    val workoutPrograms: StateFlow<List<com.example.data.local.WorkoutProgram>> = repository.getAllWorkoutPrograms().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    fun saveWorkoutProgram(program: com.example.data.local.WorkoutProgram) { viewModelScope.launch(Dispatchers.IO) { repository.saveWorkoutProgram(program) } }
+    fun deleteWorkoutProgram(cloudId: String) { viewModelScope.launch(Dispatchers.IO) { repository.deleteWorkoutProgram(cloudId) } }
+    fun completeProgramDay(cloudId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val program = repository.getWorkoutProgramsOnce().firstOrNull { it.cloudId == cloudId } ?: return@launch
+            val days = com.example.data.model.ProgramDaysJson.parse(program.daysJson)
+            if (days.isEmpty()) return@launch
+            repository.saveWorkoutProgram(program.copy(nextDayIndex = (program.nextDayIndex + 1) % days.size, completedDays = program.completedDays + 1, lastCompletedAt = System.currentTimeMillis()))
+        }
+    }
+    fun restartWorkoutProgram(cloudId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val program = repository.getWorkoutProgramsOnce().firstOrNull { it.cloudId == cloudId } ?: return@launch
+            repository.saveWorkoutProgram(program.copy(nextDayIndex = 0, completedDays = 0, lastCompletedAt = 0L))
+        }
+    }
 
     fun saveDietChart(name: String, content: String, shoppingList: String) {
         viewModelScope.launch {

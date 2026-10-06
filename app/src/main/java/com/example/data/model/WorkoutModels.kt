@@ -23,3 +23,20 @@ data class WorkoutPlan(
     val rounds: Int = 1,
     val roundRestSeconds: Int = 60
 )
+
+@JsonClass(generateAdapter = true)
+data class ProgramDay(
+    val label: String = "",
+    val isRestDay: Boolean = false,
+    val plan: WorkoutPlan? = null
+)
+
+object ProgramDaysJson {
+    private val adapter by lazy {
+        com.example.data.remote.RetrofitClient.moshi.adapter<List<ProgramDay>>(
+            com.squareup.moshi.Types.newParameterizedType(List::class.java, ProgramDay::class.java)
+        )
+    }
+    fun parse(json: String): List<ProgramDay> = try { adapter.fromJson(json) ?: emptyList() } catch (e: Exception) { emptyList() }
+    fun toJson(days: List<ProgramDay>): String = adapter.toJson(days)
+}
