@@ -82,6 +82,8 @@ fun UniversalAssistantScreen(
     val statusMessage by viewModel.universalAssistantStatus.collectAsState()
     val loggedConfirmation by viewModel.foodChatLoggedConfirmation.collectAsState()
     val pendingEntry by viewModel.pendingFoodLogEntry.collectAsState()
+    val pendingEntries by viewModel.pendingFoodLogEntries.collectAsState()
+    val reviewPending = pendingEntry != null || pendingEntries.isNotEmpty()
 
     var input by remember { mutableStateOf("") }
     var sessionToDelete by remember { mutableStateOf<AssistantChatSession?>(null) }
@@ -119,7 +121,7 @@ fun UniversalAssistantScreen(
         }
     }
 
-    BackHandler(enabled = pendingEntry != null) {
+    BackHandler(enabled = reviewPending) {
         viewModel.discardPendingFoodLog()
     }
 
@@ -299,13 +301,13 @@ fun UniversalAssistantScreen(
                                     micPermissionState.launchPermissionRequest()
                                 }
                             },
-                            enabled = !isLoading && pendingEntry == null,
+                            enabled = !isLoading && !reviewPending,
                             modifier = Modifier.testTag("assistant_mic_button")
                         ) {
                             Icon(
                                 Icons.Default.Mic,
                                 contentDescription = "Voice input",
-                                tint = if (!isLoading && pendingEntry == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                tint = if (!isLoading && !reviewPending) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                             )
                         }
                         OutlinedTextField(
@@ -316,23 +318,23 @@ fun UniversalAssistantScreen(
                                 .weight(1f)
                                 .testTag("assistant_input"),
                             shape = RoundedCornerShape(24.dp),
-                            enabled = !isLoading && pendingEntry == null,
+                            enabled = !isLoading && !reviewPending,
                             maxLines = 4
                         )
                         IconButton(
                             onClick = {
-                                if (input.isNotBlank() && !isLoading && pendingEntry == null) {
+                                if (input.isNotBlank() && !isLoading && !reviewPending) {
                                     viewModel.sendUniversalAssistantMessage(input)
                                     input = ""
                                 }
                             },
-                            enabled = input.isNotBlank() && !isLoading && pendingEntry == null,
+                            enabled = input.isNotBlank() && !isLoading && !reviewPending,
                             modifier = Modifier.testTag("assistant_send_button")
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.Send,
                                 contentDescription = "Send",
-                                tint = if (input.isNotBlank() && !isLoading && pendingEntry == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                tint = if (input.isNotBlank() && !isLoading && !reviewPending) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                             )
                         }
                     }
@@ -605,6 +607,122 @@ fun UniversalAssistantScreen(
                             )
                         ) {
                             Text("Awesome! Log this meal")
+                        }
+                    }
+                }
+            }
+
+            if (pendingEntries.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.75f))
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(24.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Review ${pendingEntries.size} food items",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            IconButton(onClick = { viewModel.discardPendingFoodLog() }) {
+                                Icon(Icons.Default.Close, contentDescription = "Close")
+                            }
+                        }
+
+                        Text(
+                            text = "Total: ${pendingEntries.sumOf { it.calories }} kcal",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp
+                        )
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 12.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 280.dp)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            pendingEntries.forEachIndexed { index, item ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                        Text(
+                                            text = item.name,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = "${item.mealType} • ${item.calories} kcal • P ${item.proteinG.toInt()}g C ${item.carbsG.toInt()}g F ${item.fatG.toInt()}g",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { viewModel.removePendingFoodLogEntry(index) },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Close,
+                                            contentDescription = "Remove item",
+                                            modifier = Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            onClick = { viewModel.confirmPendingFoodLogs() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                                .testTag("confirm_food_logs_button"),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Text("Log all (${pendingEntries.size})")
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        TextButton(
+                            onClick = { viewModel.discardPendingFoodLog() },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }

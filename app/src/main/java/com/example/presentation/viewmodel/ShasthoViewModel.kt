@@ -2011,6 +2011,84 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private suspend fun logFoodEntriesBatch(entries: List<PendingFoodLogEntry>) {
+        if (entries.isEmpty()) return
+        val timeNow = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
+        for (entry in entries) {
+            val foodLog = com.example.data.local.FoodLog(
+                date = todayDateString,
+                name = entry.name,
+                category = entry.category,
+                calories = entry.calories,
+                description = entry.description,
+                time = timeNow,
+                mealType = entry.mealType,
+                carbsG = entry.carbsG,
+                proteinG = entry.proteinG,
+                fatG = entry.fatG,
+                sodiumMg = entry.sodiumMg,
+                sugarG = entry.sugarG,
+                fiberG = entry.fiberG
+            )
+            repository.saveFoodLog(foodLog)
+        }
+
+        val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
+        val totalCals = entries.sumOf { it.calories }
+        val totalCarbs = entries.sumOf { it.carbsG.toDouble() }.toFloat()
+        val totalProtein = entries.sumOf { it.proteinG.toDouble() }.toFloat()
+        val totalFat = entries.sumOf { it.fatG.toDouble() }.toFloat()
+        val updated = current.copy(
+            caloriesConsumed = current.caloriesConsumed + totalCals,
+            carbsG = current.carbsG + totalCarbs,
+            proteinG = current.proteinG + totalProtein,
+            fatG = current.fatG + totalFat
+        )
+        repository.saveMetrics(updated)
+        repository.checkAndAwardBadges(updated)
+        repository.logActivityEvent("food", "Logged ${entries.size} foods")
+
+        try {
+            val healthConnectClient = HealthConnectClient.getOrCreate(getApplication())
+            val now = Instant.now()
+            val zoneOffset = ZoneId.systemDefault().rules.getOffset(now)
+            val records = mutableListOf<NutritionRecord>()
+            for (entry in entries) {
+                if (entry.calories > 0) {
+                    val hcMealType = when (entry.mealType.trim().lowercase()) {
+                        "breakfast" -> MealType.MEAL_TYPE_BREAKFAST
+                        "lunch" -> MealType.MEAL_TYPE_LUNCH
+                        "dinner" -> MealType.MEAL_TYPE_DINNER
+                        "snack" -> MealType.MEAL_TYPE_SNACK
+                        else -> MealType.MEAL_TYPE_UNKNOWN
+                    }
+                    records.add(
+                        NutritionRecord(
+                            startTime = now,
+                            startZoneOffset = zoneOffset,
+                            endTime = now,
+                            endZoneOffset = zoneOffset,
+                            energy = Energy.kilocalories(entry.calories.toDouble()),
+                            name = entry.name,
+                            mealType = hcMealType,
+                            totalCarbohydrate = if (entry.carbsG > 0f) Mass.grams(entry.carbsG.toDouble()) else null,
+                            protein = if (entry.proteinG > 0f) Mass.grams(entry.proteinG.toDouble()) else null,
+                            totalFat = if (entry.fatG > 0f) Mass.grams(entry.fatG.toDouble()) else null,
+                            sodium = if (entry.sodiumMg > 0f) Mass.milligrams(entry.sodiumMg.toDouble()) else null,
+                            sugar = if (entry.sugarG > 0f) Mass.grams(entry.sugarG.toDouble()) else null,
+                            dietaryFiber = if (entry.fiberG > 0f) Mass.grams(entry.fiberG.toDouble()) else null
+                        )
+                    )
+                }
+            }
+            if (records.isNotEmpty()) {
+                healthConnectClient.insertRecords(records)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     fun relogFood(log: com.example.data.local.FoodLog) {
         logScannedFood(
             name = log.name,
@@ -2065,6 +2143,21 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     private val _pendingFoodLogEntry = MutableStateFlow<PendingFoodLogEntry?>(null)
     val pendingFoodLogEntry: StateFlow<PendingFoodLogEntry?> = _pendingFoodLogEntry.asStateFlow()
 
+    private val _pendingFoodLogEntries = MutableStateFlow<List<PendingFoodLogEntry>>(emptyList())
+    val pendingFoodLogEntries: StateFlow<List<PendingFoodLogEntry>> = _pendingFoodLogEntries.asStateFlow()
+
+    fun removePendingFoodLogEntry(index: Int) {
+        val current = _pendingFoodLogEntries.value.toMutableList()
+        if (index in current.indices) {
+            current.removeAt(index)
+            _pendingFoodLogEntries.value = current
+        }
+    }
+
+    fun discardPendingFoodLogs() {
+        _pendingFoodLogEntries.value = emptyList()
+    }
+
     fun confirmPendingFoodLog() {
         val entry = _pendingFoodLogEntry.value ?: return
         logScannedFood(
@@ -2084,8 +2177,19 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         _pendingFoodLogEntry.value = null
     }
 
+    fun confirmPendingFoodLogs() {
+        val entries = _pendingFoodLogEntries.value
+        if (entries.isEmpty()) return
+        _pendingFoodLogEntries.value = emptyList()
+        viewModelScope.launch {
+            logFoodEntriesBatch(entries)
+        }
+        _foodChatLoggedConfirmation.value = "${entries.size} items logged -- ${entries.sumOf { it.calories }} kcal"
+    }
+
     fun discardPendingFoodLog() {
         _pendingFoodLogEntry.value = null
+        discardPendingFoodLogs()
     }
 
     fun clearFoodChatLoggedConfirmation() {
@@ -2344,29 +2448,35 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                         )
                     }
                     is AppRepository.AssistantResult.PendingFoodLogs -> {
-                        val confirmationText = "I've prepared food log entries for you to review below."
+                        val count = result.entries.size
+                        val confirmationText = if (count == 1) {
+                            "I've prepared 1 food entry for you to review below."
+                        } else {
+                            "I've prepared $count food entries for you to review below."
+                        }
                         _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(
                             confirmationText, false
                         )
                         repository.saveAssistantChatMessage(currentSessionId, confirmationText, false)
+                        val firstName = result.entries.firstOrNull()?.name ?: "Food"
+                        val previewText = if (count > 1) "Logged: $firstName +${count - 1} more" else "Logged: $firstName"
                         repository.saveAssistantSession(
                             sessionToSave.copy(
-                                preview = "Logged: ${result.entries.firstOrNull()?.name ?: "Foods"}",
+                                preview = previewText,
                                 messageCount = sessionToSave.messageCount + 1,
                                 updatedAt = System.currentTimeMillis()
                             )
                         )
-                        val first = result.entries.firstOrNull()
-                        if (first != null) {
-                            _pendingFoodLogEntry.value = PendingFoodLogEntry(
-                                name = first.name,
-                                category = first.category,
-                                calories = first.calories,
-                                description = first.description,
-                                mealType = first.mealType,
-                                carbsG = first.carbsG,
-                                proteinG = first.proteinG,
-                                fatG = first.fatG,
+                        _pendingFoodLogEntries.value = result.entries.map {
+                            PendingFoodLogEntry(
+                                name = it.name,
+                                category = it.category,
+                                calories = it.calories,
+                                description = it.description,
+                                mealType = it.mealType,
+                                carbsG = it.carbsG,
+                                proteinG = it.proteinG,
+                                fatG = it.fatG,
                                 sodiumMg = 0f,
                                 sugarG = 0f,
                                 fiberG = 0f
