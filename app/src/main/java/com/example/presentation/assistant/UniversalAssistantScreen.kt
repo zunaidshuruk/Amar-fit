@@ -40,7 +40,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.data.local.AssistantChatSession
+import com.example.data.local.SavedChat
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.components.AiMessageCard
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -69,6 +72,7 @@ fun UniversalAssistantScreen(
 
     val messages by viewModel.activeAssistantMessages.collectAsState()
     val sessions by viewModel.assistantSessions.collectAsState()
+    val legacyChats by viewModel.savedChats.collectAsState()
     val selectedTab by viewModel.universalAssistantTab.collectAsState()
     val isLoading by viewModel.isLoadingUniversalAssistant.collectAsState()
     val statusMessage by viewModel.universalAssistantStatus.collectAsState()
@@ -78,6 +82,8 @@ fun UniversalAssistantScreen(
     var input by remember { mutableStateOf("") }
     var sessionToDelete by remember { mutableStateOf<AssistantChatSession?>(null) }
     var showClearAllDialog by remember { mutableStateOf(false) }
+    var legacyChatToView by remember { mutableStateOf<SavedChat?>(null) }
+    var legacyChatToDelete by remember { mutableStateOf<SavedChat?>(null) }
 
     val listState = rememberLazyListState()
     val context = LocalContext.current
@@ -172,6 +178,43 @@ fun UniversalAssistantScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showClearAllDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (legacyChatToView != null) {
+        Dialog(
+            onDismissRequest = { legacyChatToView = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                LegacyChatViewer(chat = legacyChatToView!!, onBack = { legacyChatToView = null })
+            }
+        }
+    }
+
+    legacyChatToDelete?.let { chat ->
+        AlertDialog(
+            onDismissRequest = { legacyChatToDelete = null },
+            title = { Text("Delete Conversation") },
+            text = { Text("Are you sure you want to delete this saved chat? This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteChat(chat)
+                        legacyChatToDelete = null
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { legacyChatToDelete = null }) {
                     Text("Cancel")
                 }
             }
@@ -467,7 +510,10 @@ fun UniversalAssistantScreen(
                         onStartNewChat = {
                             viewModel.startNewAssistantChat()
                             input = ""
-                        }
+                        },
+                        legacyChats = legacyChats,
+                        onOpenLegacyChat = { legacyChatToView = it },
+                        onDeleteLegacyChat = { legacyChatToDelete = it }
                     )
                 }
             }
@@ -684,9 +730,12 @@ private fun ChatHistoryTab(
     onOpenSession: (AssistantChatSession) -> Unit,
     onDeleteSession: (AssistantChatSession) -> Unit,
     onClearAll: () -> Unit,
-    onStartNewChat: () -> Unit
+    onStartNewChat: () -> Unit,
+    legacyChats: List<SavedChat> = emptyList(),
+    onOpenLegacyChat: (SavedChat) -> Unit = {},
+    onDeleteLegacyChat: (SavedChat) -> Unit = {}
 ) {
-    if (sessions.isEmpty()) {
+    if (sessions.isEmpty() && legacyChats.isEmpty()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -746,107 +795,171 @@ private fun ChatHistoryTab(
             contentPadding = PaddingValues(vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "Past Conversations (${sessions.size})",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    TextButton(onClick = onClearAll) {
+            if (sessions.isNotEmpty()) {
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            "Clear All",
-                            color = MaterialTheme.colorScheme.error,
-                            fontSize = 13.sp
+                            "Past Conversations (${sessions.size})",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        TextButton(onClick = onClearAll) {
+                            Text(
+                                "Clear All",
+                                color = MaterialTheme.colorScheme.error,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
+
+                items(sessions, key = { it.id }) { session ->
+                    ElevatedCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onOpenSession(session) },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = session.title.ifBlank { "Conversation" },
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                IconButton(
+                                    onClick = { onDeleteSession(session) },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Delete chat",
+                                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+
+                            if (session.preview.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = session.preview,
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    lineHeight = 18.sp
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = formatSessionDate(session.updatedAt),
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.secondaryContainer
+                                ) {
+                                    Text(
+                                        text = "${session.messageCount} msg${if (session.messageCount == 1) "" else "s"}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
 
-            items(sessions, key = { it.id }) { session ->
-                ElevatedCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onOpenSession(session) },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+            if (legacyChats.isNotEmpty()) {
+                item {
+                    Text(
+                        "Older saved chats (${legacyChats.size})",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 4.dp)
                     )
-                ) {
-                    Column(
+                }
+
+                items(legacyChats, key = { it.cloudId }) { chat ->
+                    ElevatedCard(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(14.dp)
+                            .clickable { onOpenLegacyChat(chat) },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp)
                         ) {
-                            Text(
-                                text = session.title.ifBlank { "Conversation" },
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
-                            IconButton(
-                                onClick = { onDeleteSession(session) },
-                                modifier = Modifier.size(28.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = "Delete chat",
-                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-
-                        if (session.preview.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = session.preview,
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                                lineHeight = 18.sp
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = formatSessionDate(session.updatedAt),
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.outline
-                            )
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.secondaryContainer
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "${session.messageCount} msg${if (session.messageCount == 1) "" else "s"}",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    text = chat.title.ifBlank { "Saved chat" },
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
                                 )
+                                IconButton(
+                                    onClick = { onDeleteLegacyChat(chat) },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Delete chat",
+                                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = SimpleDateFormat("EEE, d MMM yyyy", Locale.getDefault()).format(Date(chat.createdAt)),
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }

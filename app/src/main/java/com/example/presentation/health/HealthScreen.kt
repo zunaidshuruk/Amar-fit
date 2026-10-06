@@ -962,7 +962,10 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     .weight(1f)
                     .clip(RoundedCornerShape(16.dp))
                     .background(chatAccent.bg)
-                    .clickable { navController.navigate("chat?openSavedChats=true") }
+                    .clickable {
+                        viewModel.setUniversalAssistantTab(1)
+                        navController.navigate("universal_assistant")
+                    }
                     .padding(16.dp)
             ) {
                 Column {
