@@ -11,14 +11,11 @@ service cloud.firestore {
     // no health data. Readable by any signed-in user; writable only by its owner.
     match /public_profiles/{uid} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == uid;
-      // STEP 3 (enable ONLY after every user is on an app version that no longer writes
-      // fcmToken here, and the notification script reads tokens from users/{uid}):
-      // replace the "allow write" line above with these two lines. Push tokens belong in
-      // the private users/{uid} document, never in this world-readable one.
-      //   allow create, update: if request.auth != null && request.auth.uid == uid
-      //     && !request.resource.data.keys().hasAny(['fcmToken', 'fcmTokenUpdatedAt']);
-      //   allow delete: if request.auth != null && request.auth.uid == uid;
+      // ENABLED 2026-10-06: push tokens belong in the private users/{uid} document, never in
+      // this world-readable one, so writes that contain them are rejected.
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && !request.resource.data.keys().hasAny(['fcmToken', 'fcmTokenUpdatedAt']);
+      allow delete: if request.auth != null && request.auth.uid == uid;
     }
 
     // Friends-only projection: today's steps/water/sleep/calories vs. goals.
