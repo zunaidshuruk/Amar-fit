@@ -12,12 +12,16 @@ Each of these costs roughly 8k–30k tokens to read in full. Locate the region w
 | 〃 | food chat | `fun sendFoodChatMessage`, `fun confirmPendingFoodLog` |
 | 〃 | Universal Assistant | `fun sendUniversalAssistantMessage`, `fun openAssistantSession` |
 | 〃 | workouts (HC exercise write) | `fun saveCompletedWorkoutSession`, `fun resolveHealthConnectExerciseType` |
+| 〃 | Health Connect exercise sessions cache + backfill | `suspend fun refreshExerciseSessions`, `private suspend fun readExerciseSessionsWindow`, `fun startExerciseHistoryBackfill` |
+| 〃 | day calories + own-workout calories write | `suspend fun getCaloriesBurnedForDate`, `// 3. Active calories for this session` |
+| 〃 | workout plan editing | `fun updateStructuredWorkoutPlan`, `fun updateSavedWorkoutPlan` |
 | 〃 | weight (HC weight write) | `fun setWeightAndHeight`, `fun writeWeightToHealthConnect` |
 | 〃 | social | `fun sendFriendRequestByCode`, `fun fetchLeaderboard`, `fun createChallengeWithFriend`, `fun sendMessage` |
 | 〃 | Drive backup | `fun backupToDrive`, `fun applyDriveBackup` |
 | `data/repository/AppRepository.kt` | Gemini plumbing + key/model fallback | `fun resolveApiKeys`, `fun executeGeminiCallWithBackoff`, `fun streamGeminiCall` |
 | 〃 | assistant tools | `fun buildAssistantToolsJson`, `fun sendUniversalAssistantMessage` |
 | 〃 | food analysis / barcode | `fun analyzeFoodText`, `fun analyzeFoodImage`, `fun lookupBarcodeProduct` |
+| 〃 | chat answer style guide (shared by 6 prompts) | `fun aiResponseStyle` |
 | 〃 | AI insights | `fun generateHealthInsight`, `fun generateGlucoseGuidance`, `fun generateNutritionalInsights` |
 | 〃 | badges | `fun checkAndAwardBadges` |
 | `data/repository/FirebaseManager.kt` | login pull (silent-failure risk) | `fun pullDataOnLogin` |

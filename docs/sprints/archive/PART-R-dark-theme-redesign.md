@@ -90,4 +90,31 @@ Both reference images saved locally (`design-refs/part-r-today-screen-pinterest-
 
 
 ---
-**Correction (2026-09-29):** the shipped signature accent is `#BBE800` (commit `6300106`, confirmed by Zunaid), not the Chartreuse `#E0FF4F` recorded above. Current state: [ACTIVE.md](../ACTIVE.md#part-r--dark-theme-redesign).
+**Correction (2026-09-29):** the shipped signature accent is `#BBE800` (commit `6300106`, confirmed by Zunaid), not the Chartreuse `#E0FF4F` recorded above. Current state: [INDEX.md](../INDEX.md) (Part R is now closed).
+
+
+---
+<!-- Moved verbatim from docs/sprints/ACTIVE.md when Part R closed (2026-10-04). -->
+
+## Part R — Dark theme redesign
+- [x] Pill-row "featured first row" landed (*code-checked*: `TodayPillCard(featured = rowIndex == 0)`).
+- [x] Phase 3 nutrition macro dashboard (`91d52c4`).
+- **Palette as shipped:** background Gun Metal `#00272B`, signature accent **`#BBE800`** (set in `6300106` and confirmed by Zunaid — supersedes the `#E0FF4F` in the archived Part R notes), secondary Iron `#CDD2D7`, alert Amber `#F5A623`. `#BBE800` contrast: 11.1:1 on background, 9.7:1 on cards, 8.6:1 on inner tiles.
+- [x] Metric-detail chart tokens: range-bar charts (`78783b9`) and daily bars / trend lines / intraday steps, calories, water (`e54f0c4`) now use `primary` (accent) and `onSurfaceVariant` (Iron) instead of literals. SpO2 bars: Amber below 95%, accent otherwise.
+- [ ] Heart-rate zone colors (`IntradayHeartRateChart`, `HeartRateZonesCard`) — still literals; needs a decision, since 4 zones need 4 distinguishable colors vs. the single-accent rule.
+- [ ] **Graphite Black experiment still live:** `78783b9` accidentally re-added `GraphiteBlack` (`Color.kt`) and `.background(GraphiteBlack)` on Today's root (`TodayScreen.kt`). Zunaid asked to revert; the revert push didn't land and he chose to skip it for now. Revert = delete those two lines.
+- [ ] Screen-by-screen rollout to the remaining screens (order not yet agreed).
+- [ ] `WorkoutScreen.kt` "AI Workouts" tab wrap — label now `fontSize = 13.sp` but no `maxLines`; confirm on device.
+- [x] Phase 2e calorie-ring large tile landed (*code-checked*: `"large_calories"` in `TodayTiles.kt`); whether it's in the default set is unverified.
+- Decision still open: none recorded.
+
+**Part R closed (2026-10-04).** The token cleanup finished after the entries above:
+- `931321a` — heart-rate zone colors: Light / Moderate = accent blended 45% / 70% into the card, Vigorous = accent, Peak = Amber; the intraday connecting line is neutral Iron.
+- `65ca328` — Today group (`TodayScreen.kt`, `EditFocusScreen.kt`): dark-side Slate greys → Iron, white icons → `onSurface`; muted tile values `onSurfaceVariant` at 60%.
+- `e6a88eb` — Scanner: 4 `Emerald500` accents → accent, with dark `onPrimary` text/icon where they sit on the accent. The black/white camera overlays are intentional and stay.
+- `7e06041` — greys and the resting-HR alert banner (Food Log, Sleep, Nutrition, Metric Detail); the banner is now an Amber tint.
+- `66d2cd9` — BMI status colors (Normal = accent; Underweight / Overweight / Very Overweight = Amber; no data = Iron).
+- `3bd311b` — YouTube Watch buttons made consistent (Red500 container, white content).
+- Graphite Black experiment removed (`4090c09`, `b328258`).
+- Intentionally left: camera overlay black/white (Scanner, assistant/food-chat scrims), bronze/silver/gold badge-tier colors, and the Red500 constant. Known limit: white on Red500 is 3.76:1 (below 4.5:1 for small text); a darker red would pass but would weaken the small red tutorial icon on the workout list.
+- The `isDark` branches are dead code in a dark-only app; the light `else` sides were deliberately left in place.

@@ -21,12 +21,15 @@ Open work: [ACTIVE.md](ACTIVE.md). Closed Parts link to their verbatim archive. 
 | O | Body fat % | ✅ closed | `31f611e` | [archive](archive/PART-O-body-fat.md) |
 | P | Gap review #2 | ✅ closed (#6 multi-day programs deferred) | `8125983` | [archive](archive/PART-P-gap-review-pass-2.md) |
 | Q | Social: friends, challenges, leaderboard, DMs | 🟡 shipped, not tracker-verified | `5b4d21e` | [ACTIVE](ACTIVE.md#part-q--social) · [archive](archive/PART-Q-social.md) |
-| R | Dark theme redesign | 🔲 open | `91d52c4` | [ACTIVE](ACTIVE.md#part-r--dark-theme-redesign) · [archive](archive/PART-R-dark-theme-redesign.md) |
+| R | Dark theme redesign | ✅ closed | `931321a` | [archive](archive/PART-R-dark-theme-redesign.md) |
 | S | Urgent dark-mode / header / notification fixes | ✅ closed | `8ee76e9` | [archive](archive/PART-S-urgent-dark-mode-fixes.md) |
 | T | Measurement metadata | ✅ closed | `8a79a86` | [archive](archive/PART-T-measurement-metadata.md) |
 | U | Per-metric graph types | ✅ closed | `4900cc9` | [archive](archive/PART-U-graph-type-redesign.md) |
 | V | Glucose meal context + AI guidance | ✅ closed (5/5) | `0d00d33` | [archive](archive/PART-V-glucose-meal-context.md) |
 | W | Backdated glucose entry + CSV | ✅ closed | `3bf4ac2` | [archive](archive/PART-W-backdated-glucose-entry.md) |
+| Y | AI response overhaul (renderer, style guide, card, follow-up chips) | ✅ closed (4/4) | `166f38c` | [archive](archive/PART-Y-ai-response-overhaul.md) |
+| AA | Exercise tab powered by Health Connect (sessions, history, calories) | ✅ closed | `bd467ad` | [archive](archive/PART-AA-AB-exercise-sprint.md) |
+| AB | Customizable workouts (sets, reps, time, rest, rounds; edit AI/saved/custom) | ✅ closed (AI generator returning rounds not built) | `2d112dc` | [archive](archive/PART-AA-AB-exercise-sprint.md) |
 | Z | Universal AI Assistant | 🔲 Phase 1 shipped, Phase 2 deferred | `994c07c` | [ACTIVE](ACTIVE.md#part-z--universal-ai-assistant) |
 
 Other archived snapshots:

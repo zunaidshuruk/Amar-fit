@@ -14,7 +14,8 @@ All paths under `app/src/main/java/com/example/` unless noted. Find the area, op
 | Food log, AI food chat, scanner | `presentation/foodlog/FoodLogScreen.kt`, `FoodChatScreen.kt`, `presentation/scanner/ScannerScreen.kt` | `logScannedFood`, `sendFoodChatMessage`, AppRepository `analyzeFood*`, `lookupBarcodeProduct` | |
 | Diet charts, meal plan, recipes, lifestyle | `presentation/mealplan/DietChartScreen.kt`, `MealPlanScreen.kt`, `presentation/recipe/RecipeScreen.kt`, `presentation/lifestyle/LifestyleScreen.kt` | `generateDietChart`, `generatePremiumRecipe` | |
 | Sleep, mindfulness | `presentation/sleep/SleepScreen.kt`, `presentation/mindfulness/MindfulnessTimerScreen.kt` | `setSleep`, `saveCompletedMindfulnessSession` | |
-| Workouts, exercise library | `presentation/fitness/FitnessScreen.kt` (wrapper), `presentation/workout/*` | `generateAIStructuredWorkout`, `saveCompletedWorkoutSession` | |
+| Exercise tab: Activity (Health Connect) | `presentation/workout/ActivitySection.kt` | `refreshExerciseSessions`, `observeExerciseSessions`, `getCaloriesBurnedForDate`, `startExerciseHistoryBackfill` | Today + history by day, calories burned card; sessions cached in Room `health_exercise_sessions` |
+| Workouts (AI / Saved / History), editor, library | `presentation/fitness/FitnessScreen.kt` (wrapper), `presentation/workout/WorkoutScreen.kt`, `WorkoutPlanEditor.kt`, `WorkoutSessionScreen.kt`, `ExerciseLibraryScreen.kt` | `generateAIStructuredWorkout`, `updateStructuredWorkoutPlan`, `updateSavedWorkoutPlan`, `saveCompletedWorkoutSession` | `WorkoutPlan` has `rounds` / `roundRestSeconds`; session runs sets and rounds |
 | Universal AI Assistant (Part Z) | `presentation/assistant/UniversalAssistantScreen.kt` | `sendUniversalAssistantMessage`; AppRepository `buildAssistantToolsJson`, `executeRawGeminiCall` | sessions in Room |
 | Older AI screens | `presentation/chat/ChatScreen.kt`, `presentation/coach/CoachScreen.kt` | | candidates for Part Z Phase 2 consolidation |
 | Social | `presentation/social/FriendsScreen.kt`, `LeaderboardScreen.kt`, `DirectMessageScreen.kt`, `QrScannerScreen.kt` | FirebaseManager social functions | |
@@ -27,7 +28,7 @@ All paths under `app/src/main/java/com/example/` unless noted. Find the area, op
 | Room | `data/local/AppDatabase.kt` (version + migrations), `Entities.kt`, `Daos.kt`, per-entity files | | schema JSON in `app/schemas/` |
 | Health Connect | `data/health/HealthConnectManager.kt` (permissions), `HealthGoalCalculator.kt` | | |
 | Remote APIs | `data/remote/GeminiApiService.kt`, `RetrofitClient.kt`, `GoogleDrive*`, `YouTube*` | | |
-| Theme, shared UI | `ui/theme/Color.kt`, `Theme.kt`, `AccentTokens.kt`, `Type.kt`; `ui/components/*`; `util/UnitConverter.kt` | | tokens, never literals; `MarkdownText.kt` renders all AI text: tables → cards, `---` → divider, `YOUTUBE_SEARCH: <query>` line → Watch button |
+| Theme, shared UI | `ui/theme/Color.kt`, `Theme.kt`, `AccentTokens.kt`, `Type.kt`; `ui/components/*`; `util/UnitConverter.kt` | | tokens, never literals; `MarkdownText.kt` renders all AI text (headings with accent bar, bullets, numbered steps, `> **Label:**` callouts, tables → cards, `---` → divider, `YOUTUBE_SEARCH: <query>` → Watch button); `AiMessageCard.kt` is the "KardIQ AI" answer card (copy button, follow-up chips from a `FOLLOWUPS: q1 \| q2` line) used by the Assistant, Chat (live + saved) and Food Chat |
 | Unit tests | `app/src/test/java/com/example/` | | |
 
 Not app code: root `fix_*.py`, `update_*.py`, `rewrite_*.py`, `add_*.py`, `remove_fit.py`, `test_compile.kt`, `test_fit.kt` are historical one-off AI Studio scripts. `design-refs/` holds Part R reference images.

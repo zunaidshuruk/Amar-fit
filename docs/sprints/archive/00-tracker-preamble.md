@@ -20,3 +20,11 @@ Last verified: current session, against commit `8037b30` ("style: adjust padding
 ## 🔴 Hazard — debug.keystore
 Missing from `main` since `8d06c8b` ("refactor: fix formatting in UniversalAssistantScreen"); last good copy at `0537d66`. `app/build.gradle.kts` still points the debug signing config at `${rootDir}/debug.keystore`. Restore via GitHub web upload, then confirm sha256 `4d6742b2662bfcbbb8e0a6f693d3fb939f4d2d10a446336af85a619f275f0faa`. Full incident history: this file (above).
 
+
+
+---
+<!-- Moved verbatim from docs/sprints/ACTIVE.md when rewritten (2026-10-04). -->
+
+## debug.keystore
+Restored 2026-09-29 by web upload (`46dbc23`/`bdb2a43`), checksum verified, and unchanged through `e54f0c4`. Keep checking after every push. Incident history: this file (above).
+
