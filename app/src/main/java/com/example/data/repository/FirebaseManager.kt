@@ -54,6 +54,8 @@ object FirebaseManager {
                     db.collection("users").document(uid).collection("medical_records").document(doc.id).delete().await()
                 }
 
+                deleteSocialData(db, uid)
+
                 db.collection("users").document(uid).delete().await()
                 user.delete().await()
                 DeleteAccountResult.Success
@@ -70,6 +72,77 @@ object FirebaseManager {
             }
         }
         return DeleteAccountResult.Error("No user logged in")
+    }
+
+    private suspend fun deleteSocialData(db: FirebaseFirestore, uid: String) {
+        // a) Own messages: query friendships where uid1 == uid and where uid2 == uid (two queries),
+        // keep only documents whose status == "accepted"; for each, query dm_threads/{doc.id}/messages
+        // where senderUid == uid and delete every result document.
+        try {
+            val asUid1 = db.collection("friendships").whereEqualTo("uid1", uid).get().await()
+            val asUid2 = db.collection("friendships").whereEqualTo("uid2", uid).get().await()
+            val acceptedFriendships = (asUid1.documents + asUid2.documents).filter {
+                it.getString("status") == "accepted"
+            }
+            for (fDoc in acceptedFriendships) {
+                try {
+                    val messagesSnap = db.collection("dm_threads").document(fDoc.id)
+                        .collection("messages")
+                        .whereEqualTo("senderUid", uid)
+                        .get().await()
+                    for (msgDoc in messagesSnap.documents) {
+                        msgDoc.reference.delete().await()
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // b) Activity events: query activity_events where uid == uid and delete every result.
+        try {
+            val eventsSnap = db.collection("activity_events").whereEqualTo("uid", uid).get().await()
+            for (doc in eventsSnap.documents) {
+                doc.reference.delete().await()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // c) Friend code: read public_profiles/{uid}; if it has a non-blank friendCode, delete friend_codes/{friendCode}.
+        try {
+            val profileSnap = db.collection("public_profiles").document(uid).get().await()
+            val friendCode = profileSnap.getString("friendCode")
+            if (!friendCode.isNullOrBlank()) {
+                db.collection("friend_codes").document(friendCode).delete().await()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // d) Delete friend_stats/{uid}, then delete public_profiles/{uid}.
+        try {
+            db.collection("friend_stats").document(uid).delete().await()
+            db.collection("public_profiles").document(uid).delete().await()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // e) Friendships: query friendships where uid1 == uid and where uid2 == uid and delete every result (any status).
+        try {
+            val asUid1 = db.collection("friendships").whereEqualTo("uid1", uid).get().await()
+            for (doc in asUid1.documents) {
+                doc.reference.delete().await()
+            }
+            val asUid2 = db.collection("friendships").whereEqualTo("uid2", uid).get().await()
+            for (doc in asUid2.documents) {
+                doc.reference.delete().await()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun syncMetric(metric: DailyMetric) {
