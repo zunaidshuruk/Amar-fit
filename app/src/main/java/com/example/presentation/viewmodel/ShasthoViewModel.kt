@@ -783,6 +783,27 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         } catch (e: Exception) {
             e.printStackTrace()
         }
+
+        // 3. Active calories for this session — separate try so a missing WRITE_ACTIVE_CALORIES_BURNED permission can never affect the session write above
+        if (calIncrement != null && calIncrement > 0) {
+            try {
+                val client = HealthConnectClient.getOrCreate(getApplication())
+                val endForCalories = if (endTime.isAfter(startTime)) endTime else startTime.plusSeconds(durationSeconds.toLong().coerceAtLeast(60L))
+                val calStartOffset = ZoneId.systemDefault().rules.getOffset(startTime)
+                val calEndOffset = ZoneId.systemDefault().rules.getOffset(endForCalories)
+                client.insertRecords(listOf(
+                    ActiveCaloriesBurnedRecord(
+                        startTime = startTime,
+                        startZoneOffset = calStartOffset,
+                        endTime = endForCalories,
+                        endZoneOffset = calEndOffset,
+                        energy = Energy.kilocalories(calIncrement.toDouble())
+                    )
+                ))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     suspend fun saveCompletedMindfulnessSession(
@@ -1598,6 +1619,30 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             false
         } finally {
             _isRefreshingExerciseSessions.value = false
+        }
+    }
+
+    suspend fun getCaloriesBurnedForDate(date: java.time.LocalDate): Pair<Int, Int>? {
+        return try {
+            if (HealthConnectClient.getSdkStatus(getApplication()) != HealthConnectClient.SDK_AVAILABLE) return null
+            val client = HealthConnectClient.getOrCreate(getApplication())
+            val granted = client.permissionController.getGrantedPermissions()
+            val metrics = mutableSetOf<androidx.health.connect.client.aggregate.AggregateMetric<*>>()
+            if (HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class) in granted) metrics.add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+            if (HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class) in granted) metrics.add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+            if (metrics.isEmpty()) return null
+            val zoneId = ZoneId.systemDefault()
+            val startOfDay = date.atStartOfDay(zoneId).toInstant()
+            val nowInstant = Instant.now()
+            val endOfDay = date.plusDays(1).atStartOfDay(zoneId).toInstant()
+            val end = if (nowInstant.isBefore(endOfDay)) nowInstant else endOfDay
+            if (!end.isAfter(startOfDay)) return null
+            val agg = client.aggregate(AggregateRequest(metrics = metrics, timeRangeFilter = TimeRangeFilter.between(startOfDay, end)))
+            val active = agg[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories?.toInt() ?: 0
+            val total = agg[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories?.toInt() ?: 0
+            Pair(active, total)
+        } catch (e: Exception) {
+            null
         }
     }
 

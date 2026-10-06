@@ -55,7 +55,8 @@ object HealthConnectManager {
         HealthPermission.getWritePermission(MindfulnessSessionRecord::class),
         HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class),
         HealthPermission.getWritePermission(BasalMetabolicRateRecord::class),
-        HealthPermission.getWritePermission(WeightRecord::class)
+        HealthPermission.getWritePermission(WeightRecord::class),
+        HealthPermission.getWritePermission(ActiveCaloriesBurnedRecord::class)
     )
 
     val HISTORY_PERMISSION: String = HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY

@@ -196,6 +196,76 @@ fun ActivitySection(viewModel: ShasthoViewModel) {
             }
         }
 
+        val caloriesToday by produceState<Pair<Int, Int>?>(initialValue = null, key1 = isRefreshing) {
+            value = viewModel.getCaloriesBurnedForDate(LocalDate.now())
+        }
+        caloriesToday?.let { (active, total) ->
+            if (active > 0 || total > 0) {
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            "Calories burned today",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    if (active > 0) "$active" else "—",
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    "Active kcal",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    if (total > 0) "$total" else "—",
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    "Total kcal",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Text(
+                            "Active comes from movement and workouts. Total also includes the calories your body burns at rest.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = { navController?.navigate("metric_detail/activeCaloriesBurned") }) {
+                            Text("See trend")
+                        }
+                    }
+                }
+            }
+        }
+
         // History
         val groupedSessions = remember(sessions) {
             sessions.groupBy { Instant.ofEpochMilli(it.startTime).atZone(zone).toLocalDate() }
