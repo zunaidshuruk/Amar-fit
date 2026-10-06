@@ -1050,6 +1050,8 @@ class AppRepository(
             {
               "title": "String",
               "workoutType": "String, exactly one of: strength_training, hiit, yoga, pilates, stretching, calisthenics, running, walking, biking, dancing, other",
+              "rounds": Int (1 to 5. Use 1 for strength-style sessions where each exercise has several sets. Use 2 to 4 only for circuit-style or HIIT sessions where the main exercises are repeated as a loop),
+              "roundRestSeconds": Int (seconds of rest between rounds, 30 to 90; use 0 when rounds is 1),
               "warmup": [
                 {
                   "name": "String",
@@ -1084,6 +1086,7 @@ class AppRepository(
                 }
               ]
             }
+            When rounds is greater than 1, give each main exercise sets = 1 (the repeating comes from the rounds) and keep restSeconds between exercises short (10 to 20).
             $contextPrompt
         """.trimIndent()
 
@@ -1106,7 +1109,7 @@ class AppRepository(
             val adapter = RetrofitClient.moshi.adapter(com.example.data.model.WorkoutPlan::class.java)
             val plan = adapter.fromJson(cleanedJson)
             if (plan != null) {
-                Result.success(plan)
+                Result.success(plan.copy(rounds = plan.rounds.coerceIn(1, 5), roundRestSeconds = plan.roundRestSeconds.coerceIn(0, 300)))
             } else {
                 Result.failure(Exception("Failed to parse workout plan JSON"))
             }

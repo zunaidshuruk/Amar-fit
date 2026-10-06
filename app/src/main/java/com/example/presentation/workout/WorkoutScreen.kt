@@ -303,7 +303,8 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                                 WorkoutSectionView(
                                     sectionTitle = "Main Exercises",
                                     exercises = plan.mainExercises,
-                                    sectionColor = AccentTokens.caloriesAccent(isDark)
+                                    sectionColor = AccentTokens.caloriesAccent(isDark),
+                                    subtitle = roundsSummary(plan)
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
@@ -542,6 +543,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                             }
                             if (plan.mainExercises.isNotEmpty()) {
                                 appendLine("\nMain Exercises:")
+                                roundsSummary(plan)?.let { appendLine(it) }
                                 plan.mainExercises.forEach { appendLine("• ${it.name} - ${formatExerciseDetails(it)}") }
                             }
                             if (plan.cooldown.isNotEmpty()) {
@@ -586,16 +588,20 @@ private fun formatExerciseDetails(exercise: WorkoutExercise): String {
     return details.joinToString(" • ")
 }
 
+private fun roundsSummary(plan: WorkoutPlan): String? =
+    if (plan.rounds > 1) "${plan.rounds} rounds" + (if (plan.roundRestSeconds > 0) " • ${plan.roundRestSeconds} s rest between rounds" else "") else null
+
 @Composable
 fun WorkoutSectionView(
     sectionTitle: String,
     exercises: List<WorkoutExercise>,
-    sectionColor: AccentColors
+    sectionColor: AccentColors,
+    subtitle: String? = null
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = if (subtitle != null) 2.dp else 8.dp)
         ) {
             Box(
                 modifier = Modifier
@@ -609,6 +615,14 @@ fun WorkoutSectionView(
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        if (subtitle != null) {
+            Text(
+                text = subtitle,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
             )
         }
         exercises.forEach { exercise ->
@@ -727,7 +741,8 @@ fun SavedWorkoutDetailView(
                         WorkoutSectionView(
                             sectionTitle = "Main Exercises",
                             exercises = parsedPlan.mainExercises,
-                            sectionColor = AccentTokens.caloriesAccent(isDark)
+                            sectionColor = AccentTokens.caloriesAccent(isDark),
+                            subtitle = roundsSummary(parsedPlan)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                     }
