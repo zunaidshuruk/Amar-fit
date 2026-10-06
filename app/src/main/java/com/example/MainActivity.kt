@@ -173,7 +173,7 @@ class MainActivity : ComponentActivity() {
               modifier = Modifier.fillMaxSize(),
               containerColor = MaterialTheme.colorScheme.background,
               floatingActionButton = {
-                  if (currentRoute !in setOf("universal_assistant?starter={starter}", "foodlog", "scanner")) {
+                  if (currentRoute !in setOf("universal_assistant?starter={starter}&fresh={fresh}", "foodlog", "scanner")) {
                       SmallFloatingActionButton(
                           onClick = { navController.navigate("universal_assistant") },
                           containerColor = MaterialTheme.colorScheme.primary,
@@ -414,17 +414,24 @@ class MainActivity : ComponentActivity() {
                   composable("health_goals") { HealthGoalsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("friends") { FriendsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onNavigateToLeaderboard = { navController.navigate("leaderboard") }, onNavigateToDm = { pairId, name -> navController.navigate("dm/$pairId/$name") }) }
                   composable(
-                      route = "universal_assistant?starter={starter}",
-                      arguments = listOf(androidx.navigation.navArgument("starter") {
-                          type = androidx.navigation.NavType.StringType
-                          nullable = true
-                          defaultValue = null
-                      })
+                      route = "universal_assistant?starter={starter}&fresh={fresh}",
+                      arguments = listOf(
+                          androidx.navigation.navArgument("starter") {
+                              type = androidx.navigation.NavType.StringType
+                              nullable = true
+                              defaultValue = null
+                          },
+                          androidx.navigation.navArgument("fresh") {
+                              type = androidx.navigation.NavType.BoolType
+                              defaultValue = false
+                          }
+                      )
                   ) { backStackEntry ->
                       com.example.presentation.assistant.UniversalAssistantScreen(
                           viewModel = viewModel,
                           onNavigateBack = { navController.popBackStack() },
-                          starter = backStackEntry.arguments?.getString("starter")
+                          starter = backStackEntry.arguments?.getString("starter"),
+                          fresh = backStackEntry.arguments?.getBoolean("fresh") ?: false
                       )
                   }
                   composable("health_correlations") { com.example.presentation.correlations.HealthCorrelationsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
@@ -440,7 +447,7 @@ class MainActivity : ComponentActivity() {
                       DirectMessageScreen(viewModel = viewModel, pairId = pairId, friendName = friendName, onNavigateBack = { navController.popBackStack() })
                   }
                   composable("leaderboard") { LeaderboardScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
-                  composable("scanner") { ScannerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onNavigateToFoodChat = { navController.navigate("universal_assistant?starter=nutrition") }) }
+                  composable("scanner") { ScannerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onNavigateToFoodChat = { navController.navigate("universal_assistant?fresh=true") }) }
                   composable("medical_records") { com.example.presentation.health.MedicalRecordsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("exercise_library") { ExerciseLibraryScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("mindfulness_timer") { com.example.presentation.mindfulness.MindfulnessTimerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }

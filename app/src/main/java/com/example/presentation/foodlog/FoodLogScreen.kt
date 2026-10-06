@@ -430,7 +430,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, navController: androidx.navigatio
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SmallFloatingActionButton(
-                    onClick = { navController?.navigate("universal_assistant?starter=" + android.net.Uri.encode("I want to log what I ate.")) },
+                    onClick = { navController?.navigate("universal_assistant?fresh=true") },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {

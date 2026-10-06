@@ -59,11 +59,15 @@ import java.util.Locale
 fun UniversalAssistantScreen(
     viewModel: ShasthoViewModel,
     onNavigateBack: () -> Unit = {},
-    starter: String? = null
+    starter: String? = null,
+    fresh: Boolean = false
 ) {
     var starterHandled by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(starter) {
-        if (!starter.isNullOrBlank() && !starterHandled) {
+    LaunchedEffect(starter, fresh) {
+        if (fresh && !starterHandled) {
+            starterHandled = true
+            viewModel.startNewAssistantChat()
+        } else if (!starter.isNullOrBlank() && !starterHandled) {
             starterHandled = true
             viewModel.startNewAssistantChat()
             viewModel.sendUniversalAssistantMessage(starter)
