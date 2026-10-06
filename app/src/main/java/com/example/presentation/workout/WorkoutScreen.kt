@@ -55,6 +55,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
     val savedWorkouts by viewModel.savedWorkouts.collectAsState()
     val workoutHistory by viewModel.workoutHistory.collectAsState()
     
+    var section by remember { mutableStateOf(0) } // 0 = Activity, 1 = Workouts
     var selectedTab by remember { mutableStateOf(0) } // 0 = AI Workouts, 1 = Saved, 2 = History
     var selectedSavedWorkout by remember { mutableStateOf<SavedWorkout?>(null) }
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -117,15 +118,46 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
             )
         } else {
             Text(
-                text = "Workouts",
+                text = "Exercise",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(top = 16.dp, bottom = 16.dp)
             )
 
-            // Tabs
-            Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+            // Section Switch: Activity vs Workouts
+            Row(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                Button(
+                    onClick = { section = 0 },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (section == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (section == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    modifier = Modifier.weight(1f).padding(end = 4.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
+                    Text("Activity", maxLines = 1)
+                }
+                Button(
+                    onClick = { section = 1 },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (section == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (section == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    modifier = Modifier.weight(1f).padding(start = 4.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
+                    Text("Workouts", maxLines = 1)
+                }
+            }
+
+            if (section == 0) {
+                ActivitySection(viewModel = viewModel)
+            } else {
+                // Tabs
+                Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
                 Button(
                     onClick = { selectedTab = 0 },
                     colors = ButtonDefaults.buttonColors(
@@ -462,6 +494,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                         }
                     }
                 }
+            }
             }
         }
         
