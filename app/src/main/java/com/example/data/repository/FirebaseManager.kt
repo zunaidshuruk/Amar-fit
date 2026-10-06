@@ -44,6 +44,11 @@ object FirebaseManager {
                     db.collection("users").document(uid).collection("saved_workouts").document(doc.id).delete().await()
                 }
 
+                val programsSnap = db.collection("users").document(uid).collection("workout_programs").get().await()
+                for (doc in programsSnap.documents) {
+                    db.collection("users").document(uid).collection("workout_programs").document(doc.id).delete().await()
+                }
+
                 val chatsSnap = db.collection("users").document(uid).collection("saved_chats").get().await()
                 for (doc in chatsSnap.documents) {
                     db.collection("users").document(uid).collection("saved_chats").document(doc.id).delete().await()
@@ -793,6 +798,42 @@ object FirebaseManager {
         return false
     }
 
+    suspend fun syncWorkoutProgram(program: com.example.data.local.WorkoutProgram): Boolean {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            return try {
+                db.collection("users").document(user.uid)
+                    .collection("workout_programs").document(program.cloudId)
+                    .set(program, SetOptions.merge()).await()
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
+        return false
+    }
+
+    suspend fun deleteWorkoutProgram(cloudId: String): Boolean {
+        val auth = FirebaseAuth.getInstance()
+        val user = auth.currentUser
+        if (user != null) {
+            val db = FirebaseFirestore.getInstance()
+            return try {
+                db.collection("users").document(user.uid)
+                    .collection("workout_programs").document(cloudId)
+                    .delete().await()
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
+        return false
+    }
+
     suspend fun syncSavedChat(chat: SavedChat): Boolean {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser
@@ -871,7 +912,8 @@ object FirebaseManager {
         savedDietChartDao: SavedDietChartDao? = null,
         savedWorkoutDao: SavedWorkoutDao? = null,
         savedChatDao: SavedChatDao? = null,
-        medicalRecordDao: com.example.data.local.MedicalRecordDao? = null
+        medicalRecordDao: com.example.data.local.MedicalRecordDao? = null,
+        workoutProgramDao: com.example.data.local.WorkoutProgramDao? = null
     ) {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser
@@ -947,6 +989,22 @@ object FirebaseManager {
                     }
                 } catch (e: Exception) {
                     Log.e("FirebaseManager", "Error pulling saved workouts on login", e)
+                    e.printStackTrace()
+                }
+            }
+
+            // Pull Workout Programs
+            if (workoutProgramDao != null) {
+                try {
+                    val programsSnap = db.collection("users").document(user.uid).collection("workout_programs").get().await()
+                    for (doc in programsSnap.documents) {
+                        val program = doc.toObject(com.example.data.local.WorkoutProgram::class.java)
+                        if (program != null) {
+                            workoutProgramDao.upsert(program)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("FirebaseManager", "Error pulling workout programs on login", e)
                     e.printStackTrace()
                 }
             }

@@ -2357,8 +2357,22 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     val workoutPrograms: StateFlow<List<com.example.data.local.WorkoutProgram>> = repository.getAllWorkoutPrograms().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    fun saveWorkoutProgram(program: com.example.data.local.WorkoutProgram) { viewModelScope.launch(Dispatchers.IO) { repository.saveWorkoutProgram(program) } }
-    fun deleteWorkoutProgram(cloudId: String) { viewModelScope.launch(Dispatchers.IO) { repository.deleteWorkoutProgram(cloudId) } }
+    fun saveWorkoutProgram(program: com.example.data.local.WorkoutProgram) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val success = repository.saveWorkoutProgram(program)
+            if (!success) {
+                _syncErrorEvent.emit("Saved locally, but couldn't sync to the cloud — check your connection")
+            }
+        }
+    }
+    fun deleteWorkoutProgram(cloudId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val success = repository.deleteWorkoutProgram(cloudId)
+            if (!success) {
+                _syncErrorEvent.emit("Saved locally, but couldn't sync to the cloud — check your connection")
+            }
+        }
+    }
     fun completeProgramDay(cloudId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val program = repository.getWorkoutProgramsOnce().firstOrNull { it.cloudId == cloudId } ?: return@launch
@@ -2815,6 +2829,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         val savedWorkouts = repository.getAllSavedWorkouts().firstOrNull() ?: emptyList()
         val savedChats = repository.getAllSavedChats().firstOrNull() ?: emptyList()
         val medicalRecords = repository.getMedicalRecords().firstOrNull() ?: emptyList()
+        val workoutPrograms = repository.getWorkoutProgramsOnce()
 
         return com.example.data.repository.DriveBackupPayload(
             backupDate = java.time.Instant.now().toString(),
@@ -2824,7 +2839,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             savedDietCharts = savedDietCharts,
             savedWorkouts = savedWorkouts,
             savedChats = savedChats,
-            medicalRecords = medicalRecords
+            medicalRecords = medicalRecords,
+            workoutPrograms = workoutPrograms
         )
     }
 
@@ -2946,6 +2962,9 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 }
                 for (workout in payload.savedWorkouts) {
                     repository.saveWorkout(workout)
+                }
+                for (program in payload.workoutPrograms) {
+                    repository.saveWorkoutProgram(program)
                 }
                 for (chat in payload.savedChats) {
                     repository.saveChat(chat)

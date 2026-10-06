@@ -135,7 +135,7 @@ class AppRepository(
     }
 
     suspend fun syncDataOnLogin() {
-        FirebaseManager.pullDataOnLogin(userDao, metricsDao, savedDietChartDao, savedWorkoutDao, savedChatDao, medicalRecordDao)
+        FirebaseManager.pullDataOnLogin(userDao, metricsDao, savedDietChartDao, savedWorkoutDao, savedChatDao, medicalRecordDao, workoutProgramDao)
     }
 
     private fun resolveApiKeys(): List<String> {
@@ -1725,8 +1725,8 @@ class AppRepository(
 
     fun getAllWorkoutPrograms(): kotlinx.coroutines.flow.Flow<List<com.example.data.local.WorkoutProgram>> = workoutProgramDao?.getAll() ?: kotlinx.coroutines.flow.flowOf(emptyList())
     suspend fun getWorkoutProgramsOnce(): List<com.example.data.local.WorkoutProgram> = workoutProgramDao?.getAllOnce() ?: emptyList()
-    suspend fun saveWorkoutProgram(program: com.example.data.local.WorkoutProgram) { workoutProgramDao?.upsert(program) }
-    suspend fun deleteWorkoutProgram(cloudId: String) { workoutProgramDao?.delete(cloudId) }
+    suspend fun saveWorkoutProgram(program: com.example.data.local.WorkoutProgram): Boolean { workoutProgramDao?.upsert(program); return FirebaseManager.syncWorkoutProgram(program) }
+    suspend fun deleteWorkoutProgram(cloudId: String): Boolean { workoutProgramDao?.delete(cloudId); return FirebaseManager.deleteWorkoutProgram(cloudId) }
 
     fun getAllSavedChats() = savedChatDao.getAllSavedChats()
 
