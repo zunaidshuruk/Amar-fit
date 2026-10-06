@@ -560,7 +560,8 @@ fun ExerciseLibraryScreen(
                 Toast.makeText(context, "Workout saved to Saved Workouts!", Toast.LENGTH_SHORT).show()
                 onNavigateBack()
             },
-            onDismiss = { pendingPlan = null }
+            onDismiss = { pendingPlan = null },
+            loadLibrary = { allExercises }
         )
     }
 }

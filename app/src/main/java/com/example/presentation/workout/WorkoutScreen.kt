@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.text.util.LinkifyCompat
+import com.example.data.local.LibraryExercise
 import com.example.data.local.SavedWorkout
 import com.example.data.model.WorkoutExercise
 import com.example.data.model.WorkoutPlan
@@ -114,7 +115,8 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                         selectedSavedWorkout = viewModel.updateSavedWorkoutPlan(w, newPlan)
                     }
                 },
-                onBack = { selectedSavedWorkout = null }
+                onBack = { selectedSavedWorkout = null },
+                loadLibrary = { viewModel.getExerciseLibrary(context) }
             )
         } else {
             Text(
@@ -510,7 +512,8 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                     viewModel.updateStructuredWorkoutPlan(newPlan)
                     showPlanEditor = false
                 },
-                onDismiss = { showPlanEditor = false }
+                onDismiss = { showPlanEditor = false },
+                loadLibrary = { viewModel.getExerciseLibrary(context) }
             )
         }
     }
@@ -670,7 +673,8 @@ fun SavedWorkoutDetailView(
     isDark: Boolean,
     onStartWorkout: (WorkoutPlan) -> Unit,
     onSavePlan: (WorkoutPlan) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    loadLibrary: suspend () -> List<LibraryExercise>
 ) {
     var showEditor by remember { mutableStateOf(false) }
     val bodyTextColor = if (isDark) {
@@ -791,7 +795,8 @@ fun SavedWorkoutDetailView(
                     onSavePlan(newPlan)
                     showEditor = false
                 },
-                onDismiss = { showEditor = false }
+                onDismiss = { showEditor = false },
+                loadLibrary = loadLibrary
             )
         }
     }

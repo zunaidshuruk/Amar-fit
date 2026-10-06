@@ -1,5 +1,7 @@
 package com.example.presentation.workout
 
+import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,12 +16,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.data.local.LibraryExercise
 import com.example.data.model.WorkoutExercise
 import com.example.data.model.WorkoutPlan
 
@@ -28,7 +32,8 @@ import com.example.data.model.WorkoutPlan
 fun WorkoutPlanEditor(
     initialPlan: WorkoutPlan,
     onSave: (WorkoutPlan) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    loadLibrary: suspend () -> List<LibraryExercise> = { emptyList() }
 ) {
     var title by remember(initialPlan) { mutableStateOf(initialPlan.title) }
     var rounds by remember(initialPlan) { mutableStateOf(initialPlan.rounds.coerceIn(1, 10)) }
@@ -36,6 +41,18 @@ fun WorkoutPlanEditor(
     val warmup = remember(initialPlan) { mutableStateListOf<WorkoutExercise>().apply { addAll(initialPlan.warmup) } }
     val main = remember(initialPlan) { mutableStateListOf<WorkoutExercise>().apply { addAll(initialPlan.mainExercises) } }
     val cooldown = remember(initialPlan) { mutableStateListOf<WorkoutExercise>().apply { addAll(initialPlan.cooldown) } }
+
+    var showAddDialog by remember { mutableStateOf(false) }
+    var library by remember { mutableStateOf<List<LibraryExercise>>(emptyList()) }
+    LaunchedEffect(showAddDialog) {
+        if (showAddDialog && library.isEmpty()) {
+            library = try {
+                loadLibrary()
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+    }
 
     val totalExercises = warmup.size + main.size + cooldown.size
 
@@ -275,9 +292,224 @@ fun WorkoutPlanEditor(
                             )
                         }
                     }
+
+                    item {
+                        OutlinedButton(
+                            onClick = { showAddDialog = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Add exercise", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    item {
+                        Spacer(Modifier.height(24.dp))
+                    }
                 }
             }
         }
+    }
+
+    if (showAddDialog) {
+        AddExerciseDialog(
+            library = library,
+            onAdd = { sectionIndex, exercise ->
+                when (sectionIndex) {
+                    0 -> warmup.add(exercise)
+                    1 -> main.add(exercise)
+                    else -> cooldown.add(exercise)
+                }
+            },
+            onDismiss = { showAddDialog = false }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddExerciseDialog(
+    library: List<LibraryExercise>,
+    onAdd: (Int, WorkoutExercise) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    var sectionIndex by remember { mutableStateOf(1) }
+    var query by remember { mutableStateOf("") }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .imePadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Top Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Add exercise",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = onDismiss) {
+                        Text("Done")
+                    }
+                }
+
+                // Section FilterChips
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("Warmup" to 0, "Main" to 1, "Cooldown" to 2).forEach { (label, idx) ->
+                        FilterChip(
+                            selected = sectionIndex == idx,
+                            onClick = { sectionIndex = idx },
+                            label = { Text(label) }
+                        )
+                    }
+                }
+
+                // Search / Input field
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = { Text("Search exercises or type a new name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Results LazyColumn
+                val q = query.trim()
+                val matches = remember(library, q) {
+                    (if (q.isEmpty()) library.sortedBy { it.name } else library.filter { it.name.contains(q, ignoreCase = true) }).take(60)
+                }
+
+                val hasExactMatch = remember(library, q) {
+                    library.any { it.name.equals(q, ignoreCase = true) }
+                }
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (library.isEmpty() && q.isEmpty()) {
+                        item {
+                            Text(
+                                text = "Loading exercises…",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(vertical = 16.dp)
+                            )
+                        }
+                    }
+
+                    if (q.length >= 2 && !hasExactMatch) {
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onAdd(sectionIndex, newExerciseFor(q, sectionIndex))
+                                        Toast.makeText(context, "Added: $q", Toast.LENGTH_SHORT).show()
+                                    }
+                                    .padding(vertical = 12.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Add \"$q\" as a custom exercise",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+
+                    items(matches.size) { idx ->
+                        val item = matches[idx]
+                        val subtitleParts = mutableListOf<String>()
+                        if (!item.equipment.isNullOrBlank()) subtitleParts.add(item.equipment)
+                        val primaryMuscle = item.primaryMuscles.firstOrNull()
+                        if (!primaryMuscle.isNullOrBlank()) subtitleParts.add(primaryMuscle)
+                        val subtitle = subtitleParts.joinToString(" • ")
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onAdd(sectionIndex, newExerciseFor(item.name, sectionIndex))
+                                    Toast.makeText(context, "Added: ${item.name}", Toast.LENGTH_SHORT).show()
+                                }
+                                .padding(vertical = 10.dp, horizontal = 4.dp)
+                        ) {
+                            Text(
+                                text = item.name,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            if (subtitle.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = subtitle,
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun newExerciseFor(rawName: String, sectionIndex: Int): WorkoutExercise {
+    val name = rawName.trim().take(60)
+    return if (sectionIndex == 1) {
+        WorkoutExercise(
+            name = name,
+            sets = 3,
+            reps = "10",
+            durationSeconds = 0,
+            restSeconds = 30,
+            youtubeSearchQuery = name,
+            metValue = 3.5
+        )
+    } else {
+        WorkoutExercise(
+            name = name,
+            sets = 1,
+            reps = null,
+            durationSeconds = 30,
+            restSeconds = 10,
+            youtubeSearchQuery = name,
+            metValue = 3.5
+        )
     }
 }
 
