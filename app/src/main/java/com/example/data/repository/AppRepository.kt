@@ -1473,6 +1473,19 @@ class AppRepository(
         ))
 
         declarations.put(org.json.JSONObject().apply {
+            put("name", "create_workout_program")
+            put("description", "Creates a multi-day workout program (Day 1, Day 2, ...) with a workout or rest day for each day, and saves it to the user's Programs tab. Use it when the user asks for a weekly plan, split, routine or programme over several days, not for a single workout.")
+            put("parameters", org.json.JSONObject().apply {
+                put("type", "OBJECT")
+                put("properties", org.json.JSONObject().apply {
+                    put("days", schema("INTEGER", "Number of days in the program, 2 to 7"))
+                    put("focus", schema("STRING", "Everything the user said that should shape the program: goal, equipment available, experience level, injuries or limits, how long each session can be, preferred muscle groups"))
+                })
+                put("required", org.json.JSONArray(listOf("days")))
+            })
+        })
+
+        declarations.put(org.json.JSONObject().apply {
             put("name", "generate_recipe")
             put("description", "Generates a functional/medicinal recipe suggestion based on a query, e.g. 'something for better sleep' or 'a high protein breakfast'.")
             put("parameters", org.json.JSONObject().apply {
@@ -1576,11 +1589,13 @@ class AppRepository(
         onStatusUpdate: (String) -> Unit = {}
     ): AssistantResult = withContext(Dispatchers.IO) {
         val systemInstruction = """
-            You are KardIQ AI, a universal health assistant for the KardIQ app. You can log food, generate diet charts, generate workouts, suggest medicinal recipes, generate health insights, and give glucose guidance -- all through natural conversation.
+            You are KardIQ AI, a universal health assistant for the KardIQ app. You can log food, generate diet charts, generate workouts, create multi-day workout programs, suggest medicinal recipes, generate health insights, and give glucose guidance -- all through natural conversation.
 
             Only call read_health_data when the user's real numbers would genuinely change your answer (e.g. they ask about their own trends, or want a suggestion grounded in their actual data). For simple greetings, general questions, or requests that don't need personal data, just respond directly without calling any tool -- this keeps replies fast.
 
             When the user describes food they ate, use log_food once you have a reasonable estimate -- it shows them a confirmation card, so you don't need to over-clarify first.
+
+            When the user asks for a multi-day program, weekly plan or training split, call create_workout_program. If they did not say how many days, ask once (or use 4), and put everything they told you (goal, equipment, level, limits, session length) into the focus argument. After it returns, tell them the program is saved in the Programs tab and summarise the days briefly. Use generate_workout only for a single session.
 
             When a tool result contains a line starting with "YOUTUBE_SEARCH:", copy that line exactly, on its own line, at the end of your reply.
 
@@ -1740,6 +1755,28 @@ class AppRepository(
                                     "Workout \"${plan.title}\" generated (could not be saved, please try again from the Fitness screen). $summary"
                                 }
                             } ?: "Could not generate a workout right now."
+                        }
+                        "create_workout_program" -> {
+                            val dayCount = fnArgs.optInt("days", 4).coerceIn(2, 7)
+                            val focus = fnArgs.optString("focus", "")
+                            val result = generateWorkoutProgram(profile, dayCount, focus)
+                            val generated = result.getOrNull()
+                            if (generated != null) {
+                                val (programTitle, programDays) = generated
+                                val program = com.example.data.local.WorkoutProgram(
+                                    title = programTitle,
+                                    daysJson = com.example.data.model.ProgramDaysJson.toJson(programDays),
+                                    source = "ai"
+                                )
+                                val synced = saveWorkoutProgram(program)
+                                val outline = programDays.mapIndexed { index, day ->
+                                    "Day ${index + 1}: " + (if (day.isRestDay || day.plan == null) "Rest" else day.label.ifBlank { day.plan.title })
+                                }.joinToString("; ")
+                                val syncNote = if (synced) "" else " (saved on this phone; cloud sync failed)"
+                                "Program \"$programTitle\" with ${programDays.size} days was created and saved to the Programs tab (Exercise > Programs)$syncNote. $outline"
+                            } else {
+                                "Could not create the program: " + (result.exceptionOrNull()?.message ?: "please try again.")
+                            }
                         }
                         "generate_recipe" -> {
                             val query = fnArgs.optString("query", "a healthy recipe")
