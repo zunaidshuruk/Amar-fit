@@ -10,7 +10,15 @@ import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Pool
+import androidx.compose.material.icons.filled.Rowing
 import androidx.compose.material.icons.filled.SelfImprovement
+import androidx.compose.material.icons.filled.SportsBasketball
+import androidx.compose.material.icons.filled.SportsCricket
+import androidx.compose.material.icons.filled.SportsGolf
+import androidx.compose.material.icons.filled.SportsMartialArts
+import androidx.compose.material.icons.filled.SportsSoccer
+import androidx.compose.material.icons.filled.SportsTennis
+import androidx.compose.material.icons.filled.SportsVolleyball
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -481,6 +489,15 @@ private fun exerciseTypeIcon(typeLabel: String): ImageVector {
         "Cycling" -> Icons.AutoMirrored.Filled.DirectionsBike
         "Swimming" -> Icons.Default.Pool
         "Yoga", "Pilates", "Stretching" -> Icons.Default.SelfImprovement
+        "Football" -> Icons.Default.SportsSoccer
+        "Cricket" -> Icons.Default.SportsCricket
+        "Basketball" -> Icons.Default.SportsBasketball
+        "Tennis", "Table Tennis", "Badminton", "Squash" -> Icons.Default.SportsTennis
+        "Volleyball", "Handball" -> Icons.Default.SportsVolleyball
+        "Boxing", "Martial Arts" -> Icons.Default.SportsMartialArts
+        "Golf" -> Icons.Default.SportsGolf
+        "Rowing", "Paddling" -> Icons.Default.Rowing
+        "Weightlifting", "Strength Training", "Calisthenics" -> Icons.Default.FitnessCenter
         else -> Icons.Default.FitnessCenter
     }
 }

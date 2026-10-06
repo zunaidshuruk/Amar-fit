@@ -173,6 +173,18 @@ object HealthConnectManager {
             ExerciseSessionRecord.EXERCISE_TYPE_MARTIAL_ARTS -> "Martial Arts"
             ExerciseSessionRecord.EXERCISE_TYPE_BOXING -> "Boxing"
             ExerciseSessionRecord.EXERCISE_TYPE_GOLF -> "Golf"
+            ExerciseSessionRecord.EXERCISE_TYPE_SOCCER -> "Football"
+            ExerciseSessionRecord.EXERCISE_TYPE_VOLLEYBALL -> "Volleyball"
+            ExerciseSessionRecord.EXERCISE_TYPE_HANDBALL -> "Handball"
+            ExerciseSessionRecord.EXERCISE_TYPE_SQUASH -> "Squash"
+            ExerciseSessionRecord.EXERCISE_TYPE_RUGBY -> "Rugby"
+            ExerciseSessionRecord.EXERCISE_TYPE_WEIGHTLIFTING -> "Weightlifting"
+            ExerciseSessionRecord.EXERCISE_TYPE_GYMNASTICS -> "Gymnastics"
+            ExerciseSessionRecord.EXERCISE_TYPE_ROCK_CLIMBING -> "Climbing"
+            ExerciseSessionRecord.EXERCISE_TYPE_EXERCISE_CLASS -> "Fitness Class"
+            ExerciseSessionRecord.EXERCISE_TYPE_PADDLING -> "Paddling"
+            ExerciseSessionRecord.EXERCISE_TYPE_SURFING -> "Surfing"
+            ExerciseSessionRecord.EXERCISE_TYPE_SKATING -> "Skating"
             else -> "Workout"
         }
     }
