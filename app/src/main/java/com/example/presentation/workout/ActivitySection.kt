@@ -26,10 +26,13 @@ import com.example.LocalNavController
 import com.example.data.health.HealthConnectManager
 import com.example.data.local.HealthExerciseSession
 import com.example.presentation.viewmodel.ShasthoViewModel
+import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +40,8 @@ fun ActivitySection(viewModel: ShasthoViewModel) {
     var daysShown by remember { mutableStateOf(7) }
     var refreshOk by remember { mutableStateOf<Boolean?>(null) }
     val isRefreshing by viewModel.isRefreshingExerciseSessions.collectAsState()
+    val isBackfilling by viewModel.isBackfillingExerciseHistory.collectAsState()
+    val appWorkouts by viewModel.workoutHistory.collectAsState()
     var historyGranted by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val navController = LocalNavController.current
@@ -47,6 +52,10 @@ fun ActivitySection(viewModel: ShasthoViewModel) {
 
     LaunchedEffect(Unit) {
         historyGranted = HealthConnectManager.hasHistoryPermission(context)
+    }
+
+    LaunchedEffect(historyGranted) {
+        if (historyGranted) viewModel.startExerciseHistoryBackfill(context)
     }
 
     val zone = remember { ZoneId.systemDefault() }
@@ -68,7 +77,7 @@ fun ActivitySection(viewModel: ShasthoViewModel) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        if (isRefreshing) {
+        if (isRefreshing || isBackfilling) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
 
@@ -83,6 +92,14 @@ fun ActivitySection(viewModel: ShasthoViewModel) {
                     label = { Text(label) }
                 )
             }
+        }
+
+        if (isBackfilling) {
+            Text(
+                text = "Importing your older workouts from Health Connect… they will appear as they load.",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
         if (refreshOk == false && !isRefreshing) {
@@ -105,6 +122,39 @@ fun ActivitySection(viewModel: ShasthoViewModel) {
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Text("Open Settings")
+                    }
+                }
+            }
+
+            if (sessions.isEmpty() && appWorkouts.isNotEmpty()) {
+                Text(
+                    text = "Workouts you completed in KardIQ",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+                appWorkouts.take(20).forEach { event ->
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = event.description,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = SimpleDateFormat("EEE, d MMM, h:mm a", Locale.getDefault()).format(Date(event.timestamp)),
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }

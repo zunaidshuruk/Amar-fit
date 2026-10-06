@@ -1504,6 +1504,98 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     fun observeExerciseSessions(fromMillis: Long, toMillis: Long): kotlinx.coroutines.flow.Flow<List<com.example.data.local.HealthExerciseSession>> = repository.observeHealthExerciseSessions(fromMillis, toMillis)
 
+    private suspend fun readExerciseSessionsWindow(
+        client: HealthConnectClient,
+        context: Context,
+        granted: Set<String>,
+        start: Instant,
+        end: Instant
+    ): List<HealthExerciseSession> {
+        val metricsToQuery = mutableSetOf<androidx.health.connect.client.aggregate.AggregateMetric<*>>()
+        if (HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class) in granted) {
+            metricsToQuery.add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+        }
+        if (HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class) in granted) {
+            metricsToQuery.add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
+        }
+        if (HealthPermission.getReadPermission(DistanceRecord::class) in granted) {
+            metricsToQuery.add(DistanceRecord.DISTANCE_TOTAL)
+        }
+
+        val allRecords = mutableListOf<ExerciseSessionRecord>()
+        var pageToken: String? = null
+        do {
+            val request = ReadRecordsRequest(
+                recordType = ExerciseSessionRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(start, end),
+                pageToken = pageToken,
+                pageSize = 500
+            )
+            val response = client.readRecords(request)
+            allRecords.addAll(response.records)
+            pageToken = response.pageToken
+        } while (pageToken != null)
+
+        val sessions = mutableListOf<HealthExerciseSession>()
+        val pm = context.packageManager
+        for (record in allRecords) {
+            val recordId = record.metadata.id
+            if (recordId.isBlank()) continue
+
+            val pkg = record.metadata.dataOrigin.packageName
+            val sourceLabel = try {
+                pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+            } catch (e: Exception) {
+                pkg
+            }
+            val isOwnApp = (pkg == context.packageName)
+            val typeLabel = HealthConnectManager.exerciseTypeLabel(record.exerciseType)
+            val title = record.title.orEmpty()
+            val startTime = record.startTime.toEpochMilli()
+            val endTime = record.endTime.toEpochMilli()
+            val durationMinutes = java.time.Duration.between(record.startTime, record.endTime).toMinutes().toInt()
+
+            var activeCalories = 0
+            var totalCalories = 0
+            var distanceMeters = 0f
+
+            if (metricsToQuery.isNotEmpty()) {
+                try {
+                    val agg = client.aggregate(
+                        AggregateRequest(
+                            metrics = metricsToQuery,
+                            timeRangeFilter = TimeRangeFilter.between(record.startTime, record.endTime)
+                        )
+                    )
+                    activeCalories = agg[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories?.toInt() ?: 0
+                    totalCalories = agg[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories?.toInt() ?: 0
+                    distanceMeters = agg[DistanceRecord.DISTANCE_TOTAL]?.inMeters?.toFloat() ?: 0f
+                } catch (e: Exception) {
+                    // ignore and leave at 0
+                }
+            }
+
+            sessions.add(
+                HealthExerciseSession(
+                    recordId = recordId,
+                    exerciseType = record.exerciseType,
+                    typeLabel = typeLabel,
+                    title = title,
+                    startTime = startTime,
+                    endTime = endTime,
+                    durationMinutes = durationMinutes,
+                    activeCalories = activeCalories,
+                    totalCalories = totalCalories,
+                    distanceMeters = distanceMeters,
+                    sourcePackage = pkg,
+                    sourceLabel = sourceLabel,
+                    isOwnApp = isOwnApp
+                )
+            )
+        }
+        return sessions
+    }
+
     suspend fun refreshExerciseSessions(context: Context, daysBack: Int): Boolean {
         if (HealthConnectClient.getSdkStatus(context) != HealthConnectClient.SDK_AVAILABLE) {
             return false
@@ -1527,88 +1619,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val startInstant = java.time.LocalDate.now().minusDays(effectiveDaysBack.toLong()).atStartOfDay(zoneId).toInstant()
             val endInstant = Instant.now()
 
-            val metricsToQuery = mutableSetOf<androidx.health.connect.client.aggregate.AggregateMetric<*>>()
-            if (HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class) in grantedPermissions) {
-                metricsToQuery.add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
-            }
-            if (HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class) in grantedPermissions) {
-                metricsToQuery.add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
-            }
-            if (HealthPermission.getReadPermission(DistanceRecord::class) in grantedPermissions) {
-                metricsToQuery.add(DistanceRecord.DISTANCE_TOTAL)
-            }
-
-            val allRecords = mutableListOf<ExerciseSessionRecord>()
-            var pageToken: String? = null
-            do {
-                val request = ReadRecordsRequest(
-                    recordType = ExerciseSessionRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(startInstant, endInstant),
-                    pageToken = pageToken,
-                    pageSize = 500
-                )
-                val response = healthConnectClient.readRecords(request)
-                allRecords.addAll(response.records)
-                pageToken = response.pageToken
-            } while (pageToken != null)
-
-            val sessions = mutableListOf<HealthExerciseSession>()
-            val pm = context.packageManager
-            for (record in allRecords) {
-                val recordId = record.metadata.id
-                if (recordId.isBlank()) continue
-
-                val pkg = record.metadata.dataOrigin.packageName
-                val sourceLabel = try {
-                    pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
-                } catch (e: Exception) {
-                    pkg
-                }
-                val isOwnApp = (pkg == context.packageName)
-                val typeLabel = HealthConnectManager.exerciseTypeLabel(record.exerciseType)
-                val title = record.title.orEmpty()
-                val startTime = record.startTime.toEpochMilli()
-                val endTime = record.endTime.toEpochMilli()
-                val durationMinutes = java.time.Duration.between(record.startTime, record.endTime).toMinutes().toInt()
-
-                var activeCalories = 0
-                var totalCalories = 0
-                var distanceMeters = 0f
-
-                if (metricsToQuery.isNotEmpty()) {
-                    try {
-                        val agg = healthConnectClient.aggregate(
-                            AggregateRequest(
-                                metrics = metricsToQuery,
-                                timeRangeFilter = TimeRangeFilter.between(record.startTime, record.endTime)
-                            )
-                        )
-                        activeCalories = agg[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories?.toInt() ?: 0
-                        totalCalories = agg[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories?.toInt() ?: 0
-                        distanceMeters = agg[DistanceRecord.DISTANCE_TOTAL]?.inMeters?.toFloat() ?: 0f
-                    } catch (e: Exception) {
-                        // ignore and leave at 0
-                    }
-                }
-
-                sessions.add(
-                    HealthExerciseSession(
-                        recordId = recordId,
-                        exerciseType = record.exerciseType,
-                        typeLabel = typeLabel,
-                        title = title,
-                        startTime = startTime,
-                        endTime = endTime,
-                        durationMinutes = durationMinutes,
-                        activeCalories = activeCalories,
-                        totalCalories = totalCalories,
-                        distanceMeters = distanceMeters,
-                        sourcePackage = pkg,
-                        sourceLabel = sourceLabel,
-                        isOwnApp = isOwnApp
-                    )
-                )
-            }
+            val sessions = readExerciseSessionsWindow(healthConnectClient, context, grantedPermissions, startInstant, endInstant)
 
             val startOfYesterdayMillis = java.time.LocalDate.now().minusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
             val nowMillis = System.currentTimeMillis()
@@ -1619,6 +1630,49 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             false
         } finally {
             _isRefreshingExerciseSessions.value = false
+        }
+    }
+
+    private val _isBackfillingExerciseHistory = MutableStateFlow(false)
+    val isBackfillingExerciseHistory: StateFlow<Boolean> = _isBackfillingExerciseHistory.asStateFlow()
+
+    fun startExerciseHistoryBackfill(context: Context) {
+        if (_isBackfillingExerciseHistory.value) return
+        val prefs = getApplication<Application>().getSharedPreferences("ShasthoPrefs", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("exercise_history_backfilled", false)) return
+        _isBackfillingExerciseHistory.value = true
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                if (HealthConnectClient.getSdkStatus(context) != HealthConnectClient.SDK_AVAILABLE) return@launch
+                if (!HealthConnectManager.hasHistoryPermission(context)) return@launch
+                val client = HealthConnectClient.getOrCreate(context)
+                val granted = client.permissionController.getGrantedPermissions()
+                if (HealthPermission.getReadPermission(ExerciseSessionRecord::class) !in granted) return@launch
+                val zone = ZoneId.systemDefault()
+                val today = java.time.LocalDate.now()
+                val windowDays = 90L
+                val maxDays = 1825L
+                var offsetDays = 30L   // the last 30 days are covered by the normal refresh
+                var emptyInARow = 0
+                var completed = true
+                while (offsetDays < maxDays && emptyInARow < 4) {
+                    val start = today.minusDays(offsetDays + windowDays).atStartOfDay(zone).toInstant()
+                    val end = today.minusDays(offsetDays).atStartOfDay(zone).toInstant()
+                    val chunk = try {
+                        readExerciseSessionsWindow(client, context, granted, start, end)
+                    } catch (e: Exception) {
+                        completed = false
+                        break
+                    }
+                    if (chunk.isEmpty()) emptyInARow++ else { emptyInARow = 0; repository.upsertHealthExerciseSessions(chunk) }
+                    offsetDays += windowDays
+                }
+                if (completed) prefs.edit().putBoolean("exercise_history_backfilled", true).apply()
+            } catch (e: Exception) {
+                // leave the flag unset so it retries next time
+            } finally {
+                _isBackfillingExerciseHistory.value = false
+            }
         }
     }
 
