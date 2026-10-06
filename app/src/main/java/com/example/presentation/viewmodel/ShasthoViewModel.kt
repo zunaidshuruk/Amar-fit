@@ -2373,11 +2373,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             }
         }
     }
-    fun completeProgramDay(cloudId: String) {
+    fun completeProgramDay(cloudId: String, dayIndex: Int? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             val program = repository.getWorkoutProgramsOnce().firstOrNull { it.cloudId == cloudId } ?: return@launch
             val days = com.example.data.model.ProgramDaysJson.parse(program.daysJson)
             if (days.isEmpty()) return@launch
+            if (dayIndex != null && dayIndex != program.nextDayIndex) return@launch
             repository.saveWorkoutProgram(program.copy(nextDayIndex = (program.nextDayIndex + 1) % days.size, completedDays = program.completedDays + 1, lastCompletedAt = System.currentTimeMillis()))
         }
     }

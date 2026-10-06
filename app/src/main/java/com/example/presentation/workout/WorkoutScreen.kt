@@ -63,6 +63,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
     var showPlanEditor by remember { mutableStateOf(false) }
     var workoutTitle by remember { mutableStateOf("") }
     var activeSessionPlan by remember { mutableStateOf<WorkoutPlan?>(null) }
+    var activeProgramRef by remember { mutableStateOf<Pair<String, Int>?>(null) }
 
     val bodyTextColor = if (isDark) {
         android.graphics.Color.parseColor("#E2E8F0")
@@ -88,7 +89,15 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
             plan = activeSessionPlan!!,
             userProfile = profile,
             viewModel = viewModel,
-            onExit = { activeSessionPlan = null }
+            onExit = {
+                activeSessionPlan = null
+                activeProgramRef = null
+            },
+            onWorkoutSaved = {
+                activeProgramRef?.let { (programId, dayIndex) ->
+                    viewModel.completeProgramDay(programId, dayIndex)
+                }
+            }
         )
         return
     }
@@ -127,7 +136,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                 modifier = Modifier.padding(top = 16.dp, bottom = 16.dp)
             )
 
-            // Section Switch: Activity vs Workouts
+            // Section Switch: Activity vs Workouts vs Programs
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
                 Button(
                     onClick = { section = 0 },
@@ -135,7 +144,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                         containerColor = if (section == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                         contentColor = if (section == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                     ),
-                    modifier = Modifier.weight(1f).padding(end = 4.dp),
+                    modifier = Modifier.weight(1f).padding(end = 2.dp),
                     shape = RoundedCornerShape(16.dp),
                     contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
@@ -147,16 +156,36 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                         containerColor = if (section == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                         contentColor = if (section == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                     ),
-                    modifier = Modifier.weight(1f).padding(start = 4.dp),
+                    modifier = Modifier.weight(1f).padding(horizontal = 2.dp),
                     shape = RoundedCornerShape(16.dp),
                     contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
                     Text("Workouts", maxLines = 1)
                 }
+                Button(
+                    onClick = { section = 2 },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (section == 2) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (section == 2) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    modifier = Modifier.weight(1f).padding(start = 2.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
+                    Text("Programs", maxLines = 1)
+                }
             }
 
             if (section == 0) {
                 ActivitySection(viewModel = viewModel)
+            } else if (section == 2) {
+                ProgramsSection(
+                    viewModel = viewModel,
+                    onStartDay = { programId, dayIndex, plan ->
+                        activeProgramRef = programId to dayIndex
+                        activeSessionPlan = plan
+                    }
+                )
             } else {
                 // Tabs
                 Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {

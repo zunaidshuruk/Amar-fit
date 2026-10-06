@@ -62,7 +62,8 @@ fun WorkoutSessionScreen(
     plan: WorkoutPlan,
     userProfile: UserProfile?,
     viewModel: ShasthoViewModel,
-    onExit: () -> Unit
+    onExit: () -> Unit,
+    onWorkoutSaved: () -> Unit = {}
 ) {
     val isDark = true
     val context = LocalContext.current
@@ -321,6 +322,7 @@ fun WorkoutSessionScreen(
                 caloriesBurned = computeCalories(),
                 workoutType = plan.workoutType
             )
+            onWorkoutSaved()
         }
     }
 
