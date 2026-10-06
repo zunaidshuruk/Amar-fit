@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Pool
 import androidx.compose.material.icons.filled.Rowing
@@ -51,6 +52,8 @@ fun ActivitySection(viewModel: ShasthoViewModel) {
     val isBackfilling by viewModel.isBackfillingExerciseHistory.collectAsState()
     val appWorkouts by viewModel.workoutHistory.collectAsState()
     var historyGranted by remember { mutableStateOf(false) }
+    var showLogDialog by remember { mutableStateOf(false) }
+    val profile by viewModel.userProfile.collectAsState()
     val context = LocalContext.current
     val navController = LocalNavController.current
 
@@ -100,6 +103,18 @@ fun ActivitySection(viewModel: ShasthoViewModel) {
                     label = { Text(label) }
                 )
             }
+        }
+
+        Button(
+            onClick = { showLogDialog = true },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Icon(Icons.Default.Add, null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Add exercise", fontSize = 15.sp, fontWeight = FontWeight.Bold)
         }
 
         if (isBackfilling) {
@@ -479,6 +494,19 @@ fun ActivitySection(viewModel: ShasthoViewModel) {
         }
 
         Spacer(modifier = Modifier.height(100.dp))
+    }
+
+    if (showLogDialog) {
+        LogExerciseDialog(
+            loadLibrary = { viewModel.getExerciseLibrary(context) },
+            weightKg = profile?.weightKg ?: 0f,
+            onSave = { name, category, sets, reps, seconds, start, kcal ->
+                val ok = viewModel.logManualExercise(name, category, sets, reps, seconds, start, kcal)
+                if (ok) viewModel.refreshExerciseSessions(context, daysShown)
+                ok
+            },
+            onDismiss = { showLogDialog = false }
+        )
     }
 }
 

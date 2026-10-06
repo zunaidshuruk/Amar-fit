@@ -2343,6 +2343,36 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                             fiberG = 0f
                         )
                     }
+                    is AppRepository.AssistantResult.PendingFoodLogs -> {
+                        val confirmationText = "I've prepared food log entries for you to review below."
+                        _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(
+                            confirmationText, false
+                        )
+                        repository.saveAssistantChatMessage(currentSessionId, confirmationText, false)
+                        repository.saveAssistantSession(
+                            sessionToSave.copy(
+                                preview = "Logged: ${result.entries.firstOrNull()?.name ?: "Foods"}",
+                                messageCount = sessionToSave.messageCount + 1,
+                                updatedAt = System.currentTimeMillis()
+                            )
+                        )
+                        val first = result.entries.firstOrNull()
+                        if (first != null) {
+                            _pendingFoodLogEntry.value = PendingFoodLogEntry(
+                                name = first.name,
+                                category = first.category,
+                                calories = first.calories,
+                                description = first.description,
+                                mealType = first.mealType,
+                                carbsG = first.carbsG,
+                                proteinG = first.proteinG,
+                                fatG = first.fatG,
+                                sodiumMg = 0f,
+                                sugarG = 0f,
+                                fiberG = 0f
+                            )
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 android.util.Log.e("UniversalAssistant", "sendUniversalAssistantMessage failed", e)

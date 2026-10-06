@@ -1415,6 +1415,20 @@ class AppRepository(
             val fatG: Float,
             val precedingMessage: String
         ) : AssistantResult()
+        data class PendingFoodItem(
+            val name: String,
+            val category: String,
+            val calories: Int,
+            val description: String,
+            val mealType: String,
+            val carbsG: Float,
+            val proteinG: Float,
+            val fatG: Float
+        )
+        data class PendingFoodLogs(
+            val entries: List<PendingFoodItem>,
+            val precedingMessage: String
+        ) : AssistantResult()
     }
 
     private fun buildAssistantToolsJson(): org.json.JSONArray {
@@ -1498,21 +1512,31 @@ class AppRepository(
         })
 
         declarations.put(org.json.JSONObject().apply {
-            put("name", "log_food")
-            put("description", "Logs a food entry the user says they ate. Call this once you have a clear idea of what they ate and a reasonable calorie/macro estimate -- this will show the user a confirmation card before actually saving anything, so it's fine to call this as soon as you have enough detail.")
+            put("name", "log_foods")
+            put("description", "Logs one or more foods the user says they ate. Put EVERY food or dish from the message in ONE call, one entry each, including all meals mentioned. Shows the user a confirmation card listing every item.")
             put("parameters", org.json.JSONObject().apply {
                 put("type", "OBJECT")
                 put("properties", org.json.JSONObject().apply {
-                    put("name", schema("STRING", "Name of the food/meal"))
-                    put("category", schema("STRING", "Food category"))
-                    put("calories", schema("INTEGER", "Estimated total calories"))
-                    put("carbs", schema("NUMBER", "Estimated carbohydrates in grams"))
-                    put("protein", schema("NUMBER", "Estimated protein in grams"))
-                    put("fat", schema("NUMBER", "Estimated fat in grams"))
-                    put("mealType", schema("STRING", "Meal type", listOf("Breakfast", "Lunch", "Dinner", "Snack")))
-                    put("description", schema("STRING", "Brief description of what was eaten"))
+                    put("entries", org.json.JSONObject().apply {
+                        put("type", "ARRAY")
+                        put("description", "One object per distinct food or dish")
+                        put("items", org.json.JSONObject().apply {
+                            put("type", "OBJECT")
+                            put("properties", org.json.JSONObject().apply {
+                                put("name", schema("STRING", "Name of the food/dish, include the quantity e.g. \"2 boiled eggs\""))
+                                put("category", schema("STRING", "Food category"))
+                                put("calories", schema("INTEGER", "Estimated total calories for exactly that quantity"))
+                                put("carbs", schema("NUMBER", "Estimated carbohydrates in grams"))
+                                put("protein", schema("NUMBER", "Estimated protein in grams"))
+                                put("fat", schema("NUMBER", "Estimated fat in grams"))
+                                put("mealType", schema("STRING", "Meal type", listOf("Breakfast", "Lunch", "Dinner", "Snack")))
+                                put("description", schema("STRING", "Brief description of what was eaten"))
+                            })
+                            put("required", org.json.JSONArray(listOf("name", "calories", "mealType")))
+                        })
+                    })
                 })
-                put("required", org.json.JSONArray(listOf("name", "calories", "mealType")))
+                put("required", org.json.JSONArray(listOf("entries")))
             })
         })
 
@@ -1593,7 +1617,7 @@ class AppRepository(
 
             Only call read_health_data when the user's real numbers would genuinely change your answer (e.g. they ask about their own trends, or want a suggestion grounded in their actual data). For simple greetings, general questions, or requests that don't need personal data, just respond directly without calling any tool -- this keeps replies fast.
 
-            When the user describes food they ate, use log_food once you have a reasonable estimate -- it shows them a confirmation card, so you don't need to over-clarify first.
+            When the user describes food they ate, call log_foods ONCE with one entry per distinct food or dish (even for a single food). If the message lists several meals or items (breakfast, lunch, snacks, dinner, drinks, sweets), include ALL of them in the same call and never drop any; give every entry its own mealType from the context, a clear name that includes the quantity (for example "2 boiled eggs", "3 parata"), and your best calorie and macro estimate for exactly that quantity using typical Bangladeshi portion sizes. Ask a question only if you cannot tell what a food is at all; otherwise estimate. It shows the user a confirmation card listing everything, so you don't need to over-clarify first.
 
             When the user asks for a multi-day program, weekly plan or training split, call create_workout_program. If they did not say how many days, ask once (or use 4), and put everything they told you (goal, equipment, level, limits, session length) into the focus argument. After it returns, tell them the program is saved in the Programs tab and summarise the days briefly. Use generate_workout only for a single session.
 
@@ -1695,6 +1719,21 @@ class AppRepository(
                         fatG = fnArgs.optDouble("fat", 0.0).toFloat(),
                         precedingMessage = precedingText
                     )
+                }
+
+                if (fnName == "log_foods") {
+                    val array = fnArgs.optJSONArray("entries")
+                    val items = mutableListOf<AssistantResult.PendingFoodItem>()
+                    if (array != null) for (i in 0 until minOf(array.length(), 30)) {
+                        val o = array.optJSONObject(i) ?: continue
+                        val itemName = o.optString("name", "").trim()
+                        if (itemName.isBlank()) continue
+                        items.add(AssistantResult.PendingFoodItem(itemName, o.optString("category", "Meal"), o.optInt("calories", 0), o.optString("description", ""), o.optString("mealType", "Snack"), o.optDouble("carbs", 0.0).toFloat(), o.optDouble("protein", 0.0).toFloat(), o.optDouble("fat", 0.0).toFloat()))
+                    }
+                    if (items.isNotEmpty()) {
+                        val precedingText = chatHistory.lastOrNull { !it.isUser }?.text ?: ""
+                        return@withContext AssistantResult.PendingFoodLogs(items, precedingText)
+                    }
                 }
 
                 val functionResultText: String = try {
