@@ -2215,6 +2215,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         _structuredWorkoutError.value = null
     }
 
+    fun updateStructuredWorkoutPlan(plan: com.example.data.model.WorkoutPlan) {
+        _structuredWorkoutPlan.value = plan
+        _rawStructuredWorkoutJson.value = com.example.data.remote.RetrofitClient.moshi
+            .adapter(com.example.data.model.WorkoutPlan::class.java).toJson(plan)
+    }
+
     suspend fun resolveYoutubeVideoId(searchQuery: String): String? {
         return repository.resolveYoutubeVideoId(searchQuery)
     }

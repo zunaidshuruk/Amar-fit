@@ -58,6 +58,7 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
     var selectedTab by remember { mutableStateOf(0) } // 0 = AI Workouts, 1 = Saved, 2 = History
     var selectedSavedWorkout by remember { mutableStateOf<SavedWorkout?>(null) }
     var showSaveDialog by remember { mutableStateOf(false) }
+    var showPlanEditor by remember { mutableStateOf(false) }
     var workoutTitle by remember { mutableStateOf("") }
     var activeSessionPlan by remember { mutableStateOf<WorkoutPlan?>(null) }
 
@@ -337,6 +338,27 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                         }
                     }
                     
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = { showPlanEditor = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Customize exercises",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    
                     Spacer(modifier = Modifier.height(24.dp))
                 }
                 
@@ -445,6 +467,19 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
         
         Spacer(modifier = Modifier.height(100.dp))
     }
+    }
+
+    if (showPlanEditor) {
+        structuredPlan?.let { plan ->
+            WorkoutPlanEditor(
+                initialPlan = plan,
+                onSave = { newPlan ->
+                    viewModel.updateStructuredWorkoutPlan(newPlan)
+                    showPlanEditor = false
+                },
+                onDismiss = { showPlanEditor = false }
+            )
+        }
     }
 
     if (showSaveDialog && (structuredPlan != null || !workoutTitle.isEmpty())) {

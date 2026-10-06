@@ -51,6 +51,7 @@ fun ExerciseLibraryScreen(
     var selectedExerciseIds by remember { mutableStateOf(setOf<String>()) }
     var viewingExercise by remember { mutableStateOf<LibraryExercise?>(null) }
     var showWorkoutTitleDialog by remember { mutableStateOf(false) }
+    var pendingPlan by remember { mutableStateOf<WorkoutPlan?>(null) }
     var workoutTitleInput by remember { mutableStateOf("Custom Workout") }
 
     LaunchedEffect(Unit) {
@@ -533,17 +534,11 @@ fun ExerciseLibraryScreen(
                             mainExercises = mainExercises,
                             cooldown = emptyList()
                         )
-                        val adapter = RetrofitClient.moshi.adapter(WorkoutPlan::class.java)
-                        val json = adapter.toJson(plan)
-                        viewModel.saveWorkout(title = title, content = "", structuredJson = json)
-
-                        selectedExerciseIds = emptySet()
+                        pendingPlan = plan
                         showWorkoutTitleDialog = false
-                        Toast.makeText(context, "Workout saved to Saved Workouts!", Toast.LENGTH_SHORT).show()
-                        onNavigateBack()
                     }
                 ) {
-                    Text("Save")
+                    Text("Customize")
                 }
             },
             dismissButton = {
@@ -551,6 +546,21 @@ fun ExerciseLibraryScreen(
                     Text("Cancel")
                 }
             }
+        )
+    }
+
+    pendingPlan?.let { plan ->
+        WorkoutPlanEditor(
+            initialPlan = plan,
+            onSave = { newPlan ->
+                val json = RetrofitClient.moshi.adapter(WorkoutPlan::class.java).toJson(newPlan)
+                viewModel.saveWorkout(title = newPlan.title, content = "", structuredJson = json)
+                selectedExerciseIds = emptySet()
+                pendingPlan = null
+                Toast.makeText(context, "Workout saved to Saved Workouts!", Toast.LENGTH_SHORT).show()
+                onNavigateBack()
+            },
+            onDismiss = { pendingPlan = null }
         )
     }
 }
