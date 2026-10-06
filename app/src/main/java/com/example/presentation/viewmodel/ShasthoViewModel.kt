@@ -53,6 +53,7 @@ import androidx.health.connect.client.units.Pressure
 import androidx.health.connect.client.units.Volume
 
 import androidx.health.connect.client.time.TimeRangeFilter
+import com.example.util.ExerciseCalorieEstimator
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -805,6 +806,99 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 e.printStackTrace()
             }
         }
+    }
+
+    suspend fun logManualExercise(
+        name: String,
+        category: String?,
+        sets: Int?,
+        reps: Int?,
+        durationSeconds: Int,
+        startTime: Instant,
+        caloriesOverride: Int? = null
+    ): Boolean = withContext(Dispatchers.IO) {
+        val cleanName = name.trim().take(60)
+        if (cleanName.isBlank()) return@withContext false
+        val duration = durationSeconds.coerceIn(60, 6 * 3600)
+        val end = minOf(startTime.plusSeconds(duration.toLong()), Instant.now())
+        val start = end.minusSeconds(duration.toLong())
+
+        val key = "manual_${cleanName}_${start.toEpochMilli()}"
+        if (savedWorkoutSessionKeys.contains(key)) return@withContext false
+        savedWorkoutSessionKeys.add(key)
+
+        val title = if (sets != null && reps != null && sets > 0 && reps > 0) "$cleanName ($sets × $reps)" else cleanName
+        val kcal = caloriesOverride?.coerceIn(0, 5000) ?: ExerciseCalorieEstimator.estimateKcal(category, userProfile.value?.weightKg ?: 0f, duration)
+        val minutes = (duration / 60).coerceAtLeast(1)
+
+        val dateString = start.atZone(ZoneId.systemDefault()).toLocalDate().toString()
+        val current = (if (dateString == todayDateString) todayMetrics.value else null)
+            ?: repository.getMetricsForDate(dateString).firstOrNull()
+            ?: DailyMetric(date = dateString)
+        val updated = current.copy(
+            exerciseMinutes = (current.exerciseMinutes + minutes).coerceAtLeast(0),
+            activeCaloriesBurned = (current.activeCaloriesBurned + kcal).coerceAtLeast(0)
+        )
+        repository.saveMetrics(updated)
+        repository.checkAndAwardBadges(updated)
+        repository.logActivityEvent("workout", "Logged exercise '$title' (${minutes}m, ~$kcal kcal)")
+
+        val hcExerciseType = resolveHealthConnectExerciseType(ExerciseCalorieEstimator.workoutTypeKeyFor(category), cleanName)
+        var hcRecordId: String? = null
+        try {
+            val healthConnectClient = HealthConnectClient.getOrCreate(getApplication())
+            val startOffset = ZoneId.systemDefault().rules.getOffset(start)
+            val endOffset = ZoneId.systemDefault().rules.getOffset(end)
+            val exerciseSession = ExerciseSessionRecord(
+                startTime = start,
+                startZoneOffset = startOffset,
+                endTime = end,
+                endZoneOffset = endOffset,
+                exerciseType = hcExerciseType,
+                title = title
+            )
+            val response = healthConnectClient.insertRecords(listOf(exerciseSession))
+            hcRecordId = response.recordIdsList.firstOrNull()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        if (kcal > 0) {
+            try {
+                val client = HealthConnectClient.getOrCreate(getApplication())
+                val calStartOffset = ZoneId.systemDefault().rules.getOffset(start)
+                val calEndOffset = ZoneId.systemDefault().rules.getOffset(end)
+                client.insertRecords(listOf(
+                    ActiveCaloriesBurnedRecord(
+                        startTime = start,
+                        startZoneOffset = calStartOffset,
+                        endTime = end,
+                        endZoneOffset = calEndOffset,
+                        energy = Energy.kilocalories(kcal.toDouble())
+                    )
+                ))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        val row = HealthExerciseSession(
+            recordId = hcRecordId ?: "manual-${java.util.UUID.randomUUID()}",
+            exerciseType = hcExerciseType,
+            typeLabel = HealthConnectManager.exerciseTypeLabel(hcExerciseType),
+            title = title,
+            startTime = start.toEpochMilli(),
+            endTime = end.toEpochMilli(),
+            durationMinutes = minutes,
+            activeCalories = kcal,
+            totalCalories = 0,
+            distanceMeters = 0f,
+            sourcePackage = getApplication<Application>().packageName,
+            sourceLabel = "KardIQ",
+            isOwnApp = true
+        )
+        repository.upsertHealthExerciseSessions(listOf(row))
+        return@withContext true
     }
 
     suspend fun saveCompletedMindfulnessSession(
