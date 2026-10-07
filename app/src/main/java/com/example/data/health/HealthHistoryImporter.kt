@@ -85,29 +85,46 @@ private class DayBuilder {
 }
 
 object HealthHistoryImporter {
+    @Volatile
+    var lastReport: String = ""
+
     suspend fun readDays(
         context: Context,
         startDate: LocalDate,
         endDate: LocalDate
     ): Map<String, Day> {
         if (HealthConnectClient.getSdkStatus(context) != HealthConnectClient.SDK_AVAILABLE) {
+            lastReport = "Health Connect is not available on this phone."
             return emptyMap()
         }
 
         val client = try {
             HealthConnectClient.getOrCreate(context)
         } catch (e: Exception) {
+            lastReport = "Health Connect is not available on this phone."
             return emptyMap()
         }
 
         val granted = try {
             client.permissionController.getGrantedPermissions()
         } catch (e: Exception) {
+            lastReport = "Could not read Health Connect permissions."
             return emptyMap()
         }
 
         fun hasRead(recordClass: KClass<out Record>): Boolean {
             return HealthPermission.getReadPermission(recordClass) in granted
+        }
+
+        val errors = mutableListOf<String>()
+        val skipped = mutableListOf<String>()
+        lastReport = ""
+
+        fun recordError(metricName: String, e: Exception) {
+            e.printStackTrace()
+            if (errors.none { it.startsWith("$metricName:") }) {
+                errors.add("$metricName: ${e.javaClass.simpleName} ${e.message?.take(80) ?: ""}".trim())
+            }
         }
 
         val daysMap = mutableMapOf<String, DayBuilder>()
@@ -138,8 +155,10 @@ object HealthHistoryImporter {
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    recordError("Steps", e)
                 }
+            } else {
+                if ("Steps" !in skipped) skipped.add("Steps")
             }
 
             // 2. Distance
@@ -159,8 +178,10 @@ object HealthHistoryImporter {
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    recordError("Distance", e)
                 }
+            } else {
+                if ("Distance" !in skipped) skipped.add("Distance")
             }
 
             // 3. Active Calories
@@ -180,8 +201,10 @@ object HealthHistoryImporter {
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    recordError("Active calories", e)
                 }
+            } else {
+                if ("Active calories" !in skipped) skipped.add("Active calories")
             }
 
             // 4. Sleep Hours
@@ -201,8 +224,10 @@ object HealthHistoryImporter {
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    recordError("Sleep", e)
                 }
+            } else {
+                if ("Sleep" !in skipped) skipped.add("Sleep")
             }
 
             // 5. Exercise Minutes
@@ -222,8 +247,10 @@ object HealthHistoryImporter {
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    recordError("Exercise", e)
                 }
+            } else {
+                if ("Exercise" !in skipped) skipped.add("Exercise")
             }
 
             // 6. Heart Rate
@@ -248,8 +275,10 @@ object HealthHistoryImporter {
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    recordError("Heart rate", e)
                 }
+            } else {
+                if ("Heart rate" !in skipped) skipped.add("Heart rate")
             }
 
             // 7. Resting Heart Rate
@@ -269,8 +298,10 @@ object HealthHistoryImporter {
                         }
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    recordError("Resting heart rate", e)
                 }
+            } else {
+                if ("Resting heart rate" !in skipped) skipped.add("Resting heart rate")
             }
 
             // 8. Mindfulness Minutes
