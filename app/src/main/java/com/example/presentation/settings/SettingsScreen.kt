@@ -669,6 +669,65 @@ fun SettingsScreen(
                         }
                     }
                 }
+                if (isHealthConnectAvailable) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp)
+                    ) {
+                        Text(
+                            "Import past health data",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            "Fill your history from Health Connect (steps, sleep, heart rate and more). Entries you typed in are never overwritten.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        val isImporting by viewModel.isImportingHealthHistory.collectAsState()
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        val r = viewModel.importHealthHistory(context, 30)
+                                        val msg = if (r.daysRead == 0) "No Health Connect data found for that period" else "Imported ${r.daysUpdated} days from Health Connect"
+                                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                    }
+                                },
+                                enabled = !isImporting
+                            ) {
+                                Text("Last 30 days")
+                            }
+                            if (historyGranted) {
+                                OutlinedButton(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            val r = viewModel.importHealthHistory(context, 365)
+                                            val msg = if (r.daysRead == 0) "No Health Connect data found for that period" else "Imported ${r.daysUpdated} days from Health Connect"
+                                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                        }
+                                    },
+                                    enabled = !isImporting
+                                ) {
+                                    Text("Last year")
+                                }
+                            }
+                            if (isImporting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)

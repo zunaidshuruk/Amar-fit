@@ -39,6 +39,7 @@ data class UserProfile(
     val profilePictureUri: String? = null,
     val isDarkMode: Boolean = false,
     val useImperialUnits: Boolean = false,
+    val glucoseUnitMgdl: Boolean = false,
     val notificationsEnabled: Boolean = true,
     val remindersEnabled: Boolean = true,
     val selectedLanguage: String = "English",

@@ -57,8 +57,9 @@ import com.example.util.ExerciseCalorieEstimator
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
-
 import java.util.Locale
+
+data class HealthHistoryImportResult(val daysRead: Int, val daysUpdated: Int)
 
 class ShasthoViewModel(application: Application) : AndroidViewModel(application) {
     private val database = AppDatabase.getDatabase(application)
@@ -1204,6 +1205,64 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("glucose", "Logged blood glucose (after dinner): ${value} mmol/L")
             writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_DINNER, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource, date)
+        }
+    }
+
+    private val _isImportingHealthHistory = MutableStateFlow(false)
+    val isImportingHealthHistory: StateFlow<Boolean> = _isImportingHealthHistory.asStateFlow()
+
+    suspend fun importHealthHistory(context: Context, daysBack: Int): HealthHistoryImportResult = withContext(Dispatchers.IO) {
+        if (_isImportingHealthHistory.value) {
+            return@withContext HealthHistoryImportResult(0, 0)
+        }
+        _isImportingHealthHistory.value = true
+        try {
+            val hasHistory = HealthConnectManager.hasHistoryPermission(context)
+            val maxDays = if (hasHistory) 1825 else 30
+            val effectiveDays = daysBack.coerceIn(1, maxDays)
+
+            val endDate = java.time.LocalDate.now().minusDays(1)
+            val startDate = endDate.minusDays((effectiveDays - 1).toLong().coerceAtLeast(0))
+
+            val daysMap = com.example.data.health.HealthHistoryImporter.readDays(context, startDate, endDate)
+            val daysRead = daysMap.size
+            var daysUpdated = 0
+
+            var currentDate = startDate
+            while (!currentDate.isAfter(endDate)) {
+                val dateStr = currentDate.toString()
+                val day = daysMap[dateStr]
+                if (day != null) {
+                    val current = repository.getMetricsForDate(dateStr).firstOrNull() ?: DailyMetric(date = dateStr)
+                    val updated = current.copy(
+                        steps = if (day.steps > 0) day.steps else current.steps,
+                        distanceMeters = if (day.distanceMeters > 0f) day.distanceMeters else current.distanceMeters,
+                        activeCaloriesBurned = if (day.activeCalories > 0) day.activeCalories else current.activeCaloriesBurned,
+                        sleepHours = if (day.sleepHours > 0f) day.sleepHours else current.sleepHours,
+                        exerciseMinutes = if (day.exerciseMinutes > 0) day.exerciseMinutes else current.exerciseMinutes,
+                        restingHeartRate = if (day.restingHeartRate > 0) day.restingHeartRate else current.restingHeartRate,
+                        heartRateVariability = if (day.hrv > 0f) day.hrv else current.heartRateVariability,
+                        oxygenSaturation = if (day.spo2 > 0f) day.spo2 else current.oxygenSaturation,
+                        skinTemperatureCelsius = if (day.skinTemp != 0f) day.skinTemp else current.skinTemperatureCelsius,
+                        respiratoryRate = if (day.respiratoryRate > 0f) day.respiratoryRate else current.respiratoryRate,
+                        mindfulnessMinutes = if (day.mindfulnessMinutes > 0) day.mindfulnessMinutes else current.mindfulnessMinutes,
+                        heartRateMin = if (day.heartRateMin > 0) day.heartRateMin else current.heartRateMin,
+                        heartRateMax = if (day.heartRateMax > 0) day.heartRateMax else current.heartRateMax,
+                        heartRate = if (day.heartRateAvg > 0) day.heartRateAvg else current.heartRate,
+                        bloodPressure = if (current.bloodPressure.isBlank() && day.bloodPressure.isNotBlank()) day.bloodPressure else current.bloodPressure,
+                        bloodGlucoseMorning = if (current.bloodGlucoseMorning <= 0f && day.bloodGlucose > 0f) day.bloodGlucose else current.bloodGlucoseMorning
+                    )
+                    if (updated != current) {
+                        repository.saveMetrics(updated)
+                        daysUpdated++
+                    }
+                }
+                currentDate = currentDate.plusDays(1)
+            }
+
+            HealthHistoryImportResult(daysRead, daysUpdated)
+        } finally {
+            _isImportingHealthHistory.value = false
         }
     }
     

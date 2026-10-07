@@ -35,3 +35,12 @@ fun formatWeight(kg: Float, useImperial: Boolean): String {
         "${"%.1f".format(kg)} kg"
     }
 }
+
+const val MGDL_PER_MMOL = 18.0182f
+fun mmolToMgdl(mmol: Float): Float = mmol * MGDL_PER_MMOL
+fun mgdlToMmol(mgdl: Float): Float = mgdl / MGDL_PER_MMOL
+fun glucoseForDisplay(mmol: Float, useMgdl: Boolean): Float = if (useMgdl) mmolToMgdl(mmol) else mmol
+fun glucoseFromInput(value: Float, useMgdl: Boolean): Float = if (useMgdl) mgdlToMmol(value) else value
+fun glucoseUnitLabel(useMgdl: Boolean): String = if (useMgdl) "mg/dL" else "mmol/L"
+fun formatGlucoseNumber(mmol: Float, useMgdl: Boolean): String = if (useMgdl) Math.round(mmolToMgdl(mmol)).toString() else String.format(java.util.Locale.US, "%.1f", mmol)
+fun formatGlucose(mmol: Float, useMgdl: Boolean): String = formatGlucoseNumber(mmol, useMgdl) + " " + glucoseUnitLabel(useMgdl)

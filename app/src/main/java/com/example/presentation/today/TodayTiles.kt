@@ -11,6 +11,7 @@ import com.example.data.local.UserProfile
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.AccentColors
 import com.example.ui.theme.AccentTokens
+import com.example.util.formatGlucose
 import com.example.util.formatWeight
 import java.util.Locale
 
@@ -359,7 +360,7 @@ fun resolveSmallTile(
             ResolvedSmallTile(
                 id = "blood_glucose",
                 label = "Blood Glucose",
-                value = if (glucose > 0f) "${String.format(Locale.US, "%.1f", glucose)} mg/dL" else "--",
+                value = if (glucose > 0f) formatGlucose(glucose, profile?.glucoseUnitMgdl ?: false) else "--",
                 icon = Icons.Default.Favorite,
                 accent = if (glucose > 0f) glucoseAccent else null,
                 isMuted = glucose <= 0f,
