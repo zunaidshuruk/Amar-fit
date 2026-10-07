@@ -32,8 +32,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.presentation.viewmodel.ShasthoViewModel
+import com.example.ui.components.GlucoseUnitSelector
 import com.example.ui.components.MarkdownText
+import com.example.ui.components.glucoseLooksWrongUnit
 import com.example.ui.theme.*
+import com.example.util.formatGlucoseNumber
+import com.example.util.glucoseFromInput
+import com.example.util.glucoseUnitLabel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,6 +47,7 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
     val history30 by remember(viewModel) { viewModel.getMetricsHistoryFlow(30) }.collectAsState(initial = emptyList())
     val today by viewModel.todayMetrics.collectAsState()
     val profile by viewModel.userProfile.collectAsState()
+    val useMgdl = profile?.glucoseUnitMgdl ?: false
     val isDark = true
     val glucoseAccent = AccentTokens.glucoseAccent(isDark)
     val context = LocalContext.current
@@ -59,12 +65,12 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
         }
     }
     
-    var beforeBreakfastInput by remember { mutableStateOf(today?.bloodGlucoseBeforeBreakfast?.takeIf { it > 0 }?.toString() ?: "") }
-    var afterBreakfastInput by remember { mutableStateOf(today?.bloodGlucoseAfterBreakfast?.takeIf { it > 0 }?.toString() ?: "") }
-    var beforeLunchInput by remember { mutableStateOf(today?.bloodGlucoseBeforeLunch?.takeIf { it > 0 }?.toString() ?: "") }
-    var afterLunchInput by remember { mutableStateOf(today?.bloodGlucoseAfterLunch?.takeIf { it > 0 }?.toString() ?: "") }
-    var beforeDinnerInput by remember { mutableStateOf(today?.bloodGlucoseBeforeDinner?.takeIf { it > 0 }?.toString() ?: "") }
-    var afterDinnerInput by remember { mutableStateOf(today?.bloodGlucoseAfterDinner?.takeIf { it > 0 }?.toString() ?: "") }
+    var beforeBreakfastInput by remember { mutableStateOf(today?.bloodGlucoseBeforeBreakfast?.takeIf { it > 0 }?.let { formatGlucoseNumber(it, useMgdl) } ?: "") }
+    var afterBreakfastInput by remember { mutableStateOf(today?.bloodGlucoseAfterBreakfast?.takeIf { it > 0 }?.let { formatGlucoseNumber(it, useMgdl) } ?: "") }
+    var beforeLunchInput by remember { mutableStateOf(today?.bloodGlucoseBeforeLunch?.takeIf { it > 0 }?.let { formatGlucoseNumber(it, useMgdl) } ?: "") }
+    var afterLunchInput by remember { mutableStateOf(today?.bloodGlucoseAfterLunch?.takeIf { it > 0 }?.let { formatGlucoseNumber(it, useMgdl) } ?: "") }
+    var beforeDinnerInput by remember { mutableStateOf(today?.bloodGlucoseBeforeDinner?.takeIf { it > 0 }?.let { formatGlucoseNumber(it, useMgdl) } ?: "") }
+    var afterDinnerInput by remember { mutableStateOf(today?.bloodGlucoseAfterDinner?.takeIf { it > 0 }?.let { formatGlucoseNumber(it, useMgdl) } ?: "") }
     var specimenSource by remember { mutableStateOf(today?.bloodGlucoseSpecimenSource?.takeIf { it != "Not set" } ?: "Not set") }
     var expandedSpecimenSource by remember { mutableStateOf(false) }
     val specimenSourceOptions = listOf("Not set", "Interstitial fluid", "Capillary blood", "Plasma", "Serum", "Tears", "Whole blood")
@@ -139,7 +145,25 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Today's Readings (mmol/L)", fontWeight = FontWeight.Bold, color = glucoseAccent.onBg)
+                Text("Today's Readings (${glucoseUnitLabel(useMgdl)})", fontWeight = FontWeight.Bold, color = glucoseAccent.onBg)
+                GlucoseUnitSelector(
+                    useMgdl = useMgdl,
+                    onChange = { newUnit ->
+                        fun conv(s: String) = s.toFloatOrNull()?.let { formatGlucoseNumber(glucoseFromInput(it, useMgdl), newUnit) } ?: s
+                        beforeBreakfastInput = conv(beforeBreakfastInput)
+                        afterBreakfastInput = conv(afterBreakfastInput)
+                        beforeLunchInput = conv(beforeLunchInput)
+                        afterLunchInput = conv(afterLunchInput)
+                        beforeDinnerInput = conv(beforeDinnerInput)
+                        afterDinnerInput = conv(afterDinnerInput)
+                        profile?.let { p ->
+                            coroutineScope.launch {
+                                viewModel.saveProfile(p.copy(glucoseUnitMgdl = newUnit))
+                            }
+                        }
+                    },
+                    modifier = Modifier.padding(top = 4.dp)
+                )
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text("Breakfast", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = glucoseAccent.onBg)
@@ -235,15 +259,24 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = {
-                        val bb = beforeBreakfastInput.toFloatOrNull()
-                        val ab = afterBreakfastInput.toFloatOrNull()
-                        val bl = beforeLunchInput.toFloatOrNull()
-                        val al = afterLunchInput.toFloatOrNull()
-                        val bd = beforeDinnerInput.toFloatOrNull()
-                        val ad = afterDinnerInput.toFloatOrNull()
-                        if (bb == null && ab == null && bl == null && al == null && bd == null && ad == null) {
+                        val bbTyped = beforeBreakfastInput.toFloatOrNull()
+                        val abTyped = afterBreakfastInput.toFloatOrNull()
+                        val blTyped = beforeLunchInput.toFloatOrNull()
+                        val alTyped = afterLunchInput.toFloatOrNull()
+                        val bdTyped = beforeDinnerInput.toFloatOrNull()
+                        val adTyped = afterDinnerInput.toFloatOrNull()
+                        val allTyped = listOfNotNull(bbTyped, abTyped, blTyped, alTyped, bdTyped, adTyped)
+                        if (allTyped.isEmpty()) {
                             android.widget.Toast.makeText(context, "Enter a valid glucose reading", android.widget.Toast.LENGTH_SHORT).show()
+                        } else if (allTyped.any { glucoseLooksWrongUnit(it, useMgdl) }) {
+                            android.widget.Toast.makeText(context, "That value looks like ${if (useMgdl) "mmol/L" else "mg/dL"}. Check the unit above.", android.widget.Toast.LENGTH_SHORT).show()
                         } else {
+                            val bb = bbTyped?.let { glucoseFromInput(it, useMgdl) }
+                            val ab = abTyped?.let { glucoseFromInput(it, useMgdl) }
+                            val bl = blTyped?.let { glucoseFromInput(it, useMgdl) }
+                            val al = alTyped?.let { glucoseFromInput(it, useMgdl) }
+                            val bd = bdTyped?.let { glucoseFromInput(it, useMgdl) }
+                            val ad = adTyped?.let { glucoseFromInput(it, useMgdl) }
                             coroutineScope.launch {
                                 viewModel.saveGlucoseReadingsForDate(
                                     date = viewModel.todayDateString,
@@ -387,7 +420,7 @@ fun GlucoseLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {
             Spacer(modifier = Modifier.height(8.dp))
             if (hasTargetRange) {
                 Text(
-                    text = "Shaded band shows your target range: ${targetMin} – ${targetMax} mmol/L",
+                    text = "Shaded band shows your target range: ${formatGlucoseNumber(targetMin, useMgdl)} – ${formatGlucoseNumber(targetMax, useMgdl)} ${glucoseUnitLabel(useMgdl)}",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

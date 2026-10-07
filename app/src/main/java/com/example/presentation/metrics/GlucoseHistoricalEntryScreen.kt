@@ -20,7 +20,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.presentation.viewmodel.ShasthoViewModel
+import com.example.ui.components.glucoseLooksWrongUnit
 import com.example.ui.theme.*
+import com.example.util.glucoseFromInput
+import com.example.util.glucoseUnitLabel
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -32,6 +35,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun GlucoseHistoricalEntryScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
     val profile by viewModel.userProfile.collectAsState()
+    val useMgdl = profile?.glucoseUnitMgdl ?: false
     val isDark = true
     val glucoseAccent = AccentTokens.glucoseAccent(isDark)
     val context = LocalContext.current
@@ -146,7 +150,7 @@ fun GlucoseHistoricalEntryScreen(viewModel: ShasthoViewModel, onNavigateBack: ()
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Readings (mmol/L)", fontWeight = FontWeight.Bold, color = glucoseAccent.onBg)
+                Text("Readings (${glucoseUnitLabel(useMgdl)})", fontWeight = FontWeight.Bold, color = glucoseAccent.onBg)
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text("Breakfast", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = glucoseAccent.onBg)
@@ -247,16 +251,27 @@ fun GlucoseHistoricalEntryScreen(viewModel: ShasthoViewModel, onNavigateBack: ()
                             android.widget.Toast.makeText(context, "Pick a date first", android.widget.Toast.LENGTH_SHORT).show()
                             return@Button
                         }
-                        val bb = beforeBreakfastInput.toFloatOrNull()
-                        val ab = afterBreakfastInput.toFloatOrNull()
-                        val bl = beforeLunchInput.toFloatOrNull()
-                        val al = afterLunchInput.toFloatOrNull()
-                        val bd = beforeDinnerInput.toFloatOrNull()
-                        val ad = afterDinnerInput.toFloatOrNull()
-                        if (bb == null && ab == null && bl == null && al == null && bd == null && ad == null) {
+                        val bbTyped = beforeBreakfastInput.toFloatOrNull()
+                        val abTyped = afterBreakfastInput.toFloatOrNull()
+                        val blTyped = beforeLunchInput.toFloatOrNull()
+                        val alTyped = afterLunchInput.toFloatOrNull()
+                        val bdTyped = beforeDinnerInput.toFloatOrNull()
+                        val adTyped = afterDinnerInput.toFloatOrNull()
+                        val allTyped = listOfNotNull(bbTyped, abTyped, blTyped, alTyped, bdTyped, adTyped)
+                        if (allTyped.isEmpty()) {
                             android.widget.Toast.makeText(context, "Enter a valid glucose reading", android.widget.Toast.LENGTH_SHORT).show()
                             return@Button
                         }
+                        if (allTyped.any { glucoseLooksWrongUnit(it, useMgdl) }) {
+                            android.widget.Toast.makeText(context, "That value looks like ${if (useMgdl) "mmol/L" else "mg/dL"}. Check the unit above.", android.widget.Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        val bb = bbTyped?.let { glucoseFromInput(it, useMgdl) }
+                        val ab = abTyped?.let { glucoseFromInput(it, useMgdl) }
+                        val bl = blTyped?.let { glucoseFromInput(it, useMgdl) }
+                        val al = alTyped?.let { glucoseFromInput(it, useMgdl) }
+                        val bd = bdTyped?.let { glucoseFromInput(it, useMgdl) }
+                        val ad = adTyped?.let { glucoseFromInput(it, useMgdl) }
                         coroutineScope.launch {
                             val existing = viewModel.getMetricsForDateFlow(date).firstOrNull()
                             val hasExistingGlucose = existing != null && listOf(
