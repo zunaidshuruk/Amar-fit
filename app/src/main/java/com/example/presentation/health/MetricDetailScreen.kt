@@ -1102,6 +1102,7 @@ private fun StepsCaloriesBarChart(
         else -> null
     }
     val goalValue = if (rawGoal != null && rawGoal > 0f) rawGoal else null
+    val goalLabelBackground = MaterialTheme.colorScheme.surface
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(250.dp)) {
         val totalWidth = maxWidth
@@ -1197,11 +1198,22 @@ private fun StepsCaloriesBarChart(
                         this.color = goalLineColor.toArgb()
                         this.textSize = 10.sp.toPx()
                         this.isAntiAlias = true
-                        this.textAlign = Paint.Align.LEFT
+                        this.textAlign = Paint.Align.RIGHT
                     }
 
+                    val textWidth = textPaint.measureText(goalLabel)
+                    val padding = 4.dp.toPx()
+                    val labelRight = width - padding
+
+                    drawRoundRect(
+                        color = goalLabelBackground.copy(alpha = 0.9f),
+                        topLeft = Offset(labelRight - textWidth - padding, lineY - textPaint.textSize - padding * 1.5f),
+                        size = Size(textWidth + padding * 2, textPaint.textSize + padding * 1.5f),
+                        cornerRadius = CornerRadius(6.dp.toPx())
+                    )
+
                     drawIntoCanvas { canvas ->
-                        canvas.nativeCanvas.drawText(goalLabel, 4.dp.toPx(), lineY - 4.dp.toPx(), textPaint)
+                        canvas.nativeCanvas.drawText(goalLabel, labelRight, lineY - padding * 1.25f, textPaint)
                     }
                 }
             }
@@ -1269,6 +1281,7 @@ private fun ZoneBarChart(
     } else {
         null
     }
+    val goalLabelBackground = MaterialTheme.colorScheme.surface
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth().height(250.dp)) {
         val totalWidth = maxWidth
@@ -1394,10 +1407,21 @@ private fun ZoneBarChart(
                             this.color = goalLineColor.toArgb()
                             this.textSize = 10.sp.toPx()
                             this.isAntiAlias = true
-                            this.textAlign = Paint.Align.LEFT
+                            this.textAlign = Paint.Align.RIGHT
                         }
+                        val textWidth = textPaint.measureText(goalLabel)
+                        val padding = 4.dp.toPx()
+                        val labelRight = chartWidth - padding
+
+                        drawRoundRect(
+                            color = goalLabelBackground.copy(alpha = 0.9f),
+                            topLeft = Offset(labelRight - textWidth - padding, lineY - textPaint.textSize - padding * 1.5f),
+                            size = Size(textWidth + padding * 2, textPaint.textSize + padding * 1.5f),
+                            cornerRadius = CornerRadius(6.dp.toPx())
+                        )
+
                         drawIntoCanvas { canvas ->
-                            canvas.nativeCanvas.drawText(goalLabel, 4.dp.toPx(), lineY - 4.dp.toPx(), textPaint)
+                            canvas.nativeCanvas.drawText(goalLabel, labelRight, lineY - padding * 1.25f, textPaint)
                         }
                     }
                 }
@@ -1575,7 +1599,11 @@ private fun formatMetricValueForEntry(metric: DailyMetric, metricKey: String): S
         "fatG" -> "${String.format(Locale.US, "%.1f", metric.fatG)} g"
         "waterLiters" -> "${String.format(Locale.US, "%.1f", metric.waterLiters)} L"
         "exerciseDays" -> "${metric.exerciseMinutes} mins"
-        "heartRate" -> "${metric.heartRate} bpm"
+        "heartRate" -> {
+            val kind = if (metric.date == java.time.LocalDate.now().toString()) "latest" else "avg"
+            val range = if (metric.heartRateMin > 0 && metric.heartRateMax > 0) " · ${metric.heartRateMin}–${metric.heartRateMax}" else ""
+            "${metric.heartRate} bpm $kind$range"
+        }
         "oxygenSaturation" -> "${String.format(Locale.US, "%.1f", metric.oxygenSaturation)}%"
         "bloodPressure" -> "${metric.bloodPressure} mmHg"
         "heartRateVariability" -> "${String.format(Locale.US, "%.1f", metric.heartRateVariability)} ms"
