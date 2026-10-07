@@ -397,7 +397,7 @@ class AppRepository(
         try {
             FirebaseManager.syncMetric(metric)
             val currentProfile = userDao.getUserProfile().firstOrNull()
-            if (currentProfile != null) {
+            if (currentProfile != null && metric.date == java.time.LocalDate.now().toString()) {
                 FirebaseManager.syncFriendStats(metric, currentProfile)
             }
         } catch (e: Exception) {
