@@ -53,7 +53,12 @@ import androidx.health.connect.client.units.Pressure
 import androidx.health.connect.client.units.Volume
 
 import androidx.health.connect.client.time.TimeRangeFilter
+import com.example.ui.components.glucoseLooksWrongUnit
 import com.example.util.ExerciseCalorieEstimator
+import com.example.util.formatGlucose
+import com.example.util.glucoseFromInput
+import com.example.util.glucoseUnitLabel
+import com.example.util.mmolToMgdl
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -341,19 +346,23 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val metricsList = repository.getMetricsHistoryRange(startDate.toString(), endDate.toString()).firstOrNull() ?: emptyList()
             val metricsMap = metricsList.associateBy { it.date }
 
+            val useMgdl = userProfile.value?.glucoseUnitMgdl ?: false
+            val unit = glucoseUnitLabel(useMgdl)
+            fun csv(v: Float) = if (v > 0f) (if (useMgdl) Math.round(mmolToMgdl(v)).toString() else v.toString()) else ""
+
             val rows = mutableListOf<String>()
-            rows.add("Date,Before Breakfast,After Breakfast,Before Lunch,After Lunch,Before Dinner,After Dinner,Specimen Source")
+            rows.add("Date,Before Breakfast ($unit),After Breakfast ($unit),Before Lunch ($unit),After Lunch ($unit),Before Dinner ($unit),After Dinner ($unit),Specimen Source")
 
             var curDate = startDate
             while (!curDate.isAfter(endDate)) {
                 val dateStr = curDate.toString()
                 val m = metricsMap[dateStr]
-                val bb = if (m != null && m.bloodGlucoseBeforeBreakfast > 0f) m.bloodGlucoseBeforeBreakfast.toString() else ""
-                val ab = if (m != null && m.bloodGlucoseAfterBreakfast > 0f) m.bloodGlucoseAfterBreakfast.toString() else ""
-                val bl = if (m != null && m.bloodGlucoseBeforeLunch > 0f) m.bloodGlucoseBeforeLunch.toString() else ""
-                val al = if (m != null && m.bloodGlucoseAfterLunch > 0f) m.bloodGlucoseAfterLunch.toString() else ""
-                val bd = if (m != null && m.bloodGlucoseBeforeDinner > 0f) m.bloodGlucoseBeforeDinner.toString() else ""
-                val ad = if (m != null && m.bloodGlucoseAfterDinner > 0f) m.bloodGlucoseAfterDinner.toString() else ""
+                val bb = csv(m?.bloodGlucoseBeforeBreakfast ?: 0f)
+                val ab = csv(m?.bloodGlucoseAfterBreakfast ?: 0f)
+                val bl = csv(m?.bloodGlucoseBeforeLunch ?: 0f)
+                val al = csv(m?.bloodGlucoseAfterLunch ?: 0f)
+                val bd = csv(m?.bloodGlucoseBeforeDinner ?: 0f)
+                val ad = csv(m?.bloodGlucoseAfterDinner ?: 0f)
                 val source = if (m != null && m.bloodGlucoseSpecimenSource.isNotBlank() && m.bloodGlucoseSpecimenSource != "Not set") {
                     m.bloodGlucoseSpecimenSource
                 } else {
@@ -389,6 +398,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 return@withContext GlucoseCsvImportResult(0, 0, 1)
             }
             val lines = inputStream.bufferedReader().use { it.readLines() }
+            val header = lines.firstOrNull().orEmpty()
+            val fileIsMgdl = header.contains("mg/dL", ignoreCase = true)
             val dataLines = lines.drop(1).filter { it.isNotBlank() }
 
             for (line in dataLines) {
@@ -401,6 +412,22 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 try {
                     java.time.LocalDate.parse(dateStr)
                 } catch (e: Exception) {
+                    rowsSkippedInvalid++
+                    continue
+                }
+
+                val specimenSourceRaw = parts[7].trim()
+                val specimenSource = if (specimenSourceRaw.isNotBlank() && specimenSourceRaw != "Not set") specimenSourceRaw else "Not set"
+
+                val bbRaw = parts[1].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
+                val abRaw = parts[2].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
+                val blRaw = parts[3].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
+                val alRaw = parts[4].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
+                val bdRaw = parts[5].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
+                val adRaw = parts[6].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
+
+                val parsedValues = listOfNotNull(bbRaw, abRaw, blRaw, alRaw, bdRaw, adRaw)
+                if (parsedValues.any { glucoseLooksWrongUnit(it, fileIsMgdl) }) {
                     rowsSkippedInvalid++
                     continue
                 }
@@ -422,15 +449,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     continue
                 }
 
-                val specimenSourceRaw = parts[7].trim()
-                val specimenSource = if (specimenSourceRaw.isNotBlank() && specimenSourceRaw != "Not set") specimenSourceRaw else "Not set"
-
-                val bb = parts[1].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
-                val ab = parts[2].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
-                val bl = parts[3].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
-                val al = parts[4].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
-                val bd = parts[5].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
-                val ad = parts[6].trim().takeIf { it.isNotBlank() }?.toFloatOrNull()
+                val bb = bbRaw?.let { glucoseFromInput(it, fileIsMgdl) }
+                val ab = abRaw?.let { glucoseFromInput(it, fileIsMgdl) }
+                val bl = blRaw?.let { glucoseFromInput(it, fileIsMgdl) }
+                val al = alRaw?.let { glucoseFromInput(it, fileIsMgdl) }
+                val bd = bdRaw?.let { glucoseFromInput(it, fileIsMgdl) }
+                val ad = adRaw?.let { glucoseFromInput(it, fileIsMgdl) }
 
                 val anyValue = listOf(bb, ab, bl, al, bd, ad).any { it != null }
                 if (anyValue) {
@@ -958,13 +982,15 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
     
+    private fun glucoseText(mmol: Float): String = formatGlucose(mmol, userProfile.value?.glucoseUnitMgdl ?: false)
+
     fun setBloodGlucoseMorning(value: Float) {
         viewModelScope.launch {
             val current = todayMetrics.value ?: DailyMetric(date = todayDateString)
             val updated = current.copy(bloodGlucoseMorning = value)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
-            repository.logActivityEvent("glucose", "Logged blood glucose: ${value} mmol/L")
+            repository.logActivityEvent("glucose", "Logged blood glucose: ${glucoseText(value)}")
         }
     }
 
@@ -974,7 +1000,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val updated = current.copy(bloodGlucoseNight = value)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
-            repository.logActivityEvent("glucose", "Logged blood glucose: ${value} mmol/L")
+            repository.logActivityEvent("glucose", "Logged blood glucose: ${glucoseText(value)}")
         }
     }
     
@@ -1128,7 +1154,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val updated = current.copy(bloodGlucoseBeforeBreakfast = value, bloodGlucoseSpecimenSource = specimenSource)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
-            repository.logActivityEvent("glucose", "Logged blood glucose (before breakfast): ${value} mmol/L")
+            repository.logActivityEvent("glucose", "Logged blood glucose (before breakfast): ${glucoseText(value)}")
             writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_BREAKFAST, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource, date)
         }
     }
@@ -1143,7 +1169,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val updated = current.copy(bloodGlucoseAfterBreakfast = value, bloodGlucoseSpecimenSource = specimenSource)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
-            repository.logActivityEvent("glucose", "Logged blood glucose (after breakfast): ${value} mmol/L")
+            repository.logActivityEvent("glucose", "Logged blood glucose (after breakfast): ${glucoseText(value)}")
             writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_BREAKFAST, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource, date)
         }
     }
@@ -1158,7 +1184,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val updated = current.copy(bloodGlucoseBeforeLunch = value, bloodGlucoseSpecimenSource = specimenSource)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
-            repository.logActivityEvent("glucose", "Logged blood glucose (before lunch): ${value} mmol/L")
+            repository.logActivityEvent("glucose", "Logged blood glucose (before lunch): ${glucoseText(value)}")
             writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_LUNCH, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource, date)
         }
     }
@@ -1173,7 +1199,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val updated = current.copy(bloodGlucoseAfterLunch = value, bloodGlucoseSpecimenSource = specimenSource)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
-            repository.logActivityEvent("glucose", "Logged blood glucose (after lunch): ${value} mmol/L")
+            repository.logActivityEvent("glucose", "Logged blood glucose (after lunch): ${glucoseText(value)}")
             writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_LUNCH, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource, date)
         }
     }
@@ -1188,7 +1214,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val updated = current.copy(bloodGlucoseBeforeDinner = value, bloodGlucoseSpecimenSource = specimenSource)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
-            repository.logActivityEvent("glucose", "Logged blood glucose (before dinner): ${value} mmol/L")
+            repository.logActivityEvent("glucose", "Logged blood glucose (before dinner): ${glucoseText(value)}")
             writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_DINNER, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource, date)
         }
     }
@@ -1203,7 +1229,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val updated = current.copy(bloodGlucoseAfterDinner = value, bloodGlucoseSpecimenSource = specimenSource)
             repository.saveMetrics(updated)
             repository.checkAndAwardBadges(updated)
-            repository.logActivityEvent("glucose", "Logged blood glucose (after dinner): ${value} mmol/L")
+            repository.logActivityEvent("glucose", "Logged blood glucose (after dinner): ${glucoseText(value)}")
             writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_DINNER, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource, date)
         }
     }

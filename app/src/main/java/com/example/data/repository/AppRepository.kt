@@ -682,7 +682,7 @@ class AppRepository(
             "${m.date}: bgBeforeBreakfast=${m.bloodGlucoseBeforeBreakfast}, bgAfterBreakfast=${m.bloodGlucoseAfterBreakfast}, bgBeforeLunch=${m.bloodGlucoseBeforeLunch}, bgAfterLunch=${m.bloodGlucoseAfterLunch}, bgBeforeDinner=${m.bloodGlucoseBeforeDinner}, bgAfterDinner=${m.bloodGlucoseAfterDinner}, steps=${m.steps}, sleepHours=${m.sleepHours}, weightKg=${m.weightKg}, bloodPressure=${m.bloodPressure}, waterLiters=${m.waterLiters}, caloriesConsumed=${m.caloriesConsumed}, carbsG=${m.carbsG}, proteinG=${m.proteinG}, fatG=${m.fatG}, exerciseMinutes=${m.exerciseMinutes}"
         }
         val targetRangeText = if (profile.bloodGlucoseTargetMin > 0f && profile.bloodGlucoseTargetMax > 0f) {
-            "User's target range: ${profile.bloodGlucoseTargetMin}-${profile.bloodGlucoseTargetMax} mmol/L."
+            "User's target range: ${profile.bloodGlucoseTargetMin}-${profile.bloodGlucoseTargetMax} mmol/L (${Math.round(profile.bloodGlucoseTargetMin * 18.0182f)}-${Math.round(profile.bloodGlucoseTargetMax * 18.0182f)} mg/dL)."
         } else {
             "User has not set a target range."
         }
@@ -690,6 +690,7 @@ class AppRepository(
         val systemInstruction = """
             You are a wellness assistant. Based on the user's last 7 days of health metrics below (blood glucose readings, steps, sleep, weight, blood pressure, water, calories, macros, exercise minutes), suggest 3-5 SHORT, actionable, general lifestyle changes that could help lower or better manage blood glucose.
             Profile: ${profile.age} years old, ${profile.gender}, activity level: ${profile.activityLevel}. $targetRangeText
+            All blood glucose values in the data (bg...) are in mmol/L. The user's preferred unit is ${if (profile.glucoseUnitMgdl) "mg/dL" else "mmol/L"}; whenever you mention a glucose number, write it in that unit (mg/dL = mmol/L x 18.0182).
             STRICT RULES — non-negotiable:
             - NEVER name a specific disease, diagnosis, or medical condition (e.g. do not say "diabetes").
             - NEVER claim certainty about the user's health status or guarantee a result.
@@ -699,7 +700,7 @@ class AppRepository(
         """.trimIndent()
 
         val request = GenerateContentRequest(
-            contents = listOf(Content(parts = listOf(Part(text = "7-Day Metrics:\n$metricsText")))),
+            contents = listOf(Content(parts = listOf(Part(text = "7-Day Metrics (blood glucose values are in mmol/L):\n$metricsText")))),
             systemInstruction = Content(parts = listOf(Part(text = systemInstruction)))
         )
         try {
