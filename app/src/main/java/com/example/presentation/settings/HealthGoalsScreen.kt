@@ -86,8 +86,8 @@ fun HealthGoalsScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     val currentProfile = profile
                     if (currentProfile != null) {
-                        var glucoseTargetMinInput by remember(currentProfile.bloodGlucoseTargetMin) { mutableStateOf(currentProfile.bloodGlucoseTargetMin.takeIf { it > 0f }?.toString() ?: "") }
-                        var glucoseTargetMaxInput by remember(currentProfile.bloodGlucoseTargetMax) { mutableStateOf(currentProfile.bloodGlucoseTargetMax.takeIf { it > 0f }?.toString() ?: "") }
+                        var glucoseTargetMinInput by remember(currentProfile.bloodGlucoseTargetMin, currentProfile.glucoseUnitMgdl) { mutableStateOf(currentProfile.bloodGlucoseTargetMin.takeIf { it > 0f }?.let { formatGlucoseNumber(it, currentProfile.glucoseUnitMgdl) } ?: "") }
+                        var glucoseTargetMaxInput by remember(currentProfile.bloodGlucoseTargetMax, currentProfile.glucoseUnitMgdl) { mutableStateOf(currentProfile.bloodGlucoseTargetMax.takeIf { it > 0f }?.let { formatGlucoseNumber(it, currentProfile.glucoseUnitMgdl) } ?: "") }
 
                         // 1. Steps Goal
                         GoalRow(
@@ -252,10 +252,19 @@ fun HealthGoalsScreen(
                         )
 
                         Text(
-                            text = "Blood Glucose Target Range (mmol/L)",
+                            text = "Blood Glucose Target Range (${glucoseUnitLabel(currentProfile.glucoseUnitMgdl)})",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        GlucoseUnitSelector(
+                            useMgdl = currentProfile.glucoseUnitMgdl,
+                            onChange = { newUnit ->
+                                coroutineScope.launch {
+                                    viewModel.saveProfile(currentProfile.copy(glucoseUnitMgdl = newUnit))
+                                }
+                            },
+                            modifier = Modifier.padding(top = 4.dp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(
@@ -284,12 +293,14 @@ fun HealthGoalsScreen(
                                 val max = glucoseTargetMaxInput.toFloatOrNull()
                                 if (min == null || max == null || min <= 0f || max <= 0f || min >= max) {
                                     Toast.makeText(context, "Enter a valid min and max (min must be less than max)", Toast.LENGTH_SHORT).show()
+                                } else if (glucoseLooksWrongUnit(min, currentProfile.glucoseUnitMgdl) || glucoseLooksWrongUnit(max, currentProfile.glucoseUnitMgdl)) {
+                                    Toast.makeText(context, "That value looks like ${if (currentProfile.glucoseUnitMgdl) "mmol/L" else "mg/dL"}. Check the unit above.", Toast.LENGTH_SHORT).show()
                                 } else {
                                     coroutineScope.launch {
                                         val success = viewModel.saveProfile(
                                             currentProfile.copy(
-                                                bloodGlucoseTargetMin = min,
-                                                bloodGlucoseTargetMax = max
+                                                bloodGlucoseTargetMin = glucoseFromInput(min, currentProfile.glucoseUnitMgdl),
+                                                bloodGlucoseTargetMax = glucoseFromInput(max, currentProfile.glucoseUnitMgdl)
                                             )
                                         )
                                         Toast.makeText(

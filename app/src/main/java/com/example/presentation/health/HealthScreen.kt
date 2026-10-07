@@ -38,8 +38,10 @@ import com.example.presentation.navigation.navigateToTab
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.components.StatTileCard
 import com.example.ui.theme.*
+import com.example.util.formatGlucoseNumber
 import com.example.util.formatHeight
 import com.example.util.formatWeight
+import com.example.util.glucoseUnitLabel
 import android.widget.Toast
 import java.text.NumberFormat
 
@@ -89,6 +91,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
         metrics?.bloodGlucoseBeforeDinner ?: 0f,
         metrics?.bloodGlucoseAfterDinner ?: 0f
     )
+    val glucoseUseMgdl = profile?.glucoseUnitMgdl ?: false
     val heartRate = metrics?.heartRate ?: 0
     val bloodPressure = metrics?.bloodPressure ?: ""
     val weight = profile?.weightKg ?: 70f
@@ -124,8 +127,8 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 modifier = Modifier.weight(1f),
                 icon = Icons.Default.WaterDrop,
                 label = "BLOOD GLUCOSE",
-                value = if (glucose > 0) "$glucose" else "--",
-                caption = "mmol/L (+ Tap to log)",
+                value = if (glucose > 0) formatGlucoseNumber(glucose, glucoseUseMgdl) else "--",
+                caption = "${glucoseUnitLabel(glucoseUseMgdl)} (+ Tap to log)",
                 accent = glucoseAccent,
                 onClick = { navController.navigate("glucoselog") }
             )
