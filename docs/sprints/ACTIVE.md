@@ -2,7 +2,7 @@
 
 Only open or unverified work lives here. Budget ~12 KB — when a Part closes, move its notes to `archive/` and leave one line in [INDEX.md](INDEX.md).
 
-Current as of `2d112dc` (2026-10-06). Statuses marked *code-checked* were confirmed by reading the code at that commit, not from a push-verification.
+Current as of `cd8928b` (2026-10-07). Statuses marked *code-checked* were confirmed by reading the code at that commit, not from a push-verification.
 
 ## debug.keystore
 Present on `main` (sha256 `4d6742b2...5f0faa`, 2666 B) after the web-upload restore. AI Studio's working copy lacks the file, so its pushes keep deleting it (`3cb859b`, `65ca328`, `6684f03`, `3abfc55`; restores `f864870`, `78c6447`, `e85362f`, `cd3894b`). Since that cannot be fixed from our side, the release workflow now repairs it: a "Restore debug keystore" step writes the known-good key (checksum-verified) when the repo copy is missing or wrong, and "Pre-flight checks" still fail a tag build on a tag/versionCode mismatch or empty key secrets. Tag `6` and tag `9` were cut before the keystore was present and built without it. Still: restore the file on GitHub and check AI Studio's diff for a deleted `debug.keystore` before every push. Earlier history: [archive/00-tracker-preamble.md](archive/00-tracker-preamble.md).
@@ -26,14 +26,47 @@ Shipped: friend codes, QR scan, requests, leaderboard, friend stats, challenges,
 
 Older notes (untracked work since `8037b30` and the session fixes of 2026-09-29 and 2026-10-04): [archive/00-session-fixes-and-untracked-work.md](archive/00-session-fixes-and-untracked-work.md).
 
-## Sprint 9 — closed
-Exercise tab from Health Connect (Part AA) and customizable workouts (Part AB) are done: [archive/PART-AA-AB-exercise-sprint.md](archive/PART-AA-AB-exercise-sprint.md). Release 11 (tag `11`, `versionName` 1.5) shipped Activity, calories and backfill. **Release 12 is deliberately held** (Zunaid will cut it when the current batch of work is finished): it will carry the "Add exercise" picker (`2d112dc`) and the account-deletion cleanup (`824096d`). Release checklist: bump `versionCode` (and `versionName`), tag = `versionCode`; after installing tap Settings > Health Connect > Connect once.
+## Sprint 10 — closed
+Multi-day workout programs (Part AC), the Assistant consolidation (Part Z Phase 2) and the Sprint-9 leftovers are done: [archive/PART-AC-Z2-programs-and-consolidation.md](archive/PART-AC-Z2-programs-and-consolidation.md). **Release 12 is deliberately held** (Zunaid will cut it): it carries everything after tag `11` (programs, AI programs, Today's workout card, the Assistant now replacing Chat/Coach/Food Chat, Add exercise picker, AI rounds, sports labels, account-deletion cleanup). Checklist: bump `versionCode` and `versionName`, tag = `versionCode`, create the release last; after installing tap Settings > Health Connect > Connect once.
+
+Open follow-ups:
+- [ ] **Scanner chat button starter:** `MainActivity.kt` opens `universal_assistant?starter=nutrition`, which sends the bare word "nutrition" as the user's first message. Fixed by AH-1 (Sprint 11).
+- [ ] Dead-code cleanup in the view model/repository (see the archive note); AI Studio prompts must keep the keystore line.
+- [ ] Optional: more Assistant tools (e.g. `generate_workout_program`) so programs can also be created by chat.
+
+## Sprint 11 — release 13 batch (Parts AD, AE, AF, AG, AH)
+Collected from Zunaid's feedback on 2026-10-06 (release 12 is out, tag `12`). Status: 📤 prompt sent to AI Studio, not yet on GitHub · ⏳ not started · ✅ verified (add the commit).
+
+| # | Step | Files | Status |
+|---|---|---|---|
+| AE-1 | Manual exercise logging, engine: `ExerciseCalorieEstimator` (MET by library category x weight x time; sets x reps -> duration at 3 s/rep + 60 s rest) + `logManualExercise` (Health Connect session + active calories + Activity cache row + local metrics) | `util/ExerciseCalorieEstimator.kt` (+ unit test), `ShasthoViewModel.kt` | ✅ `f302b51` |
+| AE-2 | "Add exercise" button + dialog on the Activity screen (library search or custom name, sets x reps or minutes, start time, live kcal estimate, optional calorie override) | `ActivitySection.kt` (+ new dialog file) | 📤 |
+| AF-1 | Assistant tool `create_workout_program` (days + focus -> AI program saved to the Programs tab) | `AppRepository.kt` | ✅ `1f154b0` |
+| AG-1 | Today big cards: aligned flip side (two-column table, no clipping), all big cards in the lime dot-ring style, Calories card = eaten in the ring + Active / Resting burned + Net, default big card | `TodayTiles.kt`, `TodayScreen.kt` | ✅ `8d6c9bb` |
+| AH-1 | Food-logging entry points (Food Log chat button, Scanner chat button) open a BLANK new Assistant chat (no auto-sent starter; fixes the Scanner's bare "nutrition" message) via a new `fresh=true` route argument | `MainActivity.kt`, `UniversalAssistantScreen.kt`, `FoodLogScreen.kt` | ✅ `49d0005` |
+| AH-2 | Multi-meal food logging: tool `log_foods` takes an `entries` array (one per food, each with meal type and kcal/macros); one review card lists all items (remove one, "Log all"); prompt tells the model to split complex messages by meal instead of logging only the first item | `AppRepository.kt`, `ShasthoViewModel.kt`, `UniversalAssistantScreen.kt` | 📤 |
+| AI-1 | Workout music (Level 1, no accounts): preferred app (Spotify / YouTube Music / YouTube / any), playlist links, play-pause-next-previous buttons in the guided workout via media key events, optional auto-start; settings are stored on the phone only (`ShasthoPrefs`) | `util/WorkoutMusic.kt` (new), `SettingsScreen.kt`, `WorkoutSessionScreen.kt` | ✅ `cd8928b` |
+| AJ-1 | Blood glucose unit, foundation: `UserProfile.glucoseUnitMgdl` (Room 46 → 47, `MIGRATION_46_47`), conversion/format helpers in `UnitConverter.kt` (+ unit test), and the Today tile fixed (it labelled a mmol/L value as "mg/dL") | `Entities.kt`, `AppDatabase.kt`, `UnitConverter.kt`, test, `TodayTiles.kt` | 📤 |
+| AJ-2 | Unit selector (mmol/L / mg/dL chips) on the Glucose log and Health Goals screens; all glucose inputs, charts, HbA1c, target range and tiles shown/entered in the chosen unit, stored canonically in mmol/L | `GlucoseLogScreen.kt`, `GlucoseHistoricalEntryScreen.kt`, `HealthGoalsScreen.kt`, `HealthScreen.kt` | ⏳ after AJ-1 |
+| AJ-3 | Plumbing: activity-event texts, CSV export/import in the chosen unit, AI guidance prompt shows both units | `ShasthoViewModel.kt`, `AppRepository.kt` | ⏳ after AD-1 lands (same files) |
+| AD-1 | Health Connect history reader for ALL synced daily metrics (steps, distance, calories, active calories, sleep, heart rate min/max/avg, resting HR, HRV, SpO2, ...) via per-day aggregates into `DailyMetric`, never overwriting manual entries | `ShasthoViewModel.kt` | ⏳ after wave 2 |
+| AD-2 | Triggers: first 30 days after permission is granted, on-demand when a metric screen opens a range, chunked resumable backfill when full history is granted | view model, metric screens | ⏳ |
+| AD-3 | Metric entries/charts show the daily average + range instead of the latest sample; fix the heart-rate chart label overlap | `MetricDetailScreen.kt` | ⏳ |
+| AD-4 | Verify cloud sync / Drive backup of the filled-in history | `FirebaseManager.kt` as needed | ⏳ |
+
+**Waves.** Wave 1 (AE-1, AF-1, AG-1, AH-1, AI-1) is DONE and verified. Wave 2 (different files, push together): AE-2 (`ActivitySection.kt` + `LogExerciseDialog.kt`) and AH-2 (`AppRepository.kt`, `ShasthoViewModel.kt`, `UniversalAssistantScreen.kt`). Wave 2: AE-2 and AH-2. Wave 3: AD-1 to AD-4. Release 13 after wave 3 (or after wave 2 if Zunaid wants it earlier). Rule unchanged: never two unpushed prompts touching the same file; every prompt keeps the keystore line.
+
+**Why AJ exists:** Zunaid noticed the Blood Glucose tile on Today says mg/dL while the Glucose screens say mmol/L. Code-checked: values are stored in mmol/L everywhere (Health Connect values are converted to mmol/L on import), but `TodayTiles.kt` printed the stored mmol/L number with the label "mg/dL". Decision: let the user choose the unit; store canonically in mmol/L; convert on input and on display; device (Health Connect) data is converted automatically.
+
+**Why AD exists (code-checked at `4c8363d`):** `syncWithHealthConnect` reads Health Connect only for TODAY's window and writes it into today's `DailyMetric`; there is no vitals backfill (only exercise sessions have one), so a past day has data only if the app ran that day. The same limitation hits every synced metric. Also: the Entries list shows the day's latest sample, which is misleading beside a min-max chart.
+
+Other open items: release 12's `versionName` is still "1.5" (bump it with the next release and match the release title); dead-code cleanup of the removed chat/coach/food-chat view-model code; `read_health_data` (Assistant) will become more useful once AD-1 lands.
 
 ## Part Z — Universal AI Assistant
 Shipped: repository layer, ViewModel wiring, screen, global floating button, tool-calling with plain-chat fallback, persisted history, save generated diet charts/workouts, multi-model/multi-key fallback, chat sessions (`8555d67` … `994c07c`).
 - Rule: function-response role is `"function"` (`ed1c511` reverted the `"user"` change).
 - AI answer look and structure (card, renderer, style guide, follow-up chips) is Part Y — closed, see [archive/PART-Y-ai-response-overhaul.md](archive/PART-Y-ai-response-overhaul.md).
-- [ ] Phase 2 (deferred by Zunaid): consolidate all AI features into the assistant and remove individual entry points.
+- [x] Phase 2 (consolidation into the Assistant) done 2026-10-06, see Sprint 10 above..
 
 ## Carried over
 - [ ] `WorkoutScreen.kt` "AI Workouts" tab label wrap — label is `fontSize = 13.sp` but has no `maxLines`; confirm on a device (left over from Part R, now closed).

@@ -27,10 +27,18 @@ Open work: [ACTIVE.md](ACTIVE.md). Closed Parts link to their verbatim archive. 
 | U | Per-metric graph types | ✅ closed | `4900cc9` | [archive](archive/PART-U-graph-type-redesign.md) |
 | V | Glucose meal context + AI guidance | ✅ closed (5/5) | `0d00d33` | [archive](archive/PART-V-glucose-meal-context.md) |
 | W | Backdated glucose entry + CSV | ✅ closed | `3bf4ac2` | [archive](archive/PART-W-backdated-glucose-entry.md) |
+| AC | Multi-day workout programs (manual + AI, Today card) | ✅ closed | `4c8363d` | [archive](archive/PART-AC-Z2-programs-and-consolidation.md) |
+| AD | Health Connect history for all daily metrics (backfill) | 🔲 planned (sprint 11) | — | [ACTIVE](ACTIVE.md#sprint-11--release-13-batch-parts-ad-ae-af-ag-ah) |
+| AE | Manual exercise logging with calorie estimate | 🔲 in progress (sprint 11) | — | [ACTIVE](ACTIVE.md#sprint-11--release-13-batch-parts-ad-ae-af-ag-ah) |
+| AF | Assistant creates workout programs | 🔲 in progress (sprint 11) | — | [ACTIVE](ACTIVE.md#sprint-11--release-13-batch-parts-ad-ae-af-ag-ah) |
+| AG | Today big-card polish and calories card | 🔲 in progress (sprint 11) | — | [ACTIVE](ACTIVE.md#sprint-11--release-13-batch-parts-ad-ae-af-ag-ah) |
+| AH | Assistant food logging: blank start, multi-meal logging | 🔲 in progress (sprint 11) | — | [ACTIVE](ACTIVE.md#sprint-11--release-13-batch-parts-ad-ae-af-ag-ah) |
+| AI | Workout music controls and playlist shortcut (Spotify, YouTube Music, YouTube; Level 1, no SDK) | 🔲 in progress (sprint 11) | — | [ACTIVE](ACTIVE.md#sprint-11--release-13-batch-parts-ad-ae-af-ag-ah) |
+| AJ | Blood glucose unit choice (mmol/L / mg/dL) | 🔲 in progress (sprint 11) | — | [ACTIVE](ACTIVE.md#sprint-11--release-13-batch-parts-ad-ae-af-ag-ah) |
 | Y | AI response overhaul (renderer, style guide, card, follow-up chips) | ✅ closed (4/4) | `166f38c` | [archive](archive/PART-Y-ai-response-overhaul.md) |
 | AA | Exercise tab powered by Health Connect (sessions, history, calories) | ✅ closed | `bd467ad` | [archive](archive/PART-AA-AB-exercise-sprint.md) |
 | AB | Customizable workouts (sets, reps, time, rest, rounds; edit AI/saved/custom) | ✅ closed (AI generator returning rounds not built) | `2d112dc` | [archive](archive/PART-AA-AB-exercise-sprint.md) |
-| Z | Universal AI Assistant | 🔲 Phase 1 shipped, Phase 2 deferred | `994c07c` | [ACTIVE](ACTIVE.md#part-z--universal-ai-assistant) |
+| Z | Universal AI Assistant | ✅ Phase 1 and Phase 2 done (Chat/Coach/Food Chat merged in); dead-code cleanup open | `4c8363d` | [archive](archive/PART-AC-Z2-programs-and-consolidation.md) |
 
 Other archived snapshots:
 - [Tracker preamble & keystore-incident log](archive/00-tracker-preamble.md)

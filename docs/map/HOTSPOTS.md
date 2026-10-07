@@ -14,6 +14,7 @@ Each of these costs roughly 8k–30k tokens to read in full. Locate the region w
 | 〃 | workouts (HC exercise write) | `fun saveCompletedWorkoutSession`, `fun resolveHealthConnectExerciseType` |
 | 〃 | Health Connect exercise sessions cache + backfill | `suspend fun refreshExerciseSessions`, `private suspend fun readExerciseSessionsWindow`, `fun startExerciseHistoryBackfill` |
 | 〃 | day calories + own-workout calories write | `suspend fun getCaloriesBurnedForDate`, `// 3. Active calories for this session` |
+| 〃 | workout programs | `fun completeProgramDay`, `fun generateWorkoutProgramWithAI`, `fun requestProgramDayStart` |
 | 〃 | workout plan editing | `fun updateStructuredWorkoutPlan`, `fun updateSavedWorkoutPlan` |
 | 〃 | weight (HC weight write) | `fun setWeightAndHeight`, `fun writeWeightToHealthConnect` |
 | 〃 | social | `fun sendFriendRequestByCode`, `fun fetchLeaderboard`, `fun createChallengeWithFriend`, `fun sendMessage` |
