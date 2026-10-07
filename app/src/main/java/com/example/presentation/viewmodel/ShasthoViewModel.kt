@@ -1237,6 +1237,46 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     private val _isImportingHealthHistory = MutableStateFlow(false)
     val isImportingHealthHistory: StateFlow<Boolean> = _isImportingHealthHistory.asStateFlow()
 
+    private suspend fun importHealthHistoryRange(context: Context, startDate: java.time.LocalDate, endDate: java.time.LocalDate): HealthHistoryImportResult {
+        val daysMap = com.example.data.health.HealthHistoryImporter.readDays(context, startDate, endDate)
+        val daysRead = daysMap.size
+        var daysUpdated = 0
+
+        var currentDate = startDate
+        while (!currentDate.isAfter(endDate)) {
+            val dateStr = currentDate.toString()
+            val day = daysMap[dateStr]
+            if (day != null) {
+                val current = repository.getMetricsForDate(dateStr).firstOrNull() ?: DailyMetric(date = dateStr)
+                val updated = current.copy(
+                    steps = if (day.steps > 0) day.steps else current.steps,
+                    distanceMeters = if (day.distanceMeters > 0f) day.distanceMeters else current.distanceMeters,
+                    activeCaloriesBurned = if (day.activeCalories > 0) day.activeCalories else current.activeCaloriesBurned,
+                    sleepHours = if (day.sleepHours > 0f) day.sleepHours else current.sleepHours,
+                    exerciseMinutes = if (day.exerciseMinutes > 0) day.exerciseMinutes else current.exerciseMinutes,
+                    restingHeartRate = if (day.restingHeartRate > 0) day.restingHeartRate else current.restingHeartRate,
+                    heartRateVariability = if (day.hrv > 0f) day.hrv else current.heartRateVariability,
+                    oxygenSaturation = if (day.spo2 > 0f) day.spo2 else current.oxygenSaturation,
+                    skinTemperatureCelsius = if (day.skinTemp != 0f) day.skinTemp else current.skinTemperatureCelsius,
+                    respiratoryRate = if (day.respiratoryRate > 0f) day.respiratoryRate else current.respiratoryRate,
+                    mindfulnessMinutes = if (day.mindfulnessMinutes > 0) day.mindfulnessMinutes else current.mindfulnessMinutes,
+                    heartRateMin = if (day.heartRateMin > 0) day.heartRateMin else current.heartRateMin,
+                    heartRateMax = if (day.heartRateMax > 0) day.heartRateMax else current.heartRateMax,
+                    heartRate = if (day.heartRateAvg > 0) day.heartRateAvg else current.heartRate,
+                    bloodPressure = if (current.bloodPressure.isBlank() && day.bloodPressure.isNotBlank()) day.bloodPressure else current.bloodPressure,
+                    bloodGlucoseMorning = if (current.bloodGlucoseMorning <= 0f && day.bloodGlucose > 0f) day.bloodGlucose else current.bloodGlucoseMorning
+                )
+                if (updated != current) {
+                    repository.saveMetrics(updated)
+                    daysUpdated++
+                }
+            }
+            currentDate = currentDate.plusDays(1)
+        }
+
+        return HealthHistoryImportResult(daysRead, daysUpdated)
+    }
+
     suspend fun importHealthHistory(context: Context, daysBack: Int): HealthHistoryImportResult = withContext(Dispatchers.IO) {
         if (_isImportingHealthHistory.value) {
             return@withContext HealthHistoryImportResult(0, 0)
@@ -1250,45 +1290,50 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val endDate = java.time.LocalDate.now().minusDays(1)
             val startDate = endDate.minusDays((effectiveDays - 1).toLong().coerceAtLeast(0))
 
-            val daysMap = com.example.data.health.HealthHistoryImporter.readDays(context, startDate, endDate)
-            val daysRead = daysMap.size
-            var daysUpdated = 0
-
-            var currentDate = startDate
-            while (!currentDate.isAfter(endDate)) {
-                val dateStr = currentDate.toString()
-                val day = daysMap[dateStr]
-                if (day != null) {
-                    val current = repository.getMetricsForDate(dateStr).firstOrNull() ?: DailyMetric(date = dateStr)
-                    val updated = current.copy(
-                        steps = if (day.steps > 0) day.steps else current.steps,
-                        distanceMeters = if (day.distanceMeters > 0f) day.distanceMeters else current.distanceMeters,
-                        activeCaloriesBurned = if (day.activeCalories > 0) day.activeCalories else current.activeCaloriesBurned,
-                        sleepHours = if (day.sleepHours > 0f) day.sleepHours else current.sleepHours,
-                        exerciseMinutes = if (day.exerciseMinutes > 0) day.exerciseMinutes else current.exerciseMinutes,
-                        restingHeartRate = if (day.restingHeartRate > 0) day.restingHeartRate else current.restingHeartRate,
-                        heartRateVariability = if (day.hrv > 0f) day.hrv else current.heartRateVariability,
-                        oxygenSaturation = if (day.spo2 > 0f) day.spo2 else current.oxygenSaturation,
-                        skinTemperatureCelsius = if (day.skinTemp != 0f) day.skinTemp else current.skinTemperatureCelsius,
-                        respiratoryRate = if (day.respiratoryRate > 0f) day.respiratoryRate else current.respiratoryRate,
-                        mindfulnessMinutes = if (day.mindfulnessMinutes > 0) day.mindfulnessMinutes else current.mindfulnessMinutes,
-                        heartRateMin = if (day.heartRateMin > 0) day.heartRateMin else current.heartRateMin,
-                        heartRateMax = if (day.heartRateMax > 0) day.heartRateMax else current.heartRateMax,
-                        heartRate = if (day.heartRateAvg > 0) day.heartRateAvg else current.heartRate,
-                        bloodPressure = if (current.bloodPressure.isBlank() && day.bloodPressure.isNotBlank()) day.bloodPressure else current.bloodPressure,
-                        bloodGlucoseMorning = if (current.bloodGlucoseMorning <= 0f && day.bloodGlucose > 0f) day.bloodGlucose else current.bloodGlucoseMorning
-                    )
-                    if (updated != current) {
-                        repository.saveMetrics(updated)
-                        daysUpdated++
-                    }
-                }
-                currentDate = currentDate.plusDays(1)
-            }
-
-            HealthHistoryImportResult(daysRead, daysUpdated)
+            importHealthHistoryRange(context, startDate, endDate)
         } finally {
             _isImportingHealthHistory.value = false
+        }
+    }
+
+    fun startHealthHistoryAutoImport(context: Context) {
+        if (_isImportingHealthHistory.value) return
+        val prefs = getApplication<Application>().getSharedPreferences("ShasthoPrefs", Context.MODE_PRIVATE)
+        val recentDone = prefs.getBoolean("hh_recent_done", false)
+        val fullDone = prefs.getBoolean("hh_full_done", false)
+        if (recentDone && fullDone) return
+        viewModelScope.launch(Dispatchers.IO) {
+            if (_isImportingHealthHistory.value) return@launch
+            _isImportingHealthHistory.value = true
+            try {
+                if (!HealthConnectManager.hasAnyPermissions(context)) return@launch
+                val yesterday = java.time.LocalDate.now().minusDays(1)
+                if (!recentDone) {
+                    val lastTry = prefs.getLong("hh_recent_last_try", 0L)
+                    if (System.currentTimeMillis() - lastTry > 24L * 60 * 60 * 1000) {
+                        prefs.edit().putLong("hh_recent_last_try", System.currentTimeMillis()).apply()
+                        val r = importHealthHistoryRange(context, yesterday.minusDays(29), yesterday)
+                        if (r.daysRead > 0) prefs.edit().putBoolean("hh_recent_done", true).apply()
+                    }
+                }
+                if (!fullDone && HealthConnectManager.hasHistoryPermission(context)) {
+                    var windowEnd = yesterday.minusDays(30)
+                    val oldest = yesterday.minusDays(1824)
+                    var emptyInARow = 0
+                    var completed = true
+                    while (!windowEnd.isBefore(oldest) && emptyInARow < 4) {
+                        val windowStart = if (windowEnd.minusDays(89).isBefore(oldest)) oldest else windowEnd.minusDays(89)
+                        val r = try { importHealthHistoryRange(context, windowStart, windowEnd) } catch (e: Exception) { completed = false; break }
+                        if (r.daysRead == 0) emptyInARow++ else emptyInARow = 0
+                        windowEnd = windowStart.minusDays(1)
+                    }
+                    if (completed) prefs.edit().putBoolean("hh_full_done", true).apply()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                _isImportingHealthHistory.value = false
+            }
         }
     }
     

@@ -77,6 +77,10 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.startHealthHistoryAutoImport(navController.context)
+    }
+
     var showWaterDialog by remember { mutableStateOf(false) }
     var showLogBottomSheet by remember { mutableStateOf(false) }
 
