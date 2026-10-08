@@ -1,12 +1,16 @@
 package com.example.presentation.mindfulness
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,7 +40,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.health.connect.client.records.MindfulnessSessionRecord
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
 import com.example.util.MusicNotificationManager
@@ -127,9 +135,20 @@ fun MindfulnessTimerScreen(
     var selectedPlaylistForSession by remember { mutableStateOf<WorkoutMusic.Playlist?>(initialActivePlaylist) }
     var musicEnabledForSession by remember { mutableStateOf(false) }
 
-    val sessionSteps by StepSessionCounter.sessionSteps.collectAsState()
-    var finalSessionSteps by remember { mutableIntStateOf(0) }
-    var keepScreenOnDuringWalk by remember { mutableStateOf(prefs.getBoolean("walk_keep_screen_on", true)) }
+    val stepCounter = remember { StepSessionCounter(context) }
+    val walkSteps by stepCounter.steps.collectAsState()
+    var finalWalkSteps by remember { mutableIntStateOf(0) }
+    var keepScreenOnWalking by remember { mutableStateOf(prefs.getBoolean("walk_keep_screen_on", false)) }
+    var activityLogged by remember { mutableStateOf(false) }
+
+    var stepsPermissionGranted by remember {
+        mutableStateOf(
+            Build.VERSION.SDK_INT < 29 || ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACTIVITY_RECOGNITION
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
 
     val nowPlayingState by MusicNotificationManager.nowPlaying.collectAsState()
 
@@ -184,21 +203,61 @@ fun MindfulnessTimerScreen(
         }
     }
 
-    LaunchedEffect(isRunning, isPaused, selectedType) {
-        if (isRunning && selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT) {
-            if (isPaused) {
-                StepSessionCounter.pause()
-            } else {
-                StepSessionCounter.start(context)
-                StepSessionCounter.resume()
+    fun startSession() {
+        if (musicEnabledForSession && selectedPlaylistForSession != null) {
+            WorkoutMusic.openPlaylist(context, selectedPlaylistForSession!!)
+        }
+        sessionStartTime = Instant.now()
+        remainingSeconds = selectedDurationMinutes * 60
+        elapsedSeconds = 0
+        tickMs = 0L
+        lastPhaseKey = -1
+        sessionClock.reset()
+        sessionClock.start()
+        isRunning = true
+        isPaused = false
+        isCompleted = false
+        sessionSaved = false
+        activityLogged = false
+        if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT) {
+            if (stepsPermissionGranted && stepCounter.isAvailable()) {
+                stepCounter.start()
             }
-        } else if (!isRunning) {
-            StepSessionCounter.stop()
         }
     }
 
-    DisposableEffect(isRunning, isCompleted, keepScreenOnDuringWalk, selectedType) {
-        view.keepScreenOn = isRunning && !isCompleted && (selectedType != MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT || keepScreenOnDuringWalk)
+    val activityPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        stepsPermissionGranted = granted
+        startSession()
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            stepCounter.stop()
+        }
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, isRunning, isCompleted, selectedType) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT && isRunning && !isCompleted) {
+                if (event == Lifecycle.Event.ON_STOP) {
+                    stepCounter.unregisterKeepingBaseline()
+                } else if (event == Lifecycle.Event.ON_START) {
+                    stepCounter.reRegister()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    DisposableEffect(isRunning, isCompleted, keepScreenOnWalking, selectedType) {
+        view.keepScreenOn = isRunning && !isCompleted && (selectedType != MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT || keepScreenOnWalking)
         onDispose {
             view.keepScreenOn = false
         }
@@ -207,8 +266,8 @@ fun MindfulnessTimerScreen(
     fun finishSession() {
         elapsedSeconds = (sessionClock.elapsedMs() / 1000).toInt()
         if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT) {
-            finalSessionSteps = sessionSteps
-            StepSessionCounter.stop()
+            finalWalkSteps = walkSteps
+            stepCounter.stop()
         }
         if (!sessionSaved && sessionStartTime != null && elapsedSeconds > 0) {
             sessionSaved = true
@@ -218,7 +277,7 @@ fun MindfulnessTimerScreen(
                     sessionType = selectedType,
                     startTime = sessionStartTime!!,
                     endTime = endTime,
-                    steps = if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT) finalSessionSteps else 0
+                    steps = if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT) finalWalkSteps else 0
                 )
             }
         }
@@ -261,6 +320,10 @@ fun MindfulnessTimerScreen(
                 TextButton(
                     onClick = {
                         showExitDialog = false
+                        if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT) {
+                            finalWalkSteps = walkSteps
+                            stepCounter.stop()
+                        }
                         finishSession()
                         onNavigateBack()
                     }
@@ -272,6 +335,9 @@ fun MindfulnessTimerScreen(
                 TextButton(
                     onClick = {
                         showExitDialog = false
+                        if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT) {
+                            stepCounter.stop()
+                        }
                         isRunning = false
                         isPaused = false
                         onNavigateBack()
@@ -366,81 +432,66 @@ fun MindfulnessTimerScreen(
                     )
                 }
 
-                if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT) {
+                if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT && stepCounter.isAvailable() && stepsPermissionGranted) {
+                    val heightCm = userProfile?.heightCm ?: 170f
+                    val weightKg = userProfile?.weightKg ?: 70f
+                    val imperial = userProfile?.useImperialUnits ?: false
+
+                    val distMeters = WalkingMetrics.distanceMeters(finalWalkSteps, heightCm)
+                    val formatDist = WalkingMetrics.formatDistance(distMeters, imperial)
+                    val kcal = WalkingMetrics.calories(weightKg, elapsedSeconds)
+                    val spm = WalkingMetrics.stepsPerMinute(finalWalkSteps, elapsedSeconds)
+                    val durationMin = (elapsedSeconds / 60).coerceAtLeast(1)
+
+                    LaunchedEffect(finalWalkSteps) {
+                        if (finalWalkSteps > 0 && !activityLogged) {
+                            activityLogged = true
+                            viewModel.logActivity(
+                                "mindfulness",
+                                "Mindful walk: $finalWalkSteps steps, $formatDist, about $kcal kcal in $durationMin min"
+                            )
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(16.dp))
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                text = "Walking Summary",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = "$finalSessionSteps",
-                                        fontSize = 20.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text("Steps", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = WalkingMetrics.formatDistance(WalkingMetrics.calculateDistanceKm(finalSessionSteps)),
-                                        fontSize = 20.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text("Distance", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = String.format(java.util.Locale.US, "%.0f kcal", WalkingMetrics.calculateCalories(finalSessionSteps)),
-                                        fontSize = 20.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text("Calories", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
+                                Text(text = "Steps", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = String.format(java.util.Locale.US, "%,d", finalWalkSteps), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = WalkingMetrics.formatPace(WalkingMetrics.calculatePaceSecondsPerKm(finalSessionSteps, elapsedSeconds)),
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text("Avg Pace", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = "${(elapsedSeconds / 60).coerceAtLeast(if (elapsedSeconds > 0) 1 else 0)}m ${elapsedSeconds % 60}s",
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text("Duration", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
+                                Text(text = "Distance", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = formatDist, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(text = "Calories (estimate)", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = "$kcal kcal", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(text = "Average pace", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = "$spm steps/min", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
                     }
@@ -732,55 +783,39 @@ fun MindfulnessTimerScreen(
 
                 if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.DirectionsWalk,
-                                    contentDescription = null,
-                                    tint = mindfulnessAccent.onBg
-                                )
-                                Text(
-                                    text = "Mindful Walking Mode",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
+                        Text(
+                            text = "Keep screen on while walking",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Switch(
+                            checked = keepScreenOnWalking,
+                            onCheckedChange = { checked ->
+                                keepScreenOnWalking = checked
+                                prefs.edit().putBoolean("walk_keep_screen_on", checked).apply()
                             }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Tracks live session steps using phone sensors. Distance, pace and calories are estimated for your walk.",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Keep screen on during walk",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Switch(
-                                    checked = keepScreenOnDuringWalk,
-                                    onCheckedChange = {
-                                        keepScreenOnDuringWalk = it
-                                        prefs.edit().putBoolean("walk_keep_screen_on", it).apply()
-                                    }
-                                )
-                            }
-                        }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    if (stepCounter.isAvailable()) {
+                        Text(
+                            text = "Steps are counted by your phone's step sensor, starting from 0.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Text(
+                            text = "This phone has no step sensor; the session will only be timed.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.error
+                        )
                     }
                 }
 
@@ -880,20 +915,14 @@ fun MindfulnessTimerScreen(
                 Spacer(modifier = Modifier.height(32.dp))
                 Button(
                     onClick = {
-                        if (musicEnabledForSession && selectedPlaylistForSession != null) {
-                            WorkoutMusic.openPlaylist(context, selectedPlaylistForSession!!)
+                        if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT &&
+                            Build.VERSION.SDK_INT >= 29 &&
+                            !stepsPermissionGranted
+                        ) {
+                            activityPermissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+                        } else {
+                            startSession()
                         }
-                        sessionStartTime = Instant.now()
-                        remainingSeconds = selectedDurationMinutes * 60
-                        elapsedSeconds = 0
-                        tickMs = 0L
-                        lastPhaseKey = -1
-                        sessionClock.reset()
-                        sessionClock.start()
-                        isRunning = true
-                        isPaused = false
-                        isCompleted = false
-                        sessionSaved = false
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -926,7 +955,7 @@ fun MindfulnessTimerScreen(
                 )
 
                 val currentCircleScale = if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT) {
-                    if (!isPaused) pulseScale else 1.0f
+                    1.0f
                 } else {
                     val fullness = breathState?.fullness ?: 0f
                     0.72f + 0.36f * fullness
@@ -948,28 +977,18 @@ fun MindfulnessTimerScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT) {
+                            if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT && stepCounter.isAvailable() && stepsPermissionGranted) {
                                 Text(
-                                    text = "$sessionSteps",
+                                    text = String.format(java.util.Locale.US, "%,d", walkSteps),
                                     fontSize = 44.sp,
-                                    fontWeight = FontWeight.ExtraBold,
+                                    fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
                                 Text(
-                                    text = "STEPS",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 2.sp,
-                                    color = mindfulnessAccent.onBg
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                val mins = remainingSeconds / 60
-                                val secs = remainingSeconds % 60
-                                Text(
-                                    text = String.format(java.util.Locale.US, "%02d:%02d", mins, secs),
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    text = if (isPaused) "Paused" else "steps",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isPaused) MaterialTheme.colorScheme.tertiary else mindfulnessAccent.onBg
                                 )
                             } else {
                                 val mins = remainingSeconds / 60
@@ -997,54 +1016,73 @@ fun MindfulnessTimerScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT) {
-                    val distKm = WalkingMetrics.calculateDistanceKm(sessionSteps)
-                    val cal = WalkingMetrics.calculateCalories(sessionSteps)
-                    val paceSecs = WalkingMetrics.calculatePaceSecondsPerKm(sessionSteps, elapsedSeconds)
+                    val mins = remainingSeconds / 60
+                    val secs = remainingSeconds % 60
+                    val timeText = String.format(java.util.Locale.US, "%02d:%02d", mins, secs)
 
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                    ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = timeText,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "remaining",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (stepCounter.isAvailable() && stepsPermissionGranted) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        val heightCm = userProfile?.heightCm ?: 170f
+                        val weightKg = userProfile?.weightKg ?: 70f
+                        val imperial = userProfile?.useImperialUnits ?: false
+
+                        val distMeters = WalkingMetrics.distanceMeters(walkSteps, heightCm)
+                        val distFormatted = WalkingMetrics.formatDistance(distMeters, imperial)
+                        val kcalFormatted = "${WalkingMetrics.calories(weightKg, elapsedSeconds)} kcal"
+                        val spmFormatted = "${WalkingMetrics.stepsPerMinute(walkSteps, elapsedSeconds)}"
+
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = WalkingMetrics.formatDistance(distKm),
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text("Distance", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = distFormatted, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                Text(text = "Distance", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Box(modifier = Modifier.height(28.dp).width(1.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)))
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = String.format(java.util.Locale.US, "%.0f kcal", cal),
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text("Calories", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = kcalFormatted, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                Text(text = "Calories", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Box(modifier = Modifier.height(28.dp).width(1.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)))
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = WalkingMetrics.formatPace(paceSecs),
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text("Avg Pace", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = spmFormatted, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                Text(text = "Steps/min", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
+                    }
+
+                    if (!isPaused) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        val guidanceList = listOf(
+                            "Feel your feet meeting the ground.",
+                            "Let your arms swing naturally.",
+                            "Notice your breathing as you walk.",
+                            "Look up and soften your gaze.",
+                            "Listen to the sounds around you.",
+                            "Relax your shoulders and jaw."
+                        )
+                        val guidanceIndex = (elapsedSeconds / 30) % guidanceList.size
+                        Text(
+                            text = guidanceList[guidanceIndex],
+                            fontSize = 14.sp,
+                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 24.dp)
+                        )
                     }
                 } else {
                     if (isPaused) {
@@ -1102,9 +1140,15 @@ fun MindfulnessTimerScreen(
                         onClick = {
                             if (isPaused) {
                                 sessionClock.resume()
+                                if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT) {
+                                    stepCounter.resume()
+                                }
                                 isPaused = false
                             } else {
                                 sessionClock.pause()
+                                if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT) {
+                                    stepCounter.pause()
+                                }
                                 isPaused = true
                             }
                         },

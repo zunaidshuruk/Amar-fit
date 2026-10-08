@@ -9,78 +9,112 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-object StepSessionCounter : SensorEventListener {
-    private var sensorManager: SensorManager? = null
-    private var stepSensor: Sensor? = null
-    private var isCounterSensor = true
+class StepSessionCounter(context: Context) : SensorEventListener {
 
-    private var initialSensorSteps: Int = -1
-    private var isListening = false
+    private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+    private val stepSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+
+    private val _steps = MutableStateFlow(0)
+    val steps: StateFlow<Int> = _steps.asStateFlow()
+
+    private var baseline: Float = -1f
+    private var pausedSteps: Float = 0f
+    private var valueAtPause: Float = -1f
+    private var lastValue: Float = -1f
     private var isPaused = false
 
-    private val _sessionSteps = MutableStateFlow(0)
-    val sessionSteps: StateFlow<Int> = _sessionSteps.asStateFlow()
+    fun isAvailable(): Boolean = stepSensor != null
 
-    fun start(context: Context) {
-        reset()
-        isListening = true
-        isPaused = false
-
-        val sm = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager ?: return
-        sensorManager = sm
-
-        var sensor = sm.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
-        if (sensor != null) {
-            stepSensor = sensor
-            isCounterSensor = true
-            sm.registerListener(this, sensor, SensorManager.SENSOR_DELAY_UI)
-        } else {
-            sensor = sm.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
-            if (sensor != null) {
-                stepSensor = sensor
-                isCounterSensor = false
-                sm.registerListener(this, sensor, SensorManager.SENSOR_DELAY_UI)
+    fun start() {
+        try {
+            _steps.value = 0
+            baseline = -1f
+            pausedSteps = 0f
+            valueAtPause = -1f
+            lastValue = -1f
+            isPaused = false
+            stepSensor?.let { sensor ->
+                sensorManager?.registerListener(this, sensor, SensorManager.SENSOR_DELAY_UI)
             }
-        }
+        } catch (_: Exception) {}
     }
 
     fun pause() {
-        isPaused = true
+        try {
+            isPaused = true
+            if (lastValue >= 0f) {
+                valueAtPause = lastValue
+            }
+        } catch (_: Exception) {}
     }
 
     fun resume() {
-        isPaused = false
+        try {
+            if (isPaused) {
+                if (valueAtPause >= 0f && lastValue >= valueAtPause) {
+                    pausedSteps += (lastValue - valueAtPause)
+                }
+                valueAtPause = -1f
+                isPaused = false
+            }
+        } catch (_: Exception) {}
     }
 
     fun stop() {
-        isListening = false
-        isPaused = false
-        sensorManager?.unregisterListener(this)
-        sensorManager = null
-        stepSensor = null
+        try {
+            sensorManager?.unregisterListener(this)
+            _steps.value = 0
+            baseline = -1f
+            pausedSteps = 0f
+            valueAtPause = -1f
+            lastValue = -1f
+            isPaused = false
+        } catch (_: Exception) {}
     }
 
-    fun reset() {
-        initialSensorSteps = -1
-        _sessionSteps.value = 0
+    fun unregisterKeepingBaseline() {
+        try {
+            sensorManager?.unregisterListener(this)
+        } catch (_: Exception) {}
+    }
+
+    fun reRegister() {
+        try {
+            stepSensor?.let { sensor ->
+                sensorManager?.registerListener(this, sensor, SensorManager.SENSOR_DELAY_UI)
+            }
+        } catch (_: Exception) {}
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
-        if (!isListening || isPaused || event == null) return
+        try {
+            if (event?.sensor?.type != Sensor.TYPE_STEP_COUNTER) return
+            val rawValue = event.values.firstOrNull() ?: return
+            if (rawValue < 0f) return
 
-        if (isCounterSensor) {
-            val totalSteps = event.values.firstOrNull()?.toInt() ?: return
-            if (initialSensorSteps < 0) {
-                initialSensorSteps = totalSteps
+            lastValue = rawValue
+
+            if (baseline < 0f) {
+                baseline = rawValue
+            } else if (rawValue < baseline) {
+                baseline = rawValue
+                pausedSteps = 0f
             }
-            val currentSession = (totalSteps - initialSensorSteps).coerceAtLeast(0)
-            _sessionSteps.value = currentSession
-        } else {
-            val detected = event.values.firstOrNull()?.toInt() ?: 0
-            if (detected > 0) {
-                _sessionSteps.value += detected
+
+            if (isPaused) {
+                return
             }
-        }
+
+            if (valueAtPause >= 0f) {
+                if (rawValue >= valueAtPause) {
+                    pausedSteps += (rawValue - valueAtPause)
+                }
+                valueAtPause = -1f
+            }
+
+            val currentSteps = (rawValue - baseline - pausedSteps).toInt().coerceAtLeast(0)
+            _steps.value = currentSteps
+        } catch (_: Exception) {}
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}

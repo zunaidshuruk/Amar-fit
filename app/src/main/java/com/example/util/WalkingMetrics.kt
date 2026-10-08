@@ -1,41 +1,19 @@
 package com.example.util
 
+import java.util.Locale
+
 object WalkingMetrics {
-    const val DEFAULT_STRIDE_LENGTH_METERS = 0.762f
-    const val CALORIES_PER_STEP = 0.04f
+    fun strideMeters(heightCm: Float): Float = (if (heightCm > 0f) heightCm else 170f) * 0.415f / 100f
 
-    fun calculateDistanceMeters(steps: Int, strideLengthMeters: Float = DEFAULT_STRIDE_LENGTH_METERS): Float {
-        if (steps <= 0) return 0f
-        return steps * strideLengthMeters
-    }
+    fun distanceMeters(steps: Int, heightCm: Float): Float = steps.coerceAtLeast(0) * strideMeters(heightCm)
 
-    fun calculateDistanceKm(steps: Int, strideLengthMeters: Float = DEFAULT_STRIDE_LENGTH_METERS): Float {
-        return calculateDistanceMeters(steps, strideLengthMeters) / 1000f
-    }
+    fun calories(weightKg: Float, durationSeconds: Int): Int =
+        Math.round(3.0 * (if (weightKg > 0f) weightKg else 70f) * (durationSeconds.coerceAtLeast(0) / 3600.0)).toInt()
 
-    fun calculateCalories(steps: Int): Float {
-        if (steps <= 0) return 0f
-        return steps * CALORIES_PER_STEP
-    }
+    fun stepsPerMinute(steps: Int, durationSeconds: Int): Int =
+        if (durationSeconds < 10) 0 else Math.round(steps * 60f / durationSeconds)
 
-    fun calculatePaceSecondsPerKm(steps: Int, elapsedSeconds: Int, strideLengthMeters: Float = DEFAULT_STRIDE_LENGTH_METERS): Int {
-        val distKm = calculateDistanceKm(steps, strideLengthMeters)
-        if (distKm <= 0f || elapsedSeconds <= 0) return 0
-        return (elapsedSeconds / distKm).toInt()
-    }
-
-    fun formatPace(paceSecondsPerKm: Int): String {
-        if (paceSecondsPerKm <= 0) return "--'--\" /km"
-        val mins = paceSecondsPerKm / 60
-        val secs = paceSecondsPerKm % 60
-        return String.format(java.util.Locale.US, "%d'%02d\" /km", mins, secs)
-    }
-
-    fun formatDistance(distanceKm: Float): String {
-        return if (distanceKm < 1.0f) {
-            String.format(java.util.Locale.US, "%.0f m", distanceKm * 1000f)
-        } else {
-            String.format(java.util.Locale.US, "%.2f km", distanceKm)
-        }
-    }
+    fun formatDistance(meters: Float, imperial: Boolean): String =
+        if (imperial) String.format(Locale.US, "%.2f mi", meters / 1609.344f)
+        else String.format(Locale.US, "%.2f km", meters / 1000f)
 }

@@ -216,6 +216,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun logActivity(type: String, description: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.logActivityEvent(type, description)
+        }
+    }
+
     val userProfile = repository.userProfile.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),

@@ -6,45 +6,30 @@ import org.junit.Test
 class WalkingMetricsTest {
 
     @Test
-    fun testDistanceCalculations() {
-        val steps = 1000
-        val distMeters = WalkingMetrics.calculateDistanceMeters(steps)
-        val distKm = WalkingMetrics.calculateDistanceKm(steps)
-        
-        assertEquals(762.0f, distMeters, 0.1f)
-        assertEquals(0.762f, distKm, 0.001f)
+    fun testStrideMeters() {
+        assertEquals(0.7055f, WalkingMetrics.strideMeters(170f), 0.001f)
     }
 
     @Test
-    fun testCalorieCalculations() {
-        val steps = 2000
-        val calories = WalkingMetrics.calculateCalories(steps)
-        assertEquals(80.0f, calories, 0.1f)
+    fun testDistanceMeters() {
+        assertEquals(705.5f, WalkingMetrics.distanceMeters(1000, 170f), 0.5f)
     }
 
     @Test
-    fun testPaceAndFormatting() {
-        val steps = 1312
-        val elapsedSeconds = 600
-        val paceSecs = WalkingMetrics.calculatePaceSecondsPerKm(steps, elapsedSeconds)
-        
-        assertEquals(600, paceSecs)
-        
-        val formattedPace = WalkingMetrics.formatPace(600)
-        assertEquals("10'00\" /km", formattedPace)
-        
-        val formattedDistM = WalkingMetrics.formatDistance(0.5f)
-        assertEquals("500 m", formattedDistM)
-
-        val formattedDistKm = WalkingMetrics.formatDistance(1.5f)
-        assertEquals("1.50 km", formattedDistKm)
+    fun testCalories() {
+        assertEquals(210, WalkingMetrics.calories(70f, 3600))
+        assertEquals(105, WalkingMetrics.calories(0f, 1800))
     }
 
     @Test
-    fun testZeroValues() {
-        assertEquals(0f, WalkingMetrics.calculateDistanceMeters(0), 0.001f)
-        assertEquals(0f, WalkingMetrics.calculateCalories(0), 0.001f)
-        assertEquals(0, WalkingMetrics.calculatePaceSecondsPerKm(0, 0))
-        assertEquals("--'--\" /km", WalkingMetrics.formatPace(0))
+    fun testStepsPerMinute() {
+        assertEquals(120, WalkingMetrics.stepsPerMinute(600, 300))
+        assertEquals(0, WalkingMetrics.stepsPerMinute(5, 5))
+    }
+
+    @Test
+    fun testFormatDistance() {
+        assertEquals("1.00 km", WalkingMetrics.formatDistance(1000f, false))
+        assertEquals("1.00 mi", WalkingMetrics.formatDistance(1609.344f, true))
     }
 }
