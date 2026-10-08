@@ -16,8 +16,8 @@ android {
     applicationId = "com.aistudio.amarfit.app"
     minSdk = 26
     targetSdk = 36
-    versionCode = 16
-    versionName = "1.5"
+    versionCode = 17
+    versionName = "1.7"
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
   signingConfigs {
