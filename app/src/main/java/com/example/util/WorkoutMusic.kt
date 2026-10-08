@@ -103,19 +103,19 @@ object WorkoutMusic {
     }
 
     fun play(context: Context) {
-        sendMediaKey(context, KeyEvent.KEYCODE_MEDIA_PLAY)
+        MusicNotificationManager.play(context)
     }
 
     fun togglePlayPause(context: Context) {
-        sendMediaKey(context, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+        MusicNotificationManager.togglePlayPause(context)
     }
 
     fun next(context: Context) {
-        sendMediaKey(context, KeyEvent.KEYCODE_MEDIA_NEXT)
+        MusicNotificationManager.skipToNext(context)
     }
 
     fun previous(context: Context) {
-        sendMediaKey(context, KeyEvent.KEYCODE_MEDIA_PREVIOUS)
+        MusicNotificationManager.skipToPrevious(context)
     }
 
     fun openPlaylist(context: Context): Boolean {

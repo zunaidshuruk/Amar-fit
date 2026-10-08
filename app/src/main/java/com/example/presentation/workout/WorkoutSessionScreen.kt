@@ -32,6 +32,7 @@ import com.example.data.model.WorkoutExercise
 import com.example.data.model.WorkoutPlan
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
+import com.example.util.MusicNotificationManager
 import com.example.util.WorkoutMusic
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -72,6 +73,15 @@ fun WorkoutSessionScreen(
 
     val musicContext = LocalContext.current
     val musicControlsEnabled = remember { WorkoutMusic.isControlsEnabled(musicContext) }
+    val nowPlayingState by MusicNotificationManager.nowPlaying.collectAsState()
+
+    DisposableEffect(musicContext) {
+        MusicNotificationManager.register(musicContext)
+        onDispose {
+            MusicNotificationManager.unregister(musicContext)
+        }
+    }
+
     LaunchedEffect(Unit) {
         if (WorkoutMusic.isAutoStartEnabled(musicContext)) {
             WorkoutMusic.play(musicContext)
@@ -804,51 +814,116 @@ fun WorkoutSessionScreen(
                     }
 
                     if (musicControlsEnabled) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Card(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            verticalAlignment = Alignment.CenterVertically
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            )
                         ) {
-                            IconButton(
-                                onClick = { WorkoutMusic.previous(musicContext) },
-                                modifier = Modifier.size(40.dp)
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.SkipPrevious,
-                                    contentDescription = "Previous track",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            IconButton(
-                                onClick = { WorkoutMusic.togglePlayPause(musicContext) },
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.MusicNote,
-                                    contentDescription = "Play or pause music",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            IconButton(
-                                onClick = { WorkoutMusic.next(musicContext) },
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.SkipNext,
-                                    contentDescription = "Next track",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            IconButton(
-                                onClick = { WorkoutMusic.openPlaylist(musicContext) },
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.QueueMusic,
-                                    contentDescription = "Open my playlist",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                if (nowPlayingState.hasPermission) {
+                                    if (nowPlayingState.title.isNotBlank()) {
+                                        Text(
+                                            text = nowPlayingState.title,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1,
+                                            textAlign = TextAlign.Center
+                                        )
+                                        if (nowPlayingState.artist.isNotBlank()) {
+                                            Text(
+                                                text = nowPlayingState.artist,
+                                                fontSize = 12.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    } else {
+                                        Text(
+                                            text = "Music Controls",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                } else {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = "Enable Notification Access for track info",
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        TextButton(
+                                            onClick = { MusicNotificationManager.openNotificationAccessSettings(musicContext) },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text("Grant", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceEvenly,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(
+                                        onClick = { MusicNotificationManager.skipToPrevious(musicContext) },
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.SkipPrevious,
+                                            contentDescription = "Previous track",
+                                            tint = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { MusicNotificationManager.togglePlayPause(musicContext) },
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (nowPlayingState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                            contentDescription = if (nowPlayingState.isPlaying) "Pause music" else "Play music",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { MusicNotificationManager.skipToNext(musicContext) },
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.SkipNext,
+                                            contentDescription = "Next track",
+                                            tint = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { WorkoutMusic.openPlaylist(musicContext) },
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.QueueMusic,
+                                            contentDescription = "Open my playlist",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
