@@ -7,6 +7,8 @@ import android.media.AudioManager
 import android.net.Uri
 import android.view.KeyEvent
 import android.widget.Toast
+import org.json.JSONArray
+import org.json.JSONObject
 
 object WorkoutMusic {
     enum class MusicApp(val label: String, val packageName: String?) {
@@ -16,12 +18,16 @@ object WorkoutMusic {
         ANY("Any music app", null)
     }
 
+    data class Playlist(val name: String, val link: String)
+
     private const val PREFS_NAME = "ShasthoPrefs"
     private const val KEY_MUSIC_APP = "music_app"
     private const val KEY_SPOTIFY_LINK = "music_spotify_link"
     private const val KEY_YOUTUBE_LINK = "music_youtube_link"
     private const val KEY_CONTROLS_ENABLED = "music_controls_enabled"
     private const val KEY_AUTO_START = "music_auto_start"
+    private const val KEY_PLAYLISTS = "music_playlists"
+    private const val KEY_ACTIVE_PLAYLIST = "music_active_playlist"
 
     fun getMusicApp(context: Context): MusicApp {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -78,6 +84,136 @@ object WorkoutMusic {
         prefs.edit().putBoolean(KEY_AUTO_START, enabled).apply()
     }
 
+    fun getPlaylists(context: Context): List<Playlist> {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val jsonString = prefs.getString(KEY_PLAYLISTS, null)
+        if (jsonString.isNullOrBlank()) {
+            val spotifyLink = getSpotifyLink(context).trim()
+            val youtubeLink = getYoutubeLink(context).trim()
+            val migrated = mutableListOf<Playlist>()
+            if (spotifyLink.isNotBlank() && isValidSpotifyLink(spotifyLink)) {
+                migrated.add(Playlist("Spotify playlist", spotifyLink))
+            }
+            if (youtubeLink.isNotBlank() && isValidYoutubeLink(youtubeLink)) {
+                migrated.add(Playlist("YouTube playlist", youtubeLink))
+            }
+            if (migrated.isNotEmpty()) {
+                savePlaylists(context, migrated)
+                if (prefs.getString(KEY_ACTIVE_PLAYLIST, null).isNullOrBlank()) {
+                    setActivePlaylist(context, migrated.first().name)
+                }
+                return migrated
+            }
+            return emptyList()
+        }
+
+        return try {
+            val jsonArray = JSONArray(jsonString)
+            val list = mutableListOf<Playlist>()
+            for (i in 0 until jsonArray.length()) {
+                val obj = jsonArray.getJSONObject(i)
+                val name = obj.optString("name", "").trim()
+                val link = obj.optString("link", "").trim()
+                if (name.isNotBlank() && link.isNotBlank()) {
+                    list.add(Playlist(name, link))
+                }
+            }
+            if (list.isEmpty()) {
+                val spotifyLink = getSpotifyLink(context).trim()
+                val youtubeLink = getYoutubeLink(context).trim()
+                val migrated = mutableListOf<Playlist>()
+                if (spotifyLink.isNotBlank() && isValidSpotifyLink(spotifyLink)) {
+                    migrated.add(Playlist("Spotify playlist", spotifyLink))
+                }
+                if (youtubeLink.isNotBlank() && isValidYoutubeLink(youtubeLink)) {
+                    migrated.add(Playlist("YouTube playlist", youtubeLink))
+                }
+                if (migrated.isNotEmpty()) {
+                    savePlaylists(context, migrated)
+                    return migrated
+                }
+            }
+            list
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    fun savePlaylists(context: Context, list: List<Playlist>) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val jsonArray = JSONArray()
+        list.forEach { item ->
+            val obj = JSONObject()
+            obj.put("name", item.name)
+            obj.put("link", item.link)
+            jsonArray.put(obj)
+        }
+        prefs.edit().putString(KEY_PLAYLISTS, jsonArray.toString()).apply()
+    }
+
+    fun addPlaylist(context: Context, name: String, link: String): String? {
+        val trimmedName = name.trim()
+        val trimmedLink = link.trim()
+
+        if (trimmedName.length !in 1..30) {
+            return "Name must be between 1 and 30 characters"
+        }
+
+        val existing = getPlaylists(context)
+        if (existing.any { it.name.equals(trimmedName, ignoreCase = true) }) {
+            return "A playlist with this name already exists"
+        }
+
+        if (!isValidSpotifyLink(trimmedLink) && !isValidYoutubeLink(trimmedLink)) {
+            return "Link must be a valid Spotify or YouTube playlist link"
+        }
+
+        if (existing.size >= 12) {
+            return "Maximum 12 playlists allowed"
+        }
+
+        val newList = existing + Playlist(trimmedName, trimmedLink)
+        savePlaylists(context, newList)
+
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val activeName = prefs.getString(KEY_ACTIVE_PLAYLIST, "") ?: ""
+        if (activeName.isBlank() || existing.isEmpty()) {
+            setActivePlaylist(context, trimmedName)
+        }
+
+        return null
+    }
+
+    fun removePlaylist(context: Context, name: String) {
+        val trimmedName = name.trim()
+        val existing = getPlaylists(context)
+        val updated = existing.filterNot { it.name.equals(trimmedName, ignoreCase = true) }
+        savePlaylists(context, updated)
+
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val activeName = prefs.getString(KEY_ACTIVE_PLAYLIST, "") ?: ""
+        if (activeName.equals(trimmedName, ignoreCase = true)) {
+            if (updated.isNotEmpty()) {
+                setActivePlaylist(context, updated.first().name)
+            } else {
+                setActivePlaylist(context, "")
+            }
+        }
+    }
+
+    fun getActivePlaylist(context: Context): Playlist? {
+        val playlists = getPlaylists(context)
+        if (playlists.isEmpty()) return null
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val activeName = prefs.getString(KEY_ACTIVE_PLAYLIST, "") ?: ""
+        return playlists.find { it.name.equals(activeName, ignoreCase = true) } ?: playlists.first()
+    }
+
+    fun setActivePlaylist(context: Context, name: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_ACTIVE_PLAYLIST, name.trim()).apply()
+    }
+
     fun isValidSpotifyLink(link: String): Boolean {
         val trimmed = link.trim()
         return trimmed.startsWith("https://open.spotify.com/") || trimmed.startsWith("spotify:")
@@ -119,55 +255,59 @@ object WorkoutMusic {
     }
 
     fun openPlaylist(context: Context): Boolean {
-        val preferredApp = getMusicApp(context)
-        val spotifyLink = getSpotifyLink(context).trim()
-        val youtubeLink = getYoutubeLink(context).trim()
-
-        val rawLink: String = when (preferredApp) {
-            MusicApp.SPOTIFY -> spotifyLink
-            MusicApp.YOUTUBE_MUSIC -> rewriteYoutubeHost(youtubeLink, "music.youtube.com")
-            MusicApp.YOUTUBE -> rewriteYoutubeHost(youtubeLink, "www.youtube.com")
-            MusicApp.ANY -> {
-                if (spotifyLink.isNotBlank() && isValidSpotifyLink(spotifyLink)) {
-                    spotifyLink
-                } else if (youtubeLink.isNotBlank() && isValidYoutubeLink(youtubeLink)) {
-                    youtubeLink
-                } else {
-                    ""
-                }
-            }
+        val active = getActivePlaylist(context)
+        if (active == null) {
+            Toast.makeText(context, "Add a playlist link in Settings > Workout music", Toast.LENGTH_SHORT).show()
+            return false
         }
+        return openPlaylist(context, active)
+    }
 
-        val isValid = when {
-            rawLink.isBlank() -> false
-            preferredApp == MusicApp.SPOTIFY -> isValidSpotifyLink(rawLink)
-            preferredApp == MusicApp.YOUTUBE_MUSIC || preferredApp == MusicApp.YOUTUBE -> isValidYoutubeLink(rawLink)
-            else -> isValidSpotifyLink(rawLink) || isValidYoutubeLink(rawLink)
-        }
-
-        if (rawLink.isBlank() || !isValid) {
+    fun openPlaylist(context: Context, playlist: Playlist): Boolean {
+        val rawLink = playlist.link.trim()
+        if (rawLink.isBlank()) {
             Toast.makeText(context, "Add a playlist link in Settings > Workout music", Toast.LENGTH_SHORT).show()
             return false
         }
 
+        val isSpotify = isValidSpotifyLink(rawLink)
+        val isYoutube = isValidYoutubeLink(rawLink)
+
+        if (!isSpotify && !isYoutube) {
+            Toast.makeText(context, "Couldn't open the playlist", Toast.LENGTH_SHORT).show()
+            return false
+        }
+
+        val uriString: String
+        val targetPackage: String?
+
+        if (isSpotify) {
+            uriString = rawLink
+            targetPackage = MusicApp.SPOTIFY.packageName
+        } else {
+            val preferredApp = getMusicApp(context)
+            val targetHost = if (preferredApp == MusicApp.YOUTUBE) "www.youtube.com" else "music.youtube.com"
+            val targetPkg = if (preferredApp == MusicApp.YOUTUBE) MusicApp.YOUTUBE.packageName else MusicApp.YOUTUBE_MUSIC.packageName
+            uriString = rewriteYoutubeHost(rawLink, targetHost)
+            targetPackage = targetPkg
+        }
+
         val uri = try {
-            Uri.parse(rawLink)
+            Uri.parse(uriString)
         } catch (e: Exception) {
             Toast.makeText(context, "Couldn't open the playlist", Toast.LENGTH_SHORT).show()
             return false
         }
 
-        val preferredPackage = preferredApp.packageName
-        if (preferredPackage != null) {
+        if (targetPackage != null) {
             try {
                 val intent = Intent(Intent.ACTION_VIEW, uri).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    setPackage(preferredPackage)
+                    setPackage(targetPackage)
                 }
                 context.startActivity(intent)
                 return true
             } catch (e: ActivityNotFoundException) {
-                // Retry once without package
                 try {
                     val fallbackIntent = Intent(Intent.ACTION_VIEW, uri).apply {
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -183,7 +323,6 @@ object WorkoutMusic {
                 return false
             }
         } else {
-            // ANY app: open directly
             try {
                 val intent = Intent(Intent.ACTION_VIEW, uri).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

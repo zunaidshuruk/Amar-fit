@@ -20,11 +20,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -178,10 +181,19 @@ fun SettingsScreen(
     var pendingRestorePayload by remember { mutableStateOf<DriveBackupPayload?>(null) }
 
     var musicApp by remember { mutableStateOf(WorkoutMusic.getMusicApp(context)) }
-    var musicSpotifyLink by remember { mutableStateOf(WorkoutMusic.getSpotifyLink(context)) }
-    var musicYoutubeLink by remember { mutableStateOf(WorkoutMusic.getYoutubeLink(context)) }
+    var playlists by remember { mutableStateOf(WorkoutMusic.getPlaylists(context)) }
+    var activePlaylist by remember { mutableStateOf(WorkoutMusic.getActivePlaylist(context)) }
+    var showAddPlaylistDialog by remember { mutableStateOf(false) }
+    var newPlaylistName by remember { mutableStateOf("") }
+    var newPlaylistLink by remember { mutableStateOf("") }
+    var addPlaylistError by remember { mutableStateOf<String?>(null) }
     var musicControlsEnabled by remember { mutableStateOf(WorkoutMusic.isControlsEnabled(context)) }
     var musicAutoStartEnabled by remember { mutableStateOf(WorkoutMusic.isAutoStartEnabled(context)) }
+
+    fun refreshPlaylists() {
+        playlists = WorkoutMusic.getPlaylists(context)
+        activePlaylist = WorkoutMusic.getActivePlaylist(context)
+    }
 
     val driveAuthLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -866,53 +878,141 @@ fun SettingsScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    val isSpotifyInvalid = musicSpotifyLink.isNotBlank() && !WorkoutMusic.isValidSpotifyLink(musicSpotifyLink)
-                    OutlinedTextField(
-                        value = musicSpotifyLink,
-                        onValueChange = { newValue ->
-                            musicSpotifyLink = newValue
-                            if (newValue.isBlank() || WorkoutMusic.isValidSpotifyLink(newValue)) {
-                                WorkoutMusic.setSpotifyLink(context, newValue.trim())
-                            }
-                        },
-                        label = { Text("Spotify playlist link") },
-                        placeholder = { Text("https://open.spotify.com/playlist/...") },
-                        singleLine = true,
-                        isError = isSpotifyInvalid,
-                        modifier = Modifier.fillMaxWidth()
+                    Text(
+                        "Playlists",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    if (isSpotifyInvalid) {
-                        Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (playlists.isEmpty()) {
                         Text(
-                            "Paste a playlist link from Spotify or YouTube",
-                            color = MaterialTheme.colorScheme.error,
-                            fontSize = 12.sp
+                            "No playlists added yet",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    } else {
+                        playlists.forEach { playlist ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = activePlaylist?.name == playlist.name,
+                                    onClick = {
+                                        WorkoutMusic.setActivePlaylist(context, playlist.name)
+                                        refreshPlaylists()
+                                    }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = playlist.name,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = playlist.link,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                IconButton(
+                                    onClick = {
+                                        WorkoutMusic.removePlaylist(context, playlist.name)
+                                        refreshPlaylists()
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Delete playlist",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    val isYoutubeInvalid = musicYoutubeLink.isNotBlank() && !WorkoutMusic.isValidYoutubeLink(musicYoutubeLink)
-                    OutlinedTextField(
-                        value = musicYoutubeLink,
-                        onValueChange = { newValue ->
-                            musicYoutubeLink = newValue
-                            if (newValue.isBlank() || WorkoutMusic.isValidYoutubeLink(newValue)) {
-                                WorkoutMusic.setYoutubeLink(context, newValue.trim())
-                            }
+                    OutlinedButton(
+                        onClick = {
+                            newPlaylistName = ""
+                            newPlaylistLink = ""
+                            addPlaylistError = null
+                            showAddPlaylistDialog = true
                         },
-                        label = { Text("YouTube / YouTube Music playlist link") },
-                        placeholder = { Text("https://music.youtube.com/playlist?list=...") },
-                        singleLine = true,
-                        isError = isYoutubeInvalid,
                         modifier = Modifier.fillMaxWidth()
-                    )
-                    if (isYoutubeInvalid) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            "Paste a playlist link from Spotify or YouTube",
-                            color = MaterialTheme.colorScheme.error,
-                            fontSize = 12.sp
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Add playlist")
+                    }
+
+                    if (showAddPlaylistDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showAddPlaylistDialog = false },
+                            title = { Text("Add playlist") },
+                            text = {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedTextField(
+                                        value = newPlaylistName,
+                                        onValueChange = {
+                                            newPlaylistName = it
+                                            addPlaylistError = null
+                                        },
+                                        label = { Text("Name") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    OutlinedTextField(
+                                        value = newPlaylistLink,
+                                        onValueChange = {
+                                            newPlaylistLink = it
+                                            addPlaylistError = null
+                                        },
+                                        label = { Text("Spotify or YouTube playlist link") },
+                                        placeholder = { Text("https://open.spotify.com/playlist/...") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    if (addPlaylistError != null) {
+                                        Text(
+                                            text = addPlaylistError!!,
+                                            color = MaterialTheme.colorScheme.error,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+                            },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        val err = WorkoutMusic.addPlaylist(context, newPlaylistName, newPlaylistLink)
+                                        if (err != null) {
+                                            addPlaylistError = err
+                                        } else {
+                                            showAddPlaylistDialog = false
+                                            refreshPlaylists()
+                                        }
+                                    }
+                                ) {
+                                    Text("Add")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showAddPlaylistDialog = false }) {
+                                    Text("Cancel")
+                                }
+                            }
                         )
                     }
 

@@ -33,11 +33,14 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.theme.*
+import com.example.util.MusicNotificationManager
+import com.example.util.WorkoutMusic
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -116,6 +119,20 @@ fun MindfulnessTimerScreen(
     }
 
     val durationOptions = remember { listOf(1, 3, 5, 10, 15) }
+
+    val savedPlaylists = remember { WorkoutMusic.getPlaylists(context) }
+    val initialActivePlaylist = remember { WorkoutMusic.getActivePlaylist(context) }
+    var selectedPlaylistForSession by remember { mutableStateOf<WorkoutMusic.Playlist?>(initialActivePlaylist) }
+    var musicEnabledForSession by remember { mutableStateOf(initialActivePlaylist != null) }
+
+    val nowPlayingState by MusicNotificationManager.nowPlaying.collectAsState()
+
+    DisposableEffect(context) {
+        MusicNotificationManager.register(context)
+        onDispose {
+            MusicNotificationManager.unregister(context)
+        }
+    }
 
     var selectedType by remember { mutableIntStateOf(MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MEDITATION) }
     var selectedDurationMinutes by remember { mutableIntStateOf(5) }
@@ -607,6 +624,60 @@ fun MindfulnessTimerScreen(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "Music",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (savedPlaylists.isEmpty()) {
+                    Text(
+                        text = "Add playlists in Settings > Workout music.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = !musicEnabledForSession,
+                            onClick = {
+                                musicEnabledForSession = false
+                                selectedPlaylistForSession = null
+                            },
+                            label = { Text("No music", fontSize = 13.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = mindfulnessAccent.bg,
+                                selectedLabelColor = mindfulnessAccent.onBg
+                            )
+                        )
+                        savedPlaylists.forEach { playlist ->
+                            val isSelected = musicEnabledForSession && selectedPlaylistForSession?.name == playlist.name
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    musicEnabledForSession = true
+                                    selectedPlaylistForSession = playlist
+                                    WorkoutMusic.setActivePlaylist(context, playlist.name)
+                                },
+                                label = { Text(playlist.name, fontSize = 13.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = mindfulnessAccent.bg,
+                                    selectedLabelColor = mindfulnessAccent.onBg
+                                )
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -648,6 +719,9 @@ fun MindfulnessTimerScreen(
                 Spacer(modifier = Modifier.height(32.dp))
                 Button(
                     onClick = {
+                        if (musicEnabledForSession && selectedPlaylistForSession != null) {
+                            WorkoutMusic.openPlaylist(context, selectedPlaylistForSession!!)
+                        }
                         sessionStartTime = Instant.now()
                         remainingSeconds = selectedDurationMinutes * 60
                         elapsedSeconds = 0
@@ -827,6 +901,127 @@ fun MindfulnessTimerScreen(
                             fontWeight = FontWeight.Bold,
                             color = if (isPaused) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                }
+
+                if ((musicEnabledForSession && selectedPlaylistForSession != null) || nowPlayingState.isPlaying || nowPlayingState.title.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            if (nowPlayingState.hasPermission) {
+                                if (nowPlayingState.title.isNotBlank()) {
+                                    Text(
+                                        text = nowPlayingState.title,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        textAlign = TextAlign.Center,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    if (nowPlayingState.artist.isNotBlank()) {
+                                        Text(
+                                            text = nowPlayingState.artist,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            textAlign = TextAlign.Center,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                } else {
+                                    Text(
+                                        text = "Music Controls",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            } else {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = "Enable Notification Access for track info",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    TextButton(
+                                        onClick = { MusicNotificationManager.openNotificationAccessSettings(context) },
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                    ) {
+                                        Text("Grant", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(
+                                    onClick = { MusicNotificationManager.skipToPrevious(context) },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.SkipPrevious,
+                                        contentDescription = "Previous track",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { MusicNotificationManager.togglePlayPause(context) },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (nowPlayingState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                        contentDescription = if (nowPlayingState.isPlaying) "Pause music" else "Play music",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { MusicNotificationManager.skipToNext(context) },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.SkipNext,
+                                        contentDescription = "Next track",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                IconButton(
+                                    onClick = {
+                                        if (selectedPlaylistForSession != null) {
+                                            WorkoutMusic.openPlaylist(context, selectedPlaylistForSession!!)
+                                        } else {
+                                            WorkoutMusic.openPlaylist(context)
+                                        }
+                                    },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.QueueMusic,
+                                        contentDescription = "Open my playlist",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
