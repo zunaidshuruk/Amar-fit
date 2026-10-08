@@ -923,7 +923,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     suspend fun saveCompletedMindfulnessSession(
         sessionType: Int,
         startTime: Instant,
-        endTime: Instant
+        endTime: Instant,
+        steps: Int = 0
     ) = withContext(Dispatchers.IO) {
         val sessionKey = "${sessionType}_${startTime.toEpochMilli()}"
         if (savedMindfulnessSessionKeys.contains(sessionKey)) {
@@ -953,7 +954,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT -> "Mindful Movement"
             else -> "Mindfulness"
         }
-        val logMsg = "Completed $sessionTitle session (${elapsedMinutes}m)"
+        val logMsg = if (steps > 0) "Completed $sessionTitle session (${elapsedMinutes}m, $steps steps)" else "Completed $sessionTitle session (${elapsedMinutes}m)"
         repository.logActivityEvent("mindfulness", logMsg)
 
         // 2. Health Connect write in its own try-catch (can never block or fail the local save)
