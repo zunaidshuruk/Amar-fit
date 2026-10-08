@@ -343,9 +343,11 @@ object HealthHistoryImporter {
                             pageToken = response.pageToken
                         } while (pageToken != null)
                     } catch (ex: Exception) {
-                        ex.printStackTrace()
+                        recordError("Mindfulness", ex)
                     }
                 }
+            } else {
+                if ("Mindfulness" !in skipped) skipped.add("Mindfulness")
             }
 
             // 9. HRV
@@ -371,7 +373,9 @@ object HealthHistoryImporter {
                             daysMap.getOrPut(dateStr) { DayBuilder() }.hrv = pair.second
                         }
                     }
-                } catch (e: Exception) { e.printStackTrace() }
+                } catch (e: Exception) { recordError("HRV", e) }
+            } else {
+                if ("HRV" !in skipped) skipped.add("HRV")
             }
 
             // 10. SpO2
@@ -397,7 +401,9 @@ object HealthHistoryImporter {
                             daysMap.getOrPut(dateStr) { DayBuilder() }.spo2 = pair.second
                         }
                     }
-                } catch (e: Exception) { e.printStackTrace() }
+                } catch (e: Exception) { recordError("SpO2", e) }
+            } else {
+                if ("SpO2" !in skipped) skipped.add("SpO2")
             }
 
             // 11. Skin Temperature
@@ -426,7 +432,9 @@ object HealthHistoryImporter {
                             daysMap.getOrPut(dateStr) { DayBuilder() }.skinTemp = pair.second
                         }
                     }
-                } catch (e: Exception) { e.printStackTrace() }
+                } catch (e: Exception) { recordError("Skin temperature", e) }
+            } else {
+                if ("Skin temperature" !in skipped) skipped.add("Skin temperature")
             }
 
             // 12. Respiratory Rate
@@ -452,7 +460,9 @@ object HealthHistoryImporter {
                             daysMap.getOrPut(dateStr) { DayBuilder() }.respiratoryRate = pair.second
                         }
                     }
-                } catch (e: Exception) { e.printStackTrace() }
+                } catch (e: Exception) { recordError("Respiratory rate", e) }
+            } else {
+                if ("Respiratory rate" !in skipped) skipped.add("Respiratory rate")
             }
 
             // 13. Blood Pressure
@@ -481,7 +491,9 @@ object HealthHistoryImporter {
                             daysMap.getOrPut(dateStr) { DayBuilder() }.bloodPressure = pair.second
                         }
                     }
-                } catch (e: Exception) { e.printStackTrace() }
+                } catch (e: Exception) { recordError("Blood pressure", e) }
+            } else {
+                if ("Blood pressure" !in skipped) skipped.add("Blood pressure")
             }
 
             // 14. Blood Glucose
@@ -508,7 +520,9 @@ object HealthHistoryImporter {
                             daysMap.getOrPut(dateStr) { DayBuilder() }.bloodGlucose = pair.second
                         }
                     }
-                } catch (e: Exception) { e.printStackTrace() }
+                } catch (e: Exception) { recordError("Blood glucose", e) }
+            } else {
+                if ("Blood glucose" !in skipped) skipped.add("Blood glucose")
             }
 
             // 15. Resting Heart Rate Spot Fallback
@@ -540,6 +554,58 @@ object HealthHistoryImporter {
 
             currentChunkStart = chunkEnd.plusDays(1)
         }
+
+        val stepsDays = daysMap.values.count { it.steps > 0 }
+        val distDays = daysMap.values.count { it.distanceMeters > 0f }
+        val calDays = daysMap.values.count { it.activeCalories > 0 }
+        val sleepDays = daysMap.values.count { it.sleepHours > 0f }
+        val exDays = daysMap.values.count { it.exerciseMinutes > 0 }
+        val hrDays = daysMap.values.count { it.heartRateAvg > 0 || it.heartRateMin > 0 || it.heartRateMax > 0 }
+        val rhrDays = daysMap.values.count { it.restingHeartRate > 0 }
+        val mindDays = daysMap.values.count { it.mindfulnessMinutes > 0 }
+        val hrvDays = daysMap.values.count { it.hrv > 0f }
+        val spo2Days = daysMap.values.count { it.spo2 > 0f }
+        val skinDays = daysMap.values.count { it.skinTemp != 0f }
+        val respDays = daysMap.values.count { it.respiratoryRate > 0f }
+        val bpDays = daysMap.values.count { it.bloodPressure.isNotBlank() }
+        val bgDays = daysMap.values.count { it.bloodGlucose > 0f }
+
+        val sb = StringBuilder()
+        if (daysMap.isEmpty()) {
+            sb.append("Found no Health Connect data for $startDate to $endDate.")
+        } else {
+            sb.append("Read ${daysMap.size} days from Health Connect ($startDate to $endDate):\n")
+            val details = mutableListOf<String>()
+            if (stepsDays > 0) details.add("• Steps: $stepsDays days")
+            if (distDays > 0) details.add("• Distance: $distDays days")
+            if (calDays > 0) details.add("• Active calories: $calDays days")
+            if (sleepDays > 0) details.add("• Sleep: $sleepDays days")
+            if (exDays > 0) details.add("• Exercise: $exDays days")
+            if (hrDays > 0) details.add("• Heart rate: $hrDays days")
+            if (rhrDays > 0) details.add("• Resting heart rate: $rhrDays days")
+            if (mindDays > 0) details.add("• Mindfulness: $mindDays days")
+            if (hrvDays > 0) details.add("• HRV: $hrvDays days")
+            if (spo2Days > 0) details.add("• SpO2: $spo2Days days")
+            if (skinDays > 0) details.add("• Skin temperature: $skinDays days")
+            if (respDays > 0) details.add("• Respiratory rate: $respDays days")
+            if (bpDays > 0) details.add("• Blood pressure: $bpDays days")
+            if (bgDays > 0) details.add("• Blood glucose: $bgDays days")
+
+            if (details.isEmpty()) {
+                sb.append("No non-zero metrics found in these days.")
+            } else {
+                sb.append(details.joinToString("\n"))
+            }
+        }
+
+        if (skipped.isNotEmpty()) {
+            sb.append("\n\nSkipped (no permission): ${skipped.joinToString(", ")}")
+        }
+        if (errors.isNotEmpty()) {
+            sb.append("\n\nErrors: ${errors.joinToString("; ")}")
+        }
+
+        lastReport = sb.toString().trim()
 
         return daysMap.mapValues { (_, builder) -> builder.build() }
     }

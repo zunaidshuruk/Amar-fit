@@ -1237,6 +1237,13 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     private val _isImportingHealthHistory = MutableStateFlow(false)
     val isImportingHealthHistory: StateFlow<Boolean> = _isImportingHealthHistory.asStateFlow()
 
+    private val _healthImportReportDialog = MutableStateFlow<String?>(null)
+    val healthImportReportDialog: StateFlow<String?> = _healthImportReportDialog.asStateFlow()
+
+    fun clearHealthImportReportDialog() {
+        _healthImportReportDialog.value = null
+    }
+
     private suspend fun importHealthHistoryRange(context: Context, startDate: java.time.LocalDate, endDate: java.time.LocalDate): HealthHistoryImportResult {
         val daysMap = com.example.data.health.HealthHistoryImporter.readDays(context, startDate, endDate)
         val daysRead = daysMap.size
@@ -1290,7 +1297,14 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val endDate = java.time.LocalDate.now().minusDays(1)
             val startDate = endDate.minusDays((effectiveDays - 1).toLong().coerceAtLeast(0))
 
-            importHealthHistoryRange(context, startDate, endDate)
+            val result = importHealthHistoryRange(context, startDate, endDate)
+            val report = com.example.data.health.HealthHistoryImporter.lastReport
+            _healthImportReportDialog.value = if (report.isNotBlank()) {
+                "$report\n\nDatabase updated: ${result.daysUpdated} days."
+            } else {
+                "Import complete. Database updated: ${result.daysUpdated} days."
+            }
+            result
         } finally {
             _isImportingHealthHistory.value = false
         }

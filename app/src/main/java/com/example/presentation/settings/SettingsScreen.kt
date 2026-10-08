@@ -688,6 +688,27 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         val isImporting by viewModel.isImportingHealthHistory.collectAsState()
+                        val importReportDialog by viewModel.healthImportReportDialog.collectAsState()
+
+                        importReportDialog?.let { reportText ->
+                            AlertDialog(
+                                onDismissRequest = { viewModel.clearHealthImportReportDialog() },
+                                title = { Text("Health Connect Import Report") },
+                                text = {
+                                    Text(
+                                        text = reportText,
+                                        fontSize = 14.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                },
+                                confirmButton = {
+                                    TextButton(onClick = { viewModel.clearHealthImportReportDialog() }) {
+                                        Text("OK")
+                                    }
+                                }
+                            )
+                        }
+
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -695,9 +716,7 @@ fun SettingsScreen(
                             Button(
                                 onClick = {
                                     coroutineScope.launch {
-                                        val r = viewModel.importHealthHistory(context, 30)
-                                        val msg = if (r.daysRead == 0) "No Health Connect data found for that period" else "Imported ${r.daysUpdated} days from Health Connect"
-                                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                        viewModel.importHealthHistory(context, 30)
                                     }
                                 },
                                 enabled = !isImporting
@@ -708,9 +727,7 @@ fun SettingsScreen(
                                 OutlinedButton(
                                     onClick = {
                                         coroutineScope.launch {
-                                            val r = viewModel.importHealthHistory(context, 365)
-                                            val msg = if (r.daysRead == 0) "No Health Connect data found for that period" else "Imported ${r.daysUpdated} days from Health Connect"
-                                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                            viewModel.importHealthHistory(context, 365)
                                         }
                                     },
                                     enabled = !isImporting
@@ -916,7 +933,13 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Show music controls during workouts", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            "Show music controls during workouts",
+                            modifier = Modifier.weight(1f).padding(end = 16.dp),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                         Switch(
                             checked = musicControlsEnabled,
                             onCheckedChange = { checked ->
