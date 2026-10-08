@@ -35,6 +35,9 @@ Open work: [ACTIVE.md](ACTIVE.md). Closed Parts link to their verbatim archive. 
 | AH | Assistant food logging: blank start, multi-meal logging | ✅ closed (sprint 11) | `76beb27` | [archive](archive/PART-AD-AJ-sprint-11.md) |
 | AI | Workout music controls and playlist shortcut | ✅ closed (sprint 11) | `76beb27` | [archive](archive/PART-AD-AJ-sprint-11.md) |
 | AJ | Blood glucose unit choice (mmol/L / mg/dL) | ✅ closed (sprint 11) | `76beb27` | [archive](archive/PART-AD-AJ-sprint-11.md) |
+| AK | Breathing animation synced to inhale/hold/exhale timings (mindfulness) | ✅ done (sprint 12) | — | [ACTIVE](ACTIVE.md#sprint-12--backlog-and-brainstorm-started-2026-10-07) |
+| AL | Mindful walking: step counter, saved playlists (real Spotify integration later) | ✅ done except AL-2b (sprint 12) | — | [ACTIVE](ACTIVE.md#sprint-12--backlog-and-brainstorm-started-2026-10-07) |
+| AM | Bug: stale todayMetrics overwrites today's row (water add does nothing) | ✅ fixed `9aa6272` (sprint 12) | — | [ACTIVE](ACTIVE.md#sprint-12--backlog-and-brainstorm-started-2026-10-07) |
 | Y | AI response overhaul (renderer, style guide, card, follow-up chips) | ✅ closed (4/4) | `166f38c` | [archive](archive/PART-Y-ai-response-overhaul.md) |
 | AA | Exercise tab powered by Health Connect (sessions, history, calories) | ✅ closed | `bd467ad` | [archive](archive/PART-AA-AB-exercise-sprint.md) |
 | AB | Customizable workouts (sets, reps, time, rest, rounds; edit AI/saved/custom) | ✅ closed (AI generator returning rounds not built) | `2d112dc` | [archive](archive/PART-AA-AB-exercise-sprint.md) |
