@@ -1,9 +1,16 @@
 package com.example.presentation.mindfulness
 
+import android.content.Context
+import android.os.Build
+import android.os.SystemClock
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -21,6 +28,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -32,6 +41,7 @@ import com.example.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
+import kotlin.math.ceil
 
 data class MindfulnessTypeOption(
     val type: Int,
@@ -40,16 +50,47 @@ data class MindfulnessTypeOption(
     val icon: ImageVector
 )
 
+private fun vibrateTick(context: Context) {
+    try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+            val vibrator = vibratorManager?.defaultVibrator
+            if (vibrator?.hasVibrator() == true) {
+                vibrator.vibrate(VibrationEffect.createOneShot(30L, VibrationEffect.DEFAULT_AMPLITUDE))
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            if (vibrator?.hasVibrator() == true) {
+                vibrator.vibrate(VibrationEffect.createOneShot(30L, VibrationEffect.DEFAULT_AMPLITUDE))
+            }
+        }
+    } catch (e: Exception) {
+        // ignore
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MindfulnessTimerScreen(
     viewModel: ShasthoViewModel,
     onNavigateBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val view = LocalView.current
     val coroutineScope = rememberCoroutineScope()
     val userProfile by viewModel.userProfile.collectAsState()
     val isDark = true
     val mindfulnessAccent = AccentTokens.mindfulnessAccent(isDark)
+
+    val prefs = remember { context.getSharedPreferences("ShasthoPrefs", Context.MODE_PRIVATE) }
+
+    var breathPatternId by remember { mutableStateOf(prefs.getString("breath_pattern", "coherent") ?: "coherent") }
+    var breathCustomCsv by remember { mutableStateOf(prefs.getString("breath_custom", "4,2,6,0") ?: "4,2,6,0") }
+    var breathHaptics by remember { mutableStateOf(prefs.getBoolean("breath_haptics", true)) }
+
+    val sessionClock = remember { SessionClock { SystemClock.elapsedRealtime() } }
+    var tickMs by remember { mutableLongStateOf(0L) }
 
     val sessionTypes = remember {
         listOf(
@@ -92,7 +133,43 @@ fun MindfulnessTimerScreen(
 
     val currentTypeOption = sessionTypes.find { it.type == selectedType } ?: sessionTypes.first()
 
+    val activePattern = remember(selectedType, breathPatternId, breathCustomCsv) {
+        when (selectedType) {
+            MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_BREATHING ->
+                BreathingPattern.fromPrefs(breathPatternId, breathCustomCsv)
+            MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MEDITATION ->
+                BreathingPattern.MEDITATION
+            else -> null
+        }
+    }
+
+    val breathState = remember(activePattern, tickMs) {
+        activePattern?.stateAt(tickMs / 1000f)
+    }
+
+    var lastPhaseKey by remember { mutableIntStateOf(-1) }
+    val currentPhaseKey = remember(breathState) {
+        if (breathState != null) (breathState.cycleIndex * 10 + breathState.phaseIndex) else -1
+    }
+
+    LaunchedEffect(currentPhaseKey, isRunning, isPaused, isCompleted) {
+        if (breathHaptics && isRunning && !isPaused && !isCompleted && activePattern != null && currentPhaseKey != -1) {
+            if (lastPhaseKey != -1 && lastPhaseKey != currentPhaseKey) {
+                vibrateTick(context)
+            }
+            lastPhaseKey = currentPhaseKey
+        }
+    }
+
+    DisposableEffect(isRunning, isCompleted) {
+        view.keepScreenOn = isRunning && !isCompleted
+        onDispose {
+            view.keepScreenOn = false
+        }
+    }
+
     fun finishSession() {
+        elapsedSeconds = (sessionClock.elapsedMs() / 1000).toInt()
         if (!sessionSaved && sessionStartTime != null && elapsedSeconds > 0) {
             sessionSaved = true
             val endTime = Instant.now()
@@ -109,17 +186,24 @@ fun MindfulnessTimerScreen(
         isPaused = false
     }
 
-    // Interval countdown timer mirroring WorkoutSessionScreen LaunchedEffect
+    // Frame loop for real-time UI clock rendering
     LaunchedEffect(isRunning, isPaused, isCompleted) {
         while (isRunning && !isPaused && !isCompleted) {
-            delay(1000L)
-            elapsedSeconds++
-            if (remainingSeconds > 1) {
-                remainingSeconds--
-            } else {
-                remainingSeconds = 0
-                finishSession()
-            }
+            withFrameMillis { }
+            tickMs = sessionClock.elapsedMs()
+            elapsedSeconds = (tickMs / 1000).toInt()
+            remainingSeconds = (((selectedDurationMinutes * 60000L - tickMs) + 999) / 1000).toInt().coerceAtLeast(0)
+        }
+    }
+
+    // Separate end trigger for background & screen-off accuracy
+    LaunchedEffect(isRunning, isPaused, isCompleted, selectedDurationMinutes) {
+        if (isRunning && !isPaused && !isCompleted) {
+            val remainingMs = (selectedDurationMinutes * 60000L - sessionClock.elapsedMs()).coerceAtLeast(0L)
+            delay(remainingMs)
+            elapsedSeconds = selectedDurationMinutes * 60
+            remainingSeconds = 0
+            finishSession()
         }
     }
 
@@ -223,6 +307,23 @@ fun MindfulnessTimerScreen(
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
+                val cycleCount = if (activePattern != null) {
+                    activePattern.stateAt(elapsedSeconds.toFloat()).cycleIndex
+                } else 0
+
+                if ((selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_BREATHING ||
+                     selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MEDITATION) &&
+                    cycleCount > 0
+                ) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "$cycleCount full breaths",
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(24.dp))
                 Card(
@@ -369,6 +470,142 @@ fun MindfulnessTimerScreen(
                     }
                 }
 
+                if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_BREATHING) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        text = "Breathing pattern",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val patternOptions = remember {
+                        listOf(
+                            "coherent" to "Coherent 5-5",
+                            "box" to "Box 4-4-4-4",
+                            "relaxing" to "Relaxing 4-7-8",
+                            "custom" to "Custom"
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        patternOptions.forEach { (id, label) ->
+                            FilterChip(
+                                selected = breathPatternId == id,
+                                onClick = {
+                                    breathPatternId = id
+                                    prefs.edit().putString("breath_pattern", id).apply()
+                                },
+                                label = { Text(label, fontSize = 13.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = mindfulnessAccent.bg,
+                                    selectedLabelColor = mindfulnessAccent.onBg
+                                )
+                            )
+                        }
+                    }
+
+                    if (breathPatternId == "custom") {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        val customParts = remember(breathCustomCsv) {
+                            try {
+                                val p = breathCustomCsv.split(",").map { it.trim().toInt() }
+                                if (p.size == 4) p else listOf(4, 2, 6, 0)
+                            } catch (e: Exception) {
+                                listOf(4, 2, 6, 0)
+                            }
+                        }
+
+                        fun updateCustomPart(index: Int, newValue: Int) {
+                            val updated = customParts.toMutableList()
+                            updated[index] = newValue
+                            val newCsv = updated.joinToString(",")
+                            breathCustomCsv = newCsv
+                            prefs.edit().putString("breath_custom", newCsv).apply()
+                        }
+
+                        val steppers = listOf(
+                            Triple("Breathe in", 0, 2..10),
+                            Triple("Hold", 1, 0..10),
+                            Triple("Breathe out", 2, 2..12),
+                            Triple("Hold after", 3, 0..10)
+                        )
+
+                        steppers.forEach { (label, index, range) ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 2.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = label,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(
+                                        onClick = { updateCustomPart(index, (customParts[index] - 1).coerceIn(range.first, range.last)) }
+                                    ) {
+                                        Icon(Icons.Default.Remove, contentDescription = "Decrease $label", modifier = Modifier.size(18.dp))
+                                    }
+                                    Text(
+                                        text = "${customParts[index]}s",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    IconButton(
+                                        onClick = { updateCustomPart(index, (customParts[index] + 1).coerceIn(range.first, range.last)) }
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = "Increase $label", modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+                    val currentDisplayPattern = BreathingPattern.fromPrefs(breathPatternId, breathCustomCsv)
+                    Text(
+                        text = "One breath = ${currentDisplayPattern.cycleSeconds} seconds",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_BREATHING ||
+                    selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MEDITATION) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Vibrate on each phase change",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Switch(
+                            checked = breathHaptics,
+                            onCheckedChange = {
+                                breathHaptics = it
+                                prefs.edit().putBoolean("breath_haptics", it).apply()
+                            }
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -414,6 +651,10 @@ fun MindfulnessTimerScreen(
                         sessionStartTime = Instant.now()
                         remainingSeconds = selectedDurationMinutes * 60
                         elapsedSeconds = 0
+                        tickMs = 0L
+                        lastPhaseKey = -1
+                        sessionClock.reset()
+                        sessionClock.start()
                         isRunning = true
                         isPaused = false
                         isCompleted = false
@@ -449,10 +690,17 @@ fun MindfulnessTimerScreen(
                     label = "scale"
                 )
 
+                val currentCircleScale = if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT) {
+                    if (!isPaused) pulseScale else 1.0f
+                } else {
+                    val fullness = breathState?.fullness ?: 0f
+                    0.72f + 0.36f * fullness
+                }
+
                 Box(
                     modifier = Modifier
                         .size(240.dp)
-                        .scale(if (!isPaused) pulseScale else 1.0f)
+                        .scale(currentCircleScale)
                         .clip(CircleShape)
                         .background(mindfulnessAccent.onBg.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
@@ -488,14 +736,45 @@ fun MindfulnessTimerScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                Text(
-                    text = if (isPaused) "Session paused" else if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_BREATHING) "Inhale deeply... exhale slowly..." else "Focus on your breath and let thoughts pass naturally.",
-                    fontSize = 15.sp,
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
+                if (selectedType == MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT) {
+                    Text(
+                        text = if (isPaused) "Session paused" else "Focus on your breath and let thoughts pass naturally.",
+                        fontSize = 15.sp,
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                } else {
+                    if (isPaused) {
+                        Text(
+                            text = "Paused",
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = mindfulnessAccent.onBg,
+                            textAlign = TextAlign.Center
+                        )
+                    } else if (breathState != null) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = breathState.kind.label,
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = mindfulnessAccent.onBg,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            val secsLeft = ceil(breathState.phaseSeconds - breathState.secondsIntoPhase).toInt().coerceAtLeast(1)
+                            Text(
+                                text = "$secsLeft",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(40.dp))
 
@@ -519,7 +798,15 @@ fun MindfulnessTimerScreen(
                     }
 
                     Button(
-                        onClick = { isPaused = !isPaused },
+                        onClick = {
+                            if (isPaused) {
+                                sessionClock.resume()
+                                isPaused = false
+                            } else {
+                                sessionClock.pause()
+                                isPaused = true
+                            }
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .height(52.dp)
