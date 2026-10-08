@@ -1115,6 +1115,14 @@ fun SettingsScreen(
                                     MaterialTheme.colorScheme.onSurfaceVariant
                                 }
                             )
+                            if (spotifyRemoteEnabled && !spotifyState.lastErrorDetail.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = spotifyState.lastErrorDetail ?: "",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                         Switch(
                             checked = spotifyRemoteEnabled,
@@ -1122,7 +1130,7 @@ fun SettingsScreen(
                                 spotifyRemoteEnabled = checked
                                 SpotifyRemote.setEnabled(context, checked)
                                 if (checked) {
-                                    SpotifyRemote.connect(context) { success, msg ->
+                                    SpotifyRemote.connect(context, interactive = true) { success, msg ->
                                         if (!success && !msg.isNullOrBlank()) {
                                             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                         }
@@ -1134,6 +1142,54 @@ fun SettingsScreen(
                                 checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                             )
                         )
+                    }
+
+                    if (spotifyRemoteEnabled && !spotifyState.isConnected) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp, bottom = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = {
+                                    SpotifyRemote.connect(context, interactive = true) { success, msg ->
+                                        if (!success && !msg.isNullOrBlank()) {
+                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                            ) {
+                                Text("Connect Spotify", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            if (!spotifyState.lastError.isNullOrBlank()) {
+                                OutlinedButton(
+                                    onClick = {
+                                        try {
+                                            val launchIntent = context.packageManager.getLaunchIntentForPackage("com.spotify.music")
+                                            if (launchIntent != null) {
+                                                context.startActivity(launchIntent)
+                                            } else {
+                                                Toast.makeText(context, "Spotify is not installed", Toast.LENGTH_SHORT).show()
+                                            }
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Could not open Spotify", Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    shape = RoundedCornerShape(12.dp),
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                ) {
+                                    Text("Open Spotify", fontSize = 12.sp)
+                                }
+                            }
+                        }
                     }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)

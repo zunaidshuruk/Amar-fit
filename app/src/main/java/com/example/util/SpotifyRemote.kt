@@ -1,6 +1,8 @@
 package com.example.util
 
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.util.Log
 import com.example.BuildConfig
 import com.spotify.android.appremote.api.ConnectionParams
@@ -23,7 +25,8 @@ data class SpotifyTrackState(
     val artist: String = "",
     val isPlaying: Boolean = false,
     val isConnected: Boolean = false,
-    val lastError: String? = null
+    val lastError: String? = null,
+    val lastErrorDetail: String? = null
 )
 
 object SpotifyRemote {
@@ -37,6 +40,15 @@ object SpotifyRemote {
     private var appRemote: SpotifyAppRemote? = null
     private var playerStateSubscription: Subscription<PlayerState>? = null
     private var isConnecting = false
+
+    private fun findActivity(context: Context): Activity? {
+        var current: Context? = context
+        while (current is ContextWrapper) {
+            if (current is Activity) return current
+            current = current.baseContext
+        }
+        return null
+    }
 
     fun isEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -64,7 +76,11 @@ object SpotifyRemote {
 
     fun isConnected(): Boolean = appRemote?.isConnected == true
 
-    fun connect(context: Context, onResult: ((Boolean, String?) -> Unit)? = null) {
+    fun connect(
+        context: Context,
+        interactive: Boolean = false,
+        onResult: ((Boolean, String?) -> Unit)? = null
+    ) {
         if (!isEnabled(context)) {
             onResult?.invoke(false, "Spotify integration is disabled in Settings")
             return
@@ -73,7 +89,10 @@ object SpotifyRemote {
         val clientId = getClientId()
         if (clientId.isBlank()) {
             val msg = "Spotify Client ID is not configured"
-            _state.value = _state.value.copy(lastError = msg)
+            _state.value = _state.value.copy(
+                lastError = msg,
+                lastErrorDetail = "SPOTIFY_CLIENT_ID missing or placeholder in secrets"
+            )
             onResult?.invoke(false, msg)
             return
         }
@@ -86,14 +105,15 @@ object SpotifyRemote {
         if (isConnecting) return
         isConnecting = true
 
+        val targetContext = if (interactive) (findActivity(context) ?: context) else context.applicationContext
         val redirectUri = "${context.packageName}://spotify-callback"
         val connectionParams = ConnectionParams.Builder(clientId)
             .setRedirectUri(redirectUri)
-            .showAuthView(true)
+            .showAuthView(interactive)
             .build()
 
         SpotifyAppRemote.connect(
-            context.applicationContext,
+            targetContext,
             connectionParams,
             object : Connector.ConnectionListener {
                 override fun onConnected(remote: SpotifyAppRemote) {
@@ -101,7 +121,8 @@ object SpotifyRemote {
                     appRemote = remote
                     _state.value = _state.value.copy(
                         isConnected = true,
-                        lastError = null
+                        lastError = null,
+                        lastErrorDetail = null
                     )
                     subscribeToPlayerState()
                     onResult?.invoke(true, null)
@@ -111,10 +132,12 @@ object SpotifyRemote {
                     isConnecting = false
                     appRemote = null
                     val friendlyMsg = mapThrowableToMessage(throwable)
-                    Log.w(TAG, "Spotify connection failure: $friendlyMsg", throwable)
+                    val detail = "${throwable.javaClass.simpleName}: ${throwable.message ?: ""}"
+                    Log.w(TAG, "Spotify connection failure: $friendlyMsg ($detail)", throwable)
                     _state.value = _state.value.copy(
                         isConnected = false,
-                        lastError = friendlyMsg
+                        lastError = friendlyMsg,
+                        lastErrorDetail = detail
                     )
                     onResult?.invoke(false, friendlyMsg)
                 }
@@ -146,7 +169,8 @@ object SpotifyRemote {
             artist = "",
             isPlaying = false,
             isConnected = false,
-            lastError = null
+            lastError = null,
+            lastErrorDetail = null
         )
     }
 
@@ -169,7 +193,8 @@ object SpotifyRemote {
                 }
                 setErrorCallback { throwable ->
                     val msg = mapThrowableToMessage(throwable)
-                    Log.w(TAG, "PlayerState error: $msg", throwable)
+                    val detail = "${throwable.javaClass.simpleName}: ${throwable.message ?: ""}"
+                    Log.w(TAG, "PlayerState error: $msg ($detail)", throwable)
                 }
             }
         } catch (e: Exception) {
@@ -264,7 +289,8 @@ object SpotifyRemote {
         return when (throwable) {
             is CouldNotFindSpotifyApp -> "Install the Spotify app"
             is NotLoggedInException -> "Log in to Spotify first"
-            is UserNotAuthorizedException, is AuthenticationFailedException -> "Spotify did not allow KardIQ"
+            is UserNotAuthorizedException -> "Spotify needs your permission. Tap Connect Spotify and choose Agree in the Spotify screen."
+            is AuthenticationFailedException -> "Spotify rejected KardIQ. Check the app's Client ID, redirect URI, package fingerprint, and that your Spotify account is added under User management."
             is UnsupportedFeatureVersionException -> "Spotify app version not supported"
             is SpotifyDisconnectedException -> "Disconnected from Spotify"
             else -> throwable.message ?: "Spotify connection failed"

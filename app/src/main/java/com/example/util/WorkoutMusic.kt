@@ -297,7 +297,7 @@ object WorkoutMusic {
                     return true
                 }
             } else {
-                SpotifyRemote.connect(context) { success, _ ->
+                SpotifyRemote.connect(context, interactive = true) { success, _ ->
                     if (success && spotifyUri != null) {
                         SpotifyRemote.play(spotifyUri)
                     }
