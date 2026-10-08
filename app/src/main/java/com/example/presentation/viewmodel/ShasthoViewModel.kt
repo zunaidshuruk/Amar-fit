@@ -2032,18 +2032,24 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
         fun setSteps(steps: Int) {
         viewModelScope.launch {
-            val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
-            val updated = current.copy(steps = steps)
-            repository.saveMetrics(updated)
+            val updated = metricsWriteLock.withLock {
+                val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
+                val u = current.copy(steps = steps)
+                repository.saveMetrics(u)
+                u
+            }
             repository.checkAndAwardBadges(updated)
         }
     }
 
     fun addSteps(steps: Int) {
         viewModelScope.launch {
-            val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
-            val updated = current.copy(steps = current.steps + steps)
-            repository.saveMetrics(updated)
+            val updated = metricsWriteLock.withLock {
+                val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
+                val u = current.copy(steps = current.steps + steps)
+                repository.saveMetrics(u)
+                u
+            }
             repository.checkAndAwardBadges(updated)
         }
     }
@@ -2151,14 +2157,17 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             repository.saveFoodLog(foodLog)
 
             // Also add calories to today's metrics
-            val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
-            val updated = current.copy(
-                caloriesConsumed = current.caloriesConsumed + calories,
-                carbsG = current.carbsG + carbsG,
-                proteinG = current.proteinG + proteinG,
-                fatG = current.fatG + fatG
-            )
-            repository.saveMetrics(updated)
+            val updated = metricsWriteLock.withLock {
+                val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
+                val u = current.copy(
+                    caloriesConsumed = current.caloriesConsumed + calories,
+                    carbsG = current.carbsG + carbsG,
+                    proteinG = current.proteinG + proteinG,
+                    fatG = current.fatG + fatG
+                )
+                repository.saveMetrics(u)
+                u
+            }
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("food", "Logged $name")
 
@@ -2220,18 +2229,21 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             repository.saveFoodLog(foodLog)
         }
 
-        val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
         val totalCals = entries.sumOf { it.calories }
         val totalCarbs = entries.sumOf { it.carbsG.toDouble() }.toFloat()
         val totalProtein = entries.sumOf { it.proteinG.toDouble() }.toFloat()
         val totalFat = entries.sumOf { it.fatG.toDouble() }.toFloat()
-        val updated = current.copy(
-            caloriesConsumed = current.caloriesConsumed + totalCals,
-            carbsG = current.carbsG + totalCarbs,
-            proteinG = current.proteinG + totalProtein,
-            fatG = current.fatG + totalFat
-        )
-        repository.saveMetrics(updated)
+        val updated = metricsWriteLock.withLock {
+            val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
+            val u = current.copy(
+                caloriesConsumed = current.caloriesConsumed + totalCals,
+                carbsG = current.carbsG + totalCarbs,
+                proteinG = current.proteinG + totalProtein,
+                fatG = current.fatG + totalFat
+            )
+            repository.saveMetrics(u)
+            u
+        }
         repository.checkAndAwardBadges(updated)
         repository.logActivityEvent("food", "Logged ${entries.size} foods")
 
@@ -3401,7 +3413,9 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     repository.saveUserProfile(payload.profile)
                 }
                 for (metric in payload.dailyMetrics) {
-                    repository.saveMetrics(metric)
+                    metricsWriteLock.withLock {
+                        repository.saveMetrics(metric)
+                    }
                 }
                 for (foodLog in payload.foodLogs) {
                     repository.saveFoodLog(foodLog.copy(id = 0))
