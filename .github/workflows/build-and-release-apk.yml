@@ -71,6 +71,7 @@ jobs:
           GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
           GEMINI_API_KEY_3: ${{ secrets.GEMINI_API_KEY_3 }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
         run: ./gradlew assembleDebug --no-daemon
 
       - name: Locate built APK

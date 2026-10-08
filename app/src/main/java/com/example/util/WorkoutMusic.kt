@@ -239,18 +239,30 @@ object WorkoutMusic {
     }
 
     fun play(context: Context) {
+        if (SpotifyRemote.isConnected()) {
+            if (SpotifyRemote.play()) return
+        }
         MusicNotificationManager.play(context)
     }
 
     fun togglePlayPause(context: Context) {
+        if (SpotifyRemote.isConnected()) {
+            if (SpotifyRemote.togglePlayPause()) return
+        }
         MusicNotificationManager.togglePlayPause(context)
     }
 
     fun next(context: Context) {
+        if (SpotifyRemote.isConnected()) {
+            if (SpotifyRemote.skipNext()) return
+        }
         MusicNotificationManager.skipToNext(context)
     }
 
     fun previous(context: Context) {
+        if (SpotifyRemote.isConnected()) {
+            if (SpotifyRemote.skipPrevious()) return
+        }
         MusicNotificationManager.skipToPrevious(context)
     }
 
@@ -276,6 +288,23 @@ object WorkoutMusic {
         if (!isSpotify && !isYoutube) {
             Toast.makeText(context, "Couldn't open the playlist", Toast.LENGTH_SHORT).show()
             return false
+        }
+
+        if (isSpotify && SpotifyRemote.isEnabled(context)) {
+            val spotifyUri = SpotifyRemote.extractSpotifyUri(rawLink)
+            if (SpotifyRemote.isConnected()) {
+                if (spotifyUri != null && SpotifyRemote.play(spotifyUri)) {
+                    return true
+                }
+            } else {
+                SpotifyRemote.connect(context) { success, _ ->
+                    if (success && spotifyUri != null) {
+                        SpotifyRemote.play(spotifyUri)
+                    }
+                }
+                // Return true as connection & playback are in progress in background
+                return true
+            }
         }
 
         val uriString: String

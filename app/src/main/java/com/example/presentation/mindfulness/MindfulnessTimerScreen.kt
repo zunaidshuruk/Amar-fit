@@ -46,8 +46,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.presentation.viewmodel.ShasthoViewModel
+import com.example.ui.components.MusicControlsCard
 import com.example.ui.theme.*
 import com.example.util.MusicNotificationManager
+import com.example.util.SpotifyRemote
 import com.example.util.StepSessionCounter
 import com.example.util.WalkingMetrics
 import com.example.util.WorkoutMusic
@@ -151,11 +153,18 @@ fun MindfulnessTimerScreen(
     }
 
     val nowPlayingState by MusicNotificationManager.nowPlaying.collectAsState()
+    val spotifyState by SpotifyRemote.state.collectAsState()
 
     DisposableEffect(context) {
         MusicNotificationManager.register(context)
+        if (SpotifyRemote.isEnabled(context)) {
+            SpotifyRemote.connect(context)
+        }
         onDispose {
             MusicNotificationManager.unregister(context)
+            if (SpotifyRemote.isEnabled(context)) {
+                SpotifyRemote.disconnect()
+            }
         }
     }
 
@@ -1175,125 +1184,19 @@ fun MindfulnessTimerScreen(
                     }
                 }
 
-                if ((musicEnabledForSession && selectedPlaylistForSession != null) || nowPlayingState.isPlaying || nowPlayingState.title.isNotBlank()) {
+                if ((musicEnabledForSession && selectedPlaylistForSession != null) ||
+                    nowPlayingState.isPlaying || nowPlayingState.title.isNotBlank() ||
+                    spotifyState.isConnected || spotifyState.isPlaying || spotifyState.title.isNotBlank()) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            if (nowPlayingState.hasPermission) {
-                                if (nowPlayingState.title.isNotBlank()) {
-                                    Text(
-                                        text = nowPlayingState.title,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        maxLines = 1,
-                                        textAlign = TextAlign.Center,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    if (nowPlayingState.artist.isNotBlank()) {
-                                        Text(
-                                            text = nowPlayingState.artist,
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                            textAlign = TextAlign.Center,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                } else {
-                                    Text(
-                                        text = "Music Controls",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                    MusicControlsCard(
+                        onOpenPlaylist = {
+                            if (selectedPlaylistForSession != null) {
+                                WorkoutMusic.openPlaylist(context, selectedPlaylistForSession!!)
                             } else {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(
-                                        text = "Enable Notification Access for track info",
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    TextButton(
-                                        onClick = { MusicNotificationManager.openNotificationAccessSettings(context) },
-                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                                    ) {
-                                        Text("Grant", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                IconButton(
-                                    onClick = { MusicNotificationManager.skipToPrevious(context) },
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.SkipPrevious,
-                                        contentDescription = "Previous track",
-                                        tint = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                                IconButton(
-                                    onClick = { MusicNotificationManager.togglePlayPause(context) },
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = if (nowPlayingState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                        contentDescription = if (nowPlayingState.isPlaying) "Pause music" else "Play music",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                                IconButton(
-                                    onClick = { MusicNotificationManager.skipToNext(context) },
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.SkipNext,
-                                        contentDescription = "Next track",
-                                        tint = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                                IconButton(
-                                    onClick = {
-                                        if (selectedPlaylistForSession != null) {
-                                            WorkoutMusic.openPlaylist(context, selectedPlaylistForSession!!)
-                                        } else {
-                                            WorkoutMusic.openPlaylist(context)
-                                        }
-                                    },
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.QueueMusic,
-                                        contentDescription = "Open my playlist",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                                WorkoutMusic.openPlaylist(context)
                             }
                         }
-                    }
+                    )
                 }
             }
             Spacer(modifier = Modifier.height(32.dp))

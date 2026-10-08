@@ -54,6 +54,7 @@ import com.example.data.repository.DriveBackupPayload
 import com.example.util.formatHeight
 import com.example.util.formatWeight
 import com.example.util.WorkoutMusic
+import com.example.util.SpotifyRemote
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -189,6 +190,8 @@ fun SettingsScreen(
     var addPlaylistError by remember { mutableStateOf<String?>(null) }
     var musicControlsEnabled by remember { mutableStateOf(WorkoutMusic.isControlsEnabled(context)) }
     var musicAutoStartEnabled by remember { mutableStateOf(WorkoutMusic.isAutoStartEnabled(context)) }
+    var spotifyRemoteEnabled by remember { mutableStateOf(SpotifyRemote.isEnabled(context)) }
+    val spotifyState by SpotifyRemote.state.collectAsState()
 
     fun refreshPlaylists() {
         playlists = WorkoutMusic.getPlaylists(context)
@@ -1071,6 +1074,60 @@ fun SettingsScreen(
                             onCheckedChange = { checked ->
                                 musicAutoStartEnabled = checked
                                 WorkoutMusic.setAutoStartEnabled(context, checked)
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            )
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                            Text(
+                                "Spotify direct control (App Remote)",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                if (spotifyRemoteEnabled) {
+                                    if (spotifyState.isConnected) {
+                                        "Connected: ${if (spotifyState.title.isNotBlank()) "${spotifyState.title} - ${spotifyState.artist}" else "Ready"}"
+                                    } else if (!spotifyState.lastError.isNullOrBlank()) {
+                                        "${spotifyState.lastError}"
+                                    } else if (SpotifyRemote.isConfigured()) {
+                                        "Plays Spotify in background; KardIQ stays in front"
+                                    } else {
+                                        "Set SPOTIFY_CLIENT_ID in secrets to enable direct playback"
+                                    }
+                                } else {
+                                    "Plays Spotify in background and shows real-time controls in KardIQ"
+                                },
+                                fontSize = 12.sp,
+                                color = if (!spotifyState.lastError.isNullOrBlank() && spotifyRemoteEnabled) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            )
+                        }
+                        Switch(
+                            checked = spotifyRemoteEnabled,
+                            onCheckedChange = { checked ->
+                                spotifyRemoteEnabled = checked
+                                SpotifyRemote.setEnabled(context, checked)
+                                if (checked) {
+                                    SpotifyRemote.connect(context) { success, msg ->
+                                        if (!success && !msg.isNullOrBlank()) {
+                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
                             },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = MaterialTheme.colorScheme.primary,

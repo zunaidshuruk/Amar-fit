@@ -13,6 +13,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -232,9 +233,10 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     
     val todayMetrics = repository.getMetricsForDate(todayDateString).stateIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
+        started = SharingStarted.Eagerly,
         initialValue = null
     )
+    private val metricsWriteLock = kotlinx.coroutines.sync.Mutex()
     
     val metricsHistory = repository.getMetricsHistory(startDateForRange(90)).stateIn(
         scope = viewModelScope,
@@ -484,17 +486,20 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         afterDinner: Float? = null,
         specimenSource: String = "Not set"
     ) {
-        val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
-        val updated = current.copy(
-            bloodGlucoseBeforeBreakfast = beforeBreakfast ?: current.bloodGlucoseBeforeBreakfast,
-            bloodGlucoseAfterBreakfast = afterBreakfast ?: current.bloodGlucoseAfterBreakfast,
-            bloodGlucoseBeforeLunch = beforeLunch ?: current.bloodGlucoseBeforeLunch,
-            bloodGlucoseAfterLunch = afterLunch ?: current.bloodGlucoseAfterLunch,
-            bloodGlucoseBeforeDinner = beforeDinner ?: current.bloodGlucoseBeforeDinner,
-            bloodGlucoseAfterDinner = afterDinner ?: current.bloodGlucoseAfterDinner,
-            bloodGlucoseSpecimenSource = specimenSource
-        )
-        repository.saveMetrics(updated)
+        val updated = metricsWriteLock.withLock {
+            val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
+            val u = current.copy(
+                bloodGlucoseBeforeBreakfast = beforeBreakfast ?: current.bloodGlucoseBeforeBreakfast,
+                bloodGlucoseAfterBreakfast = afterBreakfast ?: current.bloodGlucoseAfterBreakfast,
+                bloodGlucoseBeforeLunch = beforeLunch ?: current.bloodGlucoseBeforeLunch,
+                bloodGlucoseAfterLunch = afterLunch ?: current.bloodGlucoseAfterLunch,
+                bloodGlucoseBeforeDinner = beforeDinner ?: current.bloodGlucoseBeforeDinner,
+                bloodGlucoseAfterDinner = afterDinner ?: current.bloodGlucoseAfterDinner,
+                bloodGlucoseSpecimenSource = specimenSource
+            )
+            repository.saveMetrics(u)
+            u
+        }
         repository.checkAndAwardBadges(updated)
         repository.logActivityEvent("glucose", "Logged blood glucose reading(s) for $date")
         beforeBreakfast?.let { writeGlucoseToHealthConnect(it, MealType.MEAL_TYPE_BREAKFAST, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource, date) }
@@ -653,8 +658,10 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val updatedProfile = recalculateAutoGoals(profile)
             repository.saveUserProfile(updatedProfile)
             // Initialize today's metrics if not exist
-            if (repository.getMetricsForDate(todayDateString).firstOrNull() == null) {
-                repository.saveMetrics(DailyMetric(date = todayDateString))
+            metricsWriteLock.withLock {
+                if (repository.getMetricsForDate(todayDateString).firstOrNull() == null) {
+                    repository.saveMetrics(DailyMetric(date = todayDateString))
+                }
             }
             true
         } catch (e: Exception) {
@@ -665,9 +672,11 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     
     fun setSleep(hours: Float) {
         viewModelScope.launch {
-            val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
-            val updated = current.copy(sleepHours = hours)
-            repository.saveMetrics(updated)
+            metricsWriteLock.withLock {
+                val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
+                val updated = current.copy(sleepHours = hours)
+                repository.saveMetrics(updated)
+            }
             repository.logActivityEvent("sleep", "Logged ${hours}h sleep")
 
             // Write to Health Connect
@@ -694,9 +703,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     fun addWater(amountLiters: Float, onHealthConnectSyncResult: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
-            val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
-            val updated = current.copy(waterLiters = current.waterLiters + amountLiters)
-            repository.saveMetrics(updated)
+            val updated = metricsWriteLock.withLock {
+                val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
+                val u = current.copy(waterLiters = current.waterLiters + amountLiters)
+                repository.saveMetrics(u)
+                u
+            }
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("water", "Logged ${amountLiters}L water")
 
@@ -780,12 +792,15 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         val elapsedMinutes = (durationSeconds / 60).coerceAtLeast(if (durationSeconds > 0) 1 else 0)
         val calIncrement = caloriesBurned?.let { kotlin.math.round(it).toInt().coerceAtLeast(0) }
 
-        val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
-        val updated = current.copy(
-            exerciseMinutes = (current.exerciseMinutes + elapsedMinutes).coerceAtLeast(0),
-            activeCaloriesBurned = if (calIncrement != null) (current.activeCaloriesBurned + calIncrement).coerceAtLeast(0) else current.activeCaloriesBurned
-        )
-        repository.saveMetrics(updated)
+        val updated = metricsWriteLock.withLock {
+            val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
+            val u = current.copy(
+                exerciseMinutes = (current.exerciseMinutes + elapsedMinutes).coerceAtLeast(0),
+                activeCaloriesBurned = if (calIncrement != null) (current.activeCaloriesBurned + calIncrement).coerceAtLeast(0) else current.activeCaloriesBurned
+            )
+            repository.saveMetrics(u)
+            u
+        }
         repository.checkAndAwardBadges(updated)
         val logMsg = if (calIncrement != null) {
             "Completed workout '$planTitle' (${elapsedMinutes}m, ~${calIncrement} kcal)"
@@ -859,12 +874,15 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         val minutes = (duration / 60).coerceAtLeast(1)
 
         val dateString = start.atZone(ZoneId.systemDefault()).toLocalDate().toString()
-        val current = repository.getMetricsForDate(dateString).firstOrNull() ?: DailyMetric(date = dateString)
-        val updated = current.copy(
-            exerciseMinutes = (current.exerciseMinutes + minutes).coerceAtLeast(0),
-            activeCaloriesBurned = (current.activeCaloriesBurned + kcal).coerceAtLeast(0)
-        )
-        repository.saveMetrics(updated)
+        val updated = metricsWriteLock.withLock {
+            val current = repository.getMetricsForDate(dateString).firstOrNull() ?: DailyMetric(date = dateString)
+            val u = current.copy(
+                exerciseMinutes = (current.exerciseMinutes + minutes).coerceAtLeast(0),
+                activeCaloriesBurned = (current.activeCaloriesBurned + kcal).coerceAtLeast(0)
+            )
+            repository.saveMetrics(u)
+            u
+        }
         repository.checkAndAwardBadges(updated)
         repository.logActivityEvent("workout", "Logged exercise '$title' (${minutes}m, ~$kcal kcal)")
 
@@ -947,11 +965,14 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
         val elapsedMinutes = (durationSeconds / 60).coerceAtLeast(if (durationSeconds > 0) 1 else 0)
 
-        val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
-        val updated = current.copy(
-            mindfulnessMinutes = (current.mindfulnessMinutes + elapsedMinutes).coerceAtLeast(0)
-        )
-        repository.saveMetrics(updated)
+        val updated = metricsWriteLock.withLock {
+            val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
+            val u = current.copy(
+                mindfulnessMinutes = (current.mindfulnessMinutes + elapsedMinutes).coerceAtLeast(0)
+            )
+            repository.saveMetrics(u)
+            u
+        }
         repository.checkAndAwardBadges(updated)
 
         val sessionTitle = when (sessionType) {
@@ -960,8 +981,11 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             MindfulnessSessionRecord.MINDFULNESS_SESSION_TYPE_MOVEMENT -> "Mindful Movement"
             else -> "Mindfulness"
         }
-        val logMsg = if (steps > 0) "Completed $sessionTitle session (${elapsedMinutes}m, $steps steps)" else "Completed $sessionTitle session (${elapsedMinutes}m)"
-        repository.logActivityEvent("mindfulness", logMsg)
+
+        if (steps == 0) {
+            val logMsg = "Completed $sessionTitle session (${elapsedMinutes}m)"
+            repository.logActivityEvent("mindfulness", logMsg)
+        }
 
         // 2. Health Connect write in its own try-catch (can never block or fail the local save)
         try {
@@ -987,9 +1011,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     fun setBloodGlucoseMorning(value: Float) {
         viewModelScope.launch {
-            val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
-            val updated = current.copy(bloodGlucoseMorning = value)
-            repository.saveMetrics(updated)
+            val updated = metricsWriteLock.withLock {
+                val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
+                val u = current.copy(bloodGlucoseMorning = value)
+                repository.saveMetrics(u)
+                u
+            }
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("glucose", "Logged blood glucose: ${glucoseText(value)}")
         }
@@ -997,9 +1024,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     fun setBloodGlucoseNight(value: Float) {
         viewModelScope.launch {
-            val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
-            val updated = current.copy(bloodGlucoseNight = value)
-            repository.saveMetrics(updated)
+            val updated = metricsWriteLock.withLock {
+                val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
+                val u = current.copy(bloodGlucoseNight = value)
+                repository.saveMetrics(u)
+                u
+            }
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("glucose", "Logged blood glucose: ${glucoseText(value)}")
         }
@@ -1028,9 +1058,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val updatedProfile = currentProfile.copy(weightKg = weight, heightCm = height)
             repository.saveUserProfile(updatedProfile)
             
-            val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
-            val updated = current.copy(weightKg = weight)
-            repository.saveMetrics(updated)
+            val updated = metricsWriteLock.withLock {
+                val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
+                val u = current.copy(weightKg = weight)
+                repository.saveMetrics(u)
+                u
+            }
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("weight", "Logged weight: ${weight}kg")
             writeWeightToHealthConnect(weight)
@@ -1043,9 +1076,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val updatedProfile = currentProfile.copy(weightKg = value)
             repository.saveUserProfile(updatedProfile)
             
-            val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
-            val updated = current.copy(weightKg = value)
-            repository.saveMetrics(updated)
+            val updated = metricsWriteLock.withLock {
+                val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
+                val u = current.copy(weightKg = value)
+                repository.saveMetrics(u)
+                u
+            }
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("weight", "Logged weight: ${value}kg")
             writeWeightToHealthConnect(value)
@@ -1061,13 +1097,16 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     ) {
         viewModelScope.launch {
             val value = "$systolic/$diastolic"
-            val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
-            val updated = current.copy(
-                bloodPressure = value,
-                bloodPressureBodyPosition = bodyPosition,
-                bloodPressureArmLocation = armLocation
-            )
-            repository.saveMetrics(updated)
+            val updated = metricsWriteLock.withLock {
+                val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
+                val u = current.copy(
+                    bloodPressure = value,
+                    bloodPressureBodyPosition = bodyPosition,
+                    bloodPressureArmLocation = armLocation
+                )
+                repository.saveMetrics(u)
+                u
+            }
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("blood_pressure", "Logged blood pressure: ${value}")
 
@@ -1147,9 +1186,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     fun setBloodGlucoseBeforeBreakfast(value: Float, specimenSource: String = "Not set", date: String = todayDateString) {
         viewModelScope.launch {
-            val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
-            val updated = current.copy(bloodGlucoseBeforeBreakfast = value, bloodGlucoseSpecimenSource = specimenSource)
-            repository.saveMetrics(updated)
+            val updated = metricsWriteLock.withLock {
+                val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
+                val u = current.copy(bloodGlucoseBeforeBreakfast = value, bloodGlucoseSpecimenSource = specimenSource)
+                repository.saveMetrics(u)
+                u
+            }
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("glucose", "Logged blood glucose (before breakfast): ${glucoseText(value)}")
             writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_BREAKFAST, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource, date)
@@ -1158,9 +1200,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     fun setBloodGlucoseAfterBreakfast(value: Float, specimenSource: String = "Not set", date: String = todayDateString) {
         viewModelScope.launch {
-            val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
-            val updated = current.copy(bloodGlucoseAfterBreakfast = value, bloodGlucoseSpecimenSource = specimenSource)
-            repository.saveMetrics(updated)
+            val updated = metricsWriteLock.withLock {
+                val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
+                val u = current.copy(bloodGlucoseAfterBreakfast = value, bloodGlucoseSpecimenSource = specimenSource)
+                repository.saveMetrics(u)
+                u
+            }
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("glucose", "Logged blood glucose (after breakfast): ${glucoseText(value)}")
             writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_BREAKFAST, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource, date)
@@ -1169,9 +1214,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     fun setBloodGlucoseBeforeLunch(value: Float, specimenSource: String = "Not set", date: String = todayDateString) {
         viewModelScope.launch {
-            val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
-            val updated = current.copy(bloodGlucoseBeforeLunch = value, bloodGlucoseSpecimenSource = specimenSource)
-            repository.saveMetrics(updated)
+            val updated = metricsWriteLock.withLock {
+                val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
+                val u = current.copy(bloodGlucoseBeforeLunch = value, bloodGlucoseSpecimenSource = specimenSource)
+                repository.saveMetrics(u)
+                u
+            }
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("glucose", "Logged blood glucose (before lunch): ${glucoseText(value)}")
             writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_LUNCH, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource, date)
@@ -1180,9 +1228,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     fun setBloodGlucoseAfterLunch(value: Float, specimenSource: String = "Not set", date: String = todayDateString) {
         viewModelScope.launch {
-            val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
-            val updated = current.copy(bloodGlucoseAfterLunch = value, bloodGlucoseSpecimenSource = specimenSource)
-            repository.saveMetrics(updated)
+            val updated = metricsWriteLock.withLock {
+                val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
+                val u = current.copy(bloodGlucoseAfterLunch = value, bloodGlucoseSpecimenSource = specimenSource)
+                repository.saveMetrics(u)
+                u
+            }
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("glucose", "Logged blood glucose (after lunch): ${glucoseText(value)}")
             writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_LUNCH, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource, date)
@@ -1191,9 +1242,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     fun setBloodGlucoseBeforeDinner(value: Float, specimenSource: String = "Not set", date: String = todayDateString) {
         viewModelScope.launch {
-            val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
-            val updated = current.copy(bloodGlucoseBeforeDinner = value, bloodGlucoseSpecimenSource = specimenSource)
-            repository.saveMetrics(updated)
+            val updated = metricsWriteLock.withLock {
+                val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
+                val u = current.copy(bloodGlucoseBeforeDinner = value, bloodGlucoseSpecimenSource = specimenSource)
+                repository.saveMetrics(u)
+                u
+            }
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("glucose", "Logged blood glucose (before dinner): ${glucoseText(value)}")
             writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_DINNER, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource, date)
@@ -1202,9 +1256,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     fun setBloodGlucoseAfterDinner(value: Float, specimenSource: String = "Not set", date: String = todayDateString) {
         viewModelScope.launch {
-            val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
-            val updated = current.copy(bloodGlucoseAfterDinner = value, bloodGlucoseSpecimenSource = specimenSource)
-            repository.saveMetrics(updated)
+            val updated = metricsWriteLock.withLock {
+                val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
+                val u = current.copy(bloodGlucoseAfterDinner = value, bloodGlucoseSpecimenSource = specimenSource)
+                repository.saveMetrics(u)
+                u
+            }
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("glucose", "Logged blood glucose (after dinner): ${glucoseText(value)}")
             writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_DINNER, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource, date)
@@ -1231,27 +1288,34 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             val dateStr = currentDate.toString()
             val day = daysMap[dateStr]
             if (day != null) {
-                val current = repository.getMetricsForDate(dateStr).firstOrNull() ?: DailyMetric(date = dateStr)
-                val updated = current.copy(
-                    steps = if (day.steps > 0) day.steps else current.steps,
-                    distanceMeters = if (day.distanceMeters > 0f) day.distanceMeters else current.distanceMeters,
-                    activeCaloriesBurned = if (day.activeCalories > 0) day.activeCalories else current.activeCaloriesBurned,
-                    sleepHours = if (day.sleepHours > 0f) day.sleepHours else current.sleepHours,
-                    exerciseMinutes = if (day.exerciseMinutes > 0) day.exerciseMinutes else current.exerciseMinutes,
-                    restingHeartRate = if (day.restingHeartRate > 0) day.restingHeartRate else current.restingHeartRate,
-                    heartRateVariability = if (day.hrv > 0f) day.hrv else current.heartRateVariability,
-                    oxygenSaturation = if (day.spo2 > 0f) day.spo2 else current.oxygenSaturation,
-                    skinTemperatureCelsius = if (day.skinTemp != 0f) day.skinTemp else current.skinTemperatureCelsius,
-                    respiratoryRate = if (day.respiratoryRate > 0f) day.respiratoryRate else current.respiratoryRate,
-                    mindfulnessMinutes = if (day.mindfulnessMinutes > 0) day.mindfulnessMinutes else current.mindfulnessMinutes,
-                    heartRateMin = if (day.heartRateMin > 0) day.heartRateMin else current.heartRateMin,
-                    heartRateMax = if (day.heartRateMax > 0) day.heartRateMax else current.heartRateMax,
-                    heartRate = if (day.heartRateAvg > 0) day.heartRateAvg else current.heartRate,
-                    bloodPressure = if (current.bloodPressure.isBlank() && day.bloodPressure.isNotBlank()) day.bloodPressure else current.bloodPressure,
-                    bloodGlucoseMorning = if (current.bloodGlucoseMorning <= 0f && day.bloodGlucose > 0f) day.bloodGlucose else current.bloodGlucoseMorning
-                )
-                if (updated != current) {
-                    repository.saveMetrics(updated)
+                val wasUpdated = metricsWriteLock.withLock {
+                    val current = repository.getMetricsForDate(dateStr).firstOrNull() ?: DailyMetric(date = dateStr)
+                    val updated = current.copy(
+                        steps = if (day.steps > 0) day.steps else current.steps,
+                        distanceMeters = if (day.distanceMeters > 0f) day.distanceMeters else current.distanceMeters,
+                        activeCaloriesBurned = if (day.activeCalories > 0) day.activeCalories else current.activeCaloriesBurned,
+                        sleepHours = if (day.sleepHours > 0f) day.sleepHours else current.sleepHours,
+                        exerciseMinutes = if (day.exerciseMinutes > 0) day.exerciseMinutes else current.exerciseMinutes,
+                        restingHeartRate = if (day.restingHeartRate > 0) day.restingHeartRate else current.restingHeartRate,
+                        heartRateVariability = if (day.hrv > 0f) day.hrv else current.heartRateVariability,
+                        oxygenSaturation = if (day.spo2 > 0f) day.spo2 else current.oxygenSaturation,
+                        skinTemperatureCelsius = if (day.skinTemp != 0f) day.skinTemp else current.skinTemperatureCelsius,
+                        respiratoryRate = if (day.respiratoryRate > 0f) day.respiratoryRate else current.respiratoryRate,
+                        mindfulnessMinutes = if (day.mindfulnessMinutes > 0) day.mindfulnessMinutes else current.mindfulnessMinutes,
+                        heartRateMin = if (day.heartRateMin > 0) day.heartRateMin else current.heartRateMin,
+                        heartRateMax = if (day.heartRateMax > 0) day.heartRateMax else current.heartRateMax,
+                        heartRate = if (day.heartRateAvg > 0) day.heartRateAvg else current.heartRate,
+                        bloodPressure = if (current.bloodPressure.isBlank() && day.bloodPressure.isNotBlank()) day.bloodPressure else current.bloodPressure,
+                        bloodGlucoseMorning = if (current.bloodGlucoseMorning <= 0f && day.bloodGlucose > 0f) day.bloodGlucose else current.bloodGlucoseMorning
+                    )
+                    if (updated != current) {
+                        repository.saveMetrics(updated)
+                        true
+                    } else {
+                        false
+                    }
+                }
+                if (wasUpdated) {
                     daysUpdated++
                 }
             }
@@ -1635,27 +1699,29 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     e.printStackTrace()
                 }
 
-                val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
-                val updated = current.copy(
-                    steps = if (totalSteps > 0) totalSteps else current.steps,
-                    sleepHours = if (sleepHours > 0f) sleepHours else current.sleepHours,
-                    bloodPressure = if (bloodPressure.isNotEmpty()) bloodPressure else current.bloodPressure,
-                    bloodGlucoseMorning = if (bloodGlucose > 0f) bloodGlucose else current.bloodGlucoseMorning,
-                    heartRate = if (heartRate > 0) heartRate else current.heartRate,
-                    heartRateMin = if (heartRateMin > 0) heartRateMin else current.heartRateMin,
-                    heartRateMax = if (heartRateMax > 0) heartRateMax else current.heartRateMax,
-                    restingHeartRate = if (restingHeartRateValue > 0) restingHeartRateValue else current.restingHeartRate,
-                    distanceMeters = if (totalDistance > 0f) totalDistance else current.distanceMeters,
-                    exerciseMinutes = if (exerciseMinutes > 0) exerciseMinutes else current.exerciseMinutes,
-                    externalNutritionCalories = if (externalNutritionCalories > 0) externalNutritionCalories else current.externalNutritionCalories,
-                    activeCaloriesBurned = if (activeCaloriesBurned > 0) activeCaloriesBurned else current.activeCaloriesBurned,
-                    heartRateVariability = if (heartRateVariability > 0f) heartRateVariability else current.heartRateVariability,
-                    oxygenSaturation = if (oxygenSaturation > 0f) oxygenSaturation else current.oxygenSaturation,
-                    skinTemperatureCelsius = if (skinTemperatureCelsius > 0f) skinTemperatureCelsius else current.skinTemperatureCelsius,
-                    respiratoryRate = if (respiratoryRate > 0f) respiratoryRate else current.respiratoryRate,
-                    mindfulnessMinutes = if (mindfulnessMinutes > 0) mindfulnessMinutes else current.mindfulnessMinutes
-                )
-                repository.saveMetrics(updated)
+                metricsWriteLock.withLock {
+                    val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
+                    val updated = current.copy(
+                        steps = if (totalSteps > 0) totalSteps else current.steps,
+                        sleepHours = if (sleepHours > 0f) sleepHours else current.sleepHours,
+                        bloodPressure = if (bloodPressure.isNotEmpty()) bloodPressure else current.bloodPressure,
+                        bloodGlucoseMorning = if (bloodGlucose > 0f) bloodGlucose else current.bloodGlucoseMorning,
+                        heartRate = if (heartRate > 0) heartRate else current.heartRate,
+                        heartRateMin = if (heartRateMin > 0) heartRateMin else current.heartRateMin,
+                        heartRateMax = if (heartRateMax > 0) heartRateMax else current.heartRateMax,
+                        restingHeartRate = if (restingHeartRateValue > 0) restingHeartRateValue else current.restingHeartRate,
+                        distanceMeters = if (totalDistance > 0f) totalDistance else current.distanceMeters,
+                        exerciseMinutes = if (exerciseMinutes > 0) exerciseMinutes else current.exerciseMinutes,
+                        externalNutritionCalories = if (externalNutritionCalories > 0) externalNutritionCalories else current.externalNutritionCalories,
+                        activeCaloriesBurned = if (activeCaloriesBurned > 0) activeCaloriesBurned else current.activeCaloriesBurned,
+                        heartRateVariability = if (heartRateVariability > 0f) heartRateVariability else current.heartRateVariability,
+                        oxygenSaturation = if (oxygenSaturation > 0f) oxygenSaturation else current.oxygenSaturation,
+                        skinTemperatureCelsius = if (skinTemperatureCelsius > 0f) skinTemperatureCelsius else current.skinTemperatureCelsius,
+                        respiratoryRate = if (respiratoryRate > 0f) respiratoryRate else current.respiratoryRate,
+                        mindfulnessMinutes = if (mindfulnessMinutes > 0) mindfulnessMinutes else current.mindfulnessMinutes
+                    )
+                    repository.saveMetrics(updated)
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
