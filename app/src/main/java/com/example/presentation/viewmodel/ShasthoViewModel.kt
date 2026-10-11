@@ -2502,14 +2502,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             initialValue = emptyList()
         )
 
-    private val _aiEngineSetting = MutableStateFlow(OnDeviceModelStore.getEngineSetting(getApplication()))
-    val aiEngineSetting: StateFlow<AiEngineSetting> = _aiEngineSetting.asStateFlow()
-
-    fun setAiEngineSetting(setting: AiEngineSetting) {
-        _aiEngineSetting.value = setting
-        OnDeviceModelStore.setEngineSetting(getApplication(), setting)
-    }
-
     private val _universalAssistantTab = MutableStateFlow(0) // 0 = Chat, 1 = History
     val universalAssistantTab: StateFlow<Int> = _universalAssistantTab.asStateFlow()
 
@@ -2613,7 +2605,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
                 val sessionHistoryForCall = historyBeforeThisMessage.takeLast(10).map { it.copy(text = AssistantRouter.stripFooter(it.text)) }
 
-                val engineSetting = _aiEngineSetting.value
+                val engineSetting = OnDeviceModelStore.getEngineSetting(getApplication())
                 val modelReady = OnDeviceModelStore.findModelFile(getApplication()) != null
                 val online = OnDeviceModelStore.isOnline(getApplication())
                 val route = AssistantRouter.route(message, engineSetting, modelReady, online)
@@ -2740,9 +2732,11 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 android.util.Log.e("UniversalAssistant", "sendUniversalAssistantMessage failed", e)
                 val rawMsg = e.message ?: ""
                 val errorText = when {
+                    isOfflineError(rawMsg, e) -> friendlyOfflineText
                     rawMsg.contains("429") || rawMsg.contains("quota", ignoreCase = true) ->
                         "The AI assistant is momentarily busy due to high traffic. Please try again in a moment."
                     rawMsg.contains("403") ->
@@ -2757,6 +2751,17 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             _universalAssistantStatus.value = null
         }
     }
+
+    private fun isOfflineError(msg: String?, throwable: Throwable? = null): Boolean {
+        val raw = msg ?: throwable?.message ?: ""
+        val lower = raw.lowercase()
+        return lower.contains("unable to resolve host") ||
+               lower.contains("no address associated with hostname") ||
+               lower.contains("unknownhost") ||
+               throwable is java.net.UnknownHostException
+    }
+
+    private val friendlyOfflineText = "I can't reach the cloud AI because you appear to be offline. Simple questions can be answered on this phone: choose Auto or On this phone only in Settings > Offline AI (beta)."
 
     private suspend fun executeCloudAssistant(
         message: String,
@@ -2781,11 +2786,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             onStatusUpdate = { status -> _universalAssistantStatus.value = status }
         )) {
             is AppRepository.AssistantResult.Text -> {
-                _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(result.message, false)
-                repository.saveAssistantChatMessage(currentSessionId, result.message, false)
+                val messageText = if (isOfflineError(result.message)) friendlyOfflineText else result.message
+                _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(messageText, false)
+                repository.saveAssistantChatMessage(currentSessionId, messageText, false)
                 repository.saveAssistantSession(
                     sessionToSave.copy(
-                        preview = result.message.take(70),
+                        preview = messageText.take(70),
                         messageCount = sessionToSave.messageCount + 1,
                         updatedAt = System.currentTimeMillis()
                     )
