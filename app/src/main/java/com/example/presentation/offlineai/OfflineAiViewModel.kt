@@ -162,15 +162,42 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     private fun getModelsDir(): File {
-        val dir = File(getApplication<Application>().filesDir, "models")
+        val ext = getApplication<Application>().getExternalFilesDir("models")
+        val dir = ext ?: File(getApplication<Application>().filesDir, "models")
         if (!dir.exists()) dir.mkdirs()
         return dir
+    }
+
+    private fun legacyModelsDir(): File {
+        return File(getApplication<Application>().filesDir, "models")
     }
 
     fun getModelFile(): File? {
         val dir = getModelsDir()
         val files = dir.listFiles { _, name -> name.endsWith(".litertlm") }
-        return files?.firstOrNull() ?: files?.maxByOrNull { it.lastModified() }
+        val found = files?.firstOrNull() ?: files?.maxByOrNull { it.lastModified() }
+        if (found != null && found.exists() && found.length() > 0L) return found
+
+        val legacy = legacyModelsDir()
+        if (legacy.absolutePath != dir.absolutePath) {
+            val legacyFiles = legacy.listFiles { _, name -> name.endsWith(".litertlm") }
+            val legacyFound = legacyFiles?.firstOrNull() ?: legacyFiles?.maxByOrNull { it.lastModified() }
+            if (legacyFound != null && legacyFound.exists() && legacyFound.length() > 0L) return legacyFound
+        }
+        return null
+    }
+
+    private fun deleteAllOtherModelFiles(keepFile: File? = null) {
+        val dirs = listOf(getModelsDir(), legacyModelsDir())
+        for (d in dirs) {
+            if (d.exists()) {
+                d.listFiles { _, name -> name.endsWith(".litertlm") || name == "import.tmp" }?.forEach { f ->
+                    if (keepFile == null || f.absolutePath != keepFile.absolutePath) {
+                        f.delete()
+                    }
+                }
+            }
+        }
     }
 
     fun refreshModelFileState() {
@@ -179,7 +206,7 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
         val size = if (exists) file!!.length() else 0L
 
         val freeSpace = try {
-            val stat = StatFs(getApplication<Application>().filesDir.absolutePath)
+            val stat = StatFs(getModelsDir().absolutePath)
             stat.availableBlocksLong * stat.blockSizeLong
         } catch (e: Exception) {
             0L
@@ -209,6 +236,13 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun startDownload() {
         val context = getApplication<Application>()
+        val extDir = context.getExternalFilesDir("models")
+        if (extDir == null) {
+            _downloadState.value = DownloadState.Failed("This phone has no usable external storage. Use Import instead.")
+            return
+        }
+        if (!extDir.exists()) extDir.mkdirs()
+
         val rawUrl = _modelUrlInput.value.trim()
         if (!rawUrl.startsWith("https://") || !rawUrl.endsWith(".litertlm", ignoreCase = true)) {
             _downloadState.value = DownloadState.Failed("Enter a direct link ending in .litertlm")
@@ -230,9 +264,7 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
 
         try {
             val fileName = Uri.parse(rawUrl).lastPathSegment?.let { if (it.endsWith(".litertlm", ignoreCase = true)) it else null } ?: defaultModelFileName
-            val destDir = getModelsDir()
-            if (!destDir.exists()) destDir.mkdirs()
-            val destFile = File(destDir, fileName)
+            val destFile = File(extDir, fileName)
             if (destFile.exists()) destFile.delete()
 
             val request = DownloadManager.Request(Uri.parse(rawUrl))
@@ -240,7 +272,7 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
                 .setDescription("Downloading LiteRT-LM model over Wi-Fi")
                 .setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI)
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                .setDestinationUri(Uri.fromFile(destFile))
+                .setDestinationInExternalFilesDir(context, "models", fileName)
 
             val downloadId = downloadManager.enqueue(request)
             activeDownloadId = downloadId
@@ -305,11 +337,7 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
     private suspend fun onDownloadFinished(tempDestFile: File) {
         withContext(Dispatchers.IO) {
             try {
-                val modelsDir = getModelsDir()
-                val existingFiles = modelsDir.listFiles { _, name -> name.endsWith(".litertlm") }
-                existingFiles?.forEach {
-                    if (it.absolutePath != tempDestFile.absolutePath) it.delete()
-                }
+                deleteAllOtherModelFiles(tempDestFile)
                 refreshModelFileState()
                 _downloadState.value = DownloadState.Completed
             } catch (t: Throwable) {
@@ -321,6 +349,7 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun mapDownloadManagerReason(reason: Int): String {
         return when (reason) {
+            401, 403, 404 -> "The server refused the download (it may need a login, or the link is wrong)"
             DownloadManager.ERROR_CANNOT_RESUME -> "Cannot resume"
             DownloadManager.ERROR_DEVICE_NOT_FOUND -> "Storage not found"
             DownloadManager.ERROR_FILE_ALREADY_EXISTS -> "File already exists"
@@ -370,6 +399,7 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
                 }
 
                 val modelsDir = getModelsDir()
+                if (!modelsDir.exists()) modelsDir.mkdirs()
                 val tempFile = File(modelsDir, "import.tmp")
                 if (tempFile.exists()) tempFile.delete()
 
@@ -394,10 +424,6 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
                 outputStream.close()
                 inputStream.close()
 
-                // Copy finished successfully -> delete existing model files, rename tempFile
-                val existingFiles = modelsDir.listFiles { _, name -> name.endsWith(".litertlm") }
-                existingFiles?.forEach { it.delete() }
-
                 val targetFile = File(modelsDir, fileName!!)
                 if (targetFile.exists()) targetFile.delete()
                 val renamed = tempFile.renameTo(targetFile)
@@ -406,6 +432,7 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
                     tempFile.delete()
                 }
 
+                deleteAllOtherModelFiles(targetFile)
                 refreshModelFileState()
                 _downloadState.value = DownloadState.Completed
             } catch (t: Throwable) {
@@ -422,9 +449,7 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch(Dispatchers.IO) {
             llm.close()
             _loadState.value = LoadState.Unloaded
-            val dir = getModelsDir()
-            val files = dir.listFiles { _, name -> name.endsWith(".litertlm") }
-            files?.forEach { it.delete() }
+            deleteAllOtherModelFiles(null)
             refreshModelFileState()
             _downloadState.value = DownloadState.Idle
         }
