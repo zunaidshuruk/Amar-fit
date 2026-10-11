@@ -54,7 +54,6 @@ import com.example.data.repository.DriveBackupPayload
 import com.example.util.formatHeight
 import com.example.util.formatWeight
 import com.example.util.WorkoutMusic
-import com.example.util.SpotifyRemote
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -190,8 +189,6 @@ fun SettingsScreen(
     var addPlaylistError by remember { mutableStateOf<String?>(null) }
     var musicControlsEnabled by remember { mutableStateOf(WorkoutMusic.isControlsEnabled(context)) }
     var musicAutoStartEnabled by remember { mutableStateOf(WorkoutMusic.isAutoStartEnabled(context)) }
-    var spotifyRemoteEnabled by remember { mutableStateOf(SpotifyRemote.isEnabled(context)) }
-    val spotifyState by SpotifyRemote.state.collectAsState()
 
     fun refreshPlaylists() {
         playlists = WorkoutMusic.getPlaylists(context)
@@ -1081,117 +1078,28 @@ fun SettingsScreen(
                             )
                         )
                     }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                            Text(
-                                "Spotify direct control (App Remote)",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                if (spotifyRemoteEnabled) {
-                                    if (spotifyState.isConnected) {
-                                        "Connected: ${if (spotifyState.title.isNotBlank()) "${spotifyState.title} - ${spotifyState.artist}" else "Ready"}"
-                                    } else if (!spotifyState.lastError.isNullOrBlank()) {
-                                        "${spotifyState.lastError}"
-                                    } else if (SpotifyRemote.isConfigured()) {
-                                        "Plays Spotify in background; KardIQ stays in front"
-                                    } else {
-                                        "Set SPOTIFY_CLIENT_ID in secrets to enable direct playback"
-                                    }
-                                } else {
-                                    "Plays Spotify in background and shows real-time controls in KardIQ"
-                                },
-                                fontSize = 12.sp,
-                                color = if (!spotifyState.lastError.isNullOrBlank() && spotifyRemoteEnabled) {
-                                    MaterialTheme.colorScheme.error
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                }
-                            )
-                            if (spotifyRemoteEnabled && !spotifyState.lastErrorDetail.isNullOrBlank()) {
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = spotifyState.lastErrorDetail ?: "",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        Switch(
-                            checked = spotifyRemoteEnabled,
-                            onCheckedChange = { checked ->
-                                spotifyRemoteEnabled = checked
-                                SpotifyRemote.setEnabled(context, checked)
-                                if (checked) {
-                                    SpotifyRemote.connect(context, interactive = true) { success, msg ->
-                                        if (!success && !msg.isNullOrBlank()) {
-                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.primary,
-                                checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                            )
-                        )
-                    }
-
-                    if (spotifyRemoteEnabled && !spotifyState.isConnected) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 4.dp, bottom = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Button(
-                                onClick = {
-                                    SpotifyRemote.connect(context, interactive = true) { success, msg ->
-                                        if (!success && !msg.isNullOrBlank()) {
-                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary
-                                ),
-                                shape = RoundedCornerShape(12.dp),
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-                            ) {
-                                Text("Connect Spotify", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
-
-                            if (!spotifyState.lastError.isNullOrBlank()) {
-                                OutlinedButton(
-                                    onClick = {
-                                        try {
-                                            val launchIntent = context.packageManager.getLaunchIntentForPackage("com.spotify.music")
-                                            if (launchIntent != null) {
-                                                context.startActivity(launchIntent)
-                                            } else {
-                                                Toast.makeText(context, "Spotify is not installed", Toast.LENGTH_SHORT).show()
-                                            }
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Could not open Spotify", Toast.LENGTH_SHORT).show()
-                                        }
-                                    },
-                                    shape = RoundedCornerShape(12.dp),
-                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-                                ) {
-                                    Text("Open Spotify", fontSize = 12.sp)
-                                }
-                            }
-                        }
-                    }
                 }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                val navController = com.example.LocalNavController.current
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { navController?.navigate("offline_ai") }
+                        .padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                        Text("Offline AI (beta)", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
+                        Text("Try a small AI model that runs on your phone", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "Offline AI (beta)",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Row(
                     modifier = Modifier

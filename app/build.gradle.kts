@@ -71,7 +71,7 @@ android {
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
 // to match the convention used in Web projects.
 val envFile = rootProject.file(".env")
-val envKeys = listOf("GEMINI_API_KEY", "GEMINI_API_KEY_2", "GEMINI_API_KEY_3", "YOUTUBE_API_KEY", "SPOTIFY_CLIENT_ID")
+val envKeys = listOf("GEMINI_API_KEY", "GEMINI_API_KEY_2", "GEMINI_API_KEY_3", "YOUTUBE_API_KEY")
 val props = Properties()
 if (envFile.exists()) {
   try { envFile.inputStream().use { props.load(it) } } catch (e: Exception) {}
@@ -148,8 +148,7 @@ dependencies {
   implementation(libs.okhttp)
   implementation("com.google.mlkit:barcode-scanning:17.3.0")
   implementation(libs.zxing.core)
-  implementation(files("libs/spotify-app-remote-release-0.8.0.aar"))
-  implementation("com.google.code.gson:gson:2.10.1")
+  implementation("com.google.ai.edge.litertlm:litertlm-android:0.17.1")
   // implementation(libs.play.services.location)
   implementation(libs.retrofit)
   testImplementation(libs.androidx.compose.ui.test.junit4)
@@ -173,3 +172,10 @@ dependencies {
   androidTestImplementation(libs.androidx.room.testing)
   "ksp"(libs.moshi.kotlin.codegen)
 }
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        freeCompilerArgs.add("-Xskip-metadata-version-check")
+    }
+}
+

@@ -48,6 +48,7 @@ import com.example.presentation.metrics.GlucoseLogScreen
 import com.example.presentation.metrics.WeightLogScreen
 import com.example.presentation.notifications.NotificationHelper
 import com.example.presentation.nutrition.NutritionScreen
+import com.example.presentation.offlineai.OfflineAiScreen
 import com.example.presentation.onboarding.OnboardingScreen
 import com.example.presentation.recipe.RecipeScreen
 import com.example.presentation.scanner.ScannerScreen
@@ -452,6 +453,7 @@ class MainActivity : ComponentActivity() {
                   composable("exercise_library") { ExerciseLibraryScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("mindfulness_timer") { com.example.presentation.mindfulness.MindfulnessTimerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("edit_focus") { com.example.presentation.today.EditFocusScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                  composable("offline_ai") { OfflineAiScreen(onNavigateBack = { navController.popBackStack() }) }
                   composable(
                       route = "metric_detail/{metricKey}",
                       arguments = listOf(androidx.navigation.navArgument("metricKey") { type = androidx.navigation.NavType.StringType })

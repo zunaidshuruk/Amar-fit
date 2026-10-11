@@ -21,7 +21,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.util.MusicNotificationManager
-import com.example.util.SpotifyRemote
 import com.example.util.WorkoutMusic
 import kotlinx.coroutines.delay
 
@@ -32,16 +31,13 @@ fun MusicControlsCard(
 ) {
     val context = LocalContext.current
     val notifState by MusicNotificationManager.nowPlaying.collectAsState()
-    val spotifyState by SpotifyRemote.state.collectAsState()
 
-    val isSpotifyActive = spotifyState.isConnected
-
-    val title = if (isSpotifyActive) spotifyState.title else notifState.title
-    val artist = if (isSpotifyActive) spotifyState.artist else notifState.artist
+    val title = notifState.title
+    val artist = notifState.artist
 
     var audioActive by remember { mutableStateOf(false) }
-    LaunchedEffect(notifState.hasPermission, isSpotifyActive) {
-        while (!notifState.hasPermission && !isSpotifyActive) {
+    LaunchedEffect(notifState.hasPermission) {
+        while (!notifState.hasPermission) {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
             audioActive = audioManager?.isMusicActive == true
             delay(1000)
@@ -49,13 +45,11 @@ fun MusicControlsCard(
     }
 
     var optimistic by remember { mutableStateOf<Boolean?>(null) }
-    LaunchedEffect(notifState.isPlaying, spotifyState.isPlaying, audioActive) {
+    LaunchedEffect(notifState.isPlaying, audioActive) {
         optimistic = null
     }
 
-    val actualPlaying = if (isSpotifyActive) {
-        spotifyState.isPlaying
-    } else if (notifState.hasPermission) {
+    val actualPlaying = if (notifState.hasPermission) {
         notifState.isPlaying
     } else {
         audioActive
@@ -76,36 +70,7 @@ fun MusicControlsCard(
                 .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (isSpotifyActive) {
-                if (title.isNotBlank()) {
-                    Text(
-                        text = title,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        textAlign = TextAlign.Center,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (artist.isNotBlank()) {
-                        Text(
-                            text = artist,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            textAlign = TextAlign.Center,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                } else {
-                    Text(
-                        text = "Spotify Connected",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            } else if (notifState.hasPermission) {
+            if (notifState.hasPermission) {
                 if (title.isNotBlank()) {
                     Text(
                         text = title,

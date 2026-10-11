@@ -34,7 +34,6 @@ import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.components.MusicControlsCard
 import com.example.ui.theme.*
 import com.example.util.MusicNotificationManager
-import com.example.util.SpotifyRemote
 import com.example.util.WorkoutMusic
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -78,14 +77,8 @@ fun WorkoutSessionScreen(
 
     DisposableEffect(musicContext) {
         MusicNotificationManager.register(musicContext)
-        if (SpotifyRemote.isEnabled(musicContext)) {
-            SpotifyRemote.connect(musicContext)
-        }
         onDispose {
             MusicNotificationManager.unregister(musicContext)
-            if (SpotifyRemote.isEnabled(musicContext)) {
-                SpotifyRemote.disconnect()
-            }
         }
     }
 

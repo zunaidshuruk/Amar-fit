@@ -49,7 +49,6 @@ import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.components.MusicControlsCard
 import com.example.ui.theme.*
 import com.example.util.MusicNotificationManager
-import com.example.util.SpotifyRemote
 import com.example.util.StepSessionCounter
 import com.example.util.WalkingMetrics
 import com.example.util.WorkoutMusic
@@ -153,18 +152,11 @@ fun MindfulnessTimerScreen(
     }
 
     val nowPlayingState by MusicNotificationManager.nowPlaying.collectAsState()
-    val spotifyState by SpotifyRemote.state.collectAsState()
 
     DisposableEffect(context) {
         MusicNotificationManager.register(context)
-        if (SpotifyRemote.isEnabled(context)) {
-            SpotifyRemote.connect(context)
-        }
         onDispose {
             MusicNotificationManager.unregister(context)
-            if (SpotifyRemote.isEnabled(context)) {
-                SpotifyRemote.disconnect()
-            }
         }
     }
 
@@ -1185,8 +1177,7 @@ fun MindfulnessTimerScreen(
                 }
 
                 if ((musicEnabledForSession && selectedPlaylistForSession != null) ||
-                    nowPlayingState.isPlaying || nowPlayingState.title.isNotBlank() ||
-                    spotifyState.isConnected || spotifyState.isPlaying || spotifyState.title.isNotBlank()) {
+                    nowPlayingState.isPlaying || nowPlayingState.title.isNotBlank()) {
                     Spacer(modifier = Modifier.height(16.dp))
                     MusicControlsCard(
                         onOpenPlaylist = {
