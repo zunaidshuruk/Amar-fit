@@ -8,6 +8,11 @@ import com.example.data.local.DailyMetric
 import com.example.data.local.UserProfile
 import com.example.data.repository.AppRepository
 import com.example.data.repository.FirebaseManager
+import com.example.util.ai.AiEngineSetting
+import com.example.util.ai.AssistantRouter
+import com.example.util.ai.AssistantRoute
+import com.example.util.ai.OnDeviceModelStore
+import com.example.util.ai.OnDeviceLlm
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -2497,6 +2502,14 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             initialValue = emptyList()
         )
 
+    private val _aiEngineSetting = MutableStateFlow(OnDeviceModelStore.getEngineSetting(getApplication()))
+    val aiEngineSetting: StateFlow<AiEngineSetting> = _aiEngineSetting.asStateFlow()
+
+    fun setAiEngineSetting(setting: AiEngineSetting) {
+        _aiEngineSetting.value = setting
+        OnDeviceModelStore.setEngineSetting(getApplication(), setting)
+    }
+
     private val _universalAssistantTab = MutableStateFlow(0) // 0 = Chat, 1 = History
     val universalAssistantTab: StateFlow<Int> = _universalAssistantTab.asStateFlow()
 
@@ -2600,87 +2613,80 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
                 val sessionHistoryForCall = historyBeforeThisMessage.takeLast(10)
 
-                when (val result = repository.sendUniversalAssistantMessage(
-                    userMessage = message,
-                    chatHistory = sessionHistoryForCall,
-                    profile = profile,
-                    metrics = metrics,
-                    foodLogs = foodLogs,
-                    onStatusUpdate = { status -> _universalAssistantStatus.value = status }
-                )) {
-                    is AppRepository.AssistantResult.Text -> {
-                        _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(result.message, false)
-                        repository.saveAssistantChatMessage(currentSessionId, result.message, false)
+                val engineSetting = _aiEngineSetting.value
+                val modelReady = OnDeviceModelStore.findModelFile(getApplication()) != null
+                val online = OnDeviceModelStore.isOnline(getApplication())
+                val route = AssistantRouter.route(message, engineSetting, modelReady, online)
+
+                when (route) {
+                    AssistantRoute.NEEDS_SETUP, AssistantRoute.NEEDS_INTERNET, AssistantRoute.NEEDS_CLOUD_ENGINE -> {
+                        val notice = AssistantRouter.notice(route)
+                        _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(notice, false)
+                        repository.saveAssistantChatMessage(currentSessionId, notice, false)
                         repository.saveAssistantSession(
                             sessionToSave.copy(
-                                preview = result.message.take(70),
+                                preview = notice.take(70),
                                 messageCount = sessionToSave.messageCount + 1,
                                 updatedAt = System.currentTimeMillis()
                             )
                         )
+                        _isLoadingUniversalAssistant.value = false
+                        _universalAssistantStatus.value = null
+                        return@launch
                     }
-                    is AppRepository.AssistantResult.PendingFoodLog -> {
-                        val confirmationText = "I've prepared a food log entry for you to review below."
-                        _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(
-                            confirmationText, false
-                        )
-                        repository.saveAssistantChatMessage(currentSessionId, confirmationText, false)
-                        repository.saveAssistantSession(
-                            sessionToSave.copy(
-                                preview = "Logged: ${result.name}",
-                                messageCount = sessionToSave.messageCount + 1,
-                                updatedAt = System.currentTimeMillis()
-                            )
-                        )
-                        _pendingFoodLogEntry.value = PendingFoodLogEntry(
-                            name = result.name,
-                            category = result.category,
-                            calories = result.calories,
-                            description = result.description,
-                            mealType = result.mealType,
-                            carbsG = result.carbsG,
-                            proteinG = result.proteinG,
-                            fatG = result.fatG,
-                            sodiumMg = 0f,
-                            sugarG = 0f,
-                            fiberG = 0f
-                        )
-                    }
-                    is AppRepository.AssistantResult.PendingFoodLogs -> {
-                        val count = result.entries.size
-                        val confirmationText = if (count == 1) {
-                            "I've prepared 1 food entry for you to review below."
+                    AssistantRoute.ON_DEVICE -> {
+                        _universalAssistantStatus.value = "Running on device..."
+                        val loadResult = OnDeviceLlm.shared(getApplication()).ensureLoaded()
+                        if (!loadResult.ok) {
+                            val fallbackNotice = "Could not load on-device model (${loadResult.error ?: "error"}). Falling back to cloud AI..."
+                            executeCloudAssistant(message, currentSessionId, sessionToSave, sessionHistoryForCall, profile, metrics, foodLogs, fallbackNotice)
                         } else {
-                            "I've prepared $count food entries for you to review below."
-                        }
-                        _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(
-                            confirmationText, false
-                        )
-                        repository.saveAssistantChatMessage(currentSessionId, confirmationText, false)
-                        val firstName = result.entries.firstOrNull()?.name ?: "Food"
-                        val previewText = if (count > 1) "Logged: $firstName +${count - 1} more" else "Logged: $firstName"
-                        repository.saveAssistantSession(
-                            sessionToSave.copy(
-                                preview = previewText,
-                                messageCount = sessionToSave.messageCount + 1,
-                                updatedAt = System.currentTimeMillis()
+                            val contextStr = AssistantRouter.buildContext(profile, metrics)
+                            val sysInstruction = buildString {
+                                append(AssistantRouter.ON_DEVICE_SYSTEM_PROMPT)
+                                if (contextStr.isNotBlank()) {
+                                    append("\n\nUser Context: $contextStr")
+                                }
+                            }
+                            val history = sessionHistoryForCall.map { it.isUser to it.text }
+
+                            var accumulated = ""
+                            val assistantMsgIndex = _activeAssistantMessages.value.size
+                            _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage("", false)
+
+                            OnDeviceLlm.shared(getApplication()).generate(
+                                prompt = message,
+                                systemInstruction = sysInstruction,
+                                history = history
+                            ).collect { chunk ->
+                                accumulated += chunk
+                                val displayed = accumulated + AssistantRouter.ON_DEVICE_FOOTER
+                                val currentList = _activeAssistantMessages.value.toMutableList()
+                                if (currentList.size > assistantMsgIndex) {
+                                    currentList[assistantMsgIndex] = ChatMessage(displayed, false)
+                                    _activeAssistantMessages.value = currentList
+                                }
+                            }
+
+                            val finalMsg = if (accumulated.isNotBlank()) accumulated + AssistantRouter.ON_DEVICE_FOOTER else "I am sorry, I couldn't generate a response."
+                            val currentList = _activeAssistantMessages.value.toMutableList()
+                            if (currentList.size > assistantMsgIndex) {
+                                currentList[assistantMsgIndex] = ChatMessage(finalMsg, false)
+                                _activeAssistantMessages.value = currentList
+                            }
+
+                            repository.saveAssistantChatMessage(currentSessionId, finalMsg, false)
+                            repository.saveAssistantSession(
+                                sessionToSave.copy(
+                                    preview = finalMsg.take(70),
+                                    messageCount = sessionToSave.messageCount + 1,
+                                    updatedAt = System.currentTimeMillis()
+                                )
                             )
-                        )
-                        _pendingFoodLogEntries.value = result.entries.map {
-                            PendingFoodLogEntry(
-                                name = it.name,
-                                category = it.category,
-                                calories = it.calories,
-                                description = it.description,
-                                mealType = it.mealType,
-                                carbsG = it.carbsG,
-                                proteinG = it.proteinG,
-                                fatG = it.fatG,
-                                sodiumMg = 0f,
-                                sugarG = 0f,
-                                fiberG = 0f
-                            )
                         }
+                    }
+                    AssistantRoute.CLOUD -> {
+                        executeCloudAssistant(message, currentSessionId, sessionToSave, sessionHistoryForCall, profile, metrics, foodLogs, null)
                     }
                 }
             } catch (e: Exception) {
@@ -2699,6 +2705,105 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             }
             _isLoadingUniversalAssistant.value = false
             _universalAssistantStatus.value = null
+        }
+    }
+
+    private suspend fun executeCloudAssistant(
+        message: String,
+        currentSessionId: String,
+        sessionToSave: com.example.data.local.AssistantChatSession,
+        sessionHistoryForCall: List<ChatMessage>,
+        profile: UserProfile,
+        metrics: List<DailyMetric>,
+        foodLogs: List<com.example.data.local.FoodLog>,
+        prefixNotice: String?
+    ) {
+        if (prefixNotice != null) {
+            _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(prefixNotice, false)
+            repository.saveAssistantChatMessage(currentSessionId, prefixNotice, false)
+        }
+        when (val result = repository.sendUniversalAssistantMessage(
+            userMessage = message,
+            chatHistory = sessionHistoryForCall,
+            profile = profile,
+            metrics = metrics,
+            foodLogs = foodLogs,
+            onStatusUpdate = { status -> _universalAssistantStatus.value = status }
+        )) {
+            is AppRepository.AssistantResult.Text -> {
+                _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(result.message, false)
+                repository.saveAssistantChatMessage(currentSessionId, result.message, false)
+                repository.saveAssistantSession(
+                    sessionToSave.copy(
+                        preview = result.message.take(70),
+                        messageCount = sessionToSave.messageCount + 1,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                )
+            }
+            is AppRepository.AssistantResult.PendingFoodLog -> {
+                val confirmationText = "I've prepared a food log entry for you to review below."
+                _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(
+                    confirmationText, false
+                )
+                repository.saveAssistantChatMessage(currentSessionId, confirmationText, false)
+                repository.saveAssistantSession(
+                    sessionToSave.copy(
+                        preview = "Logged: ${result.name}",
+                        messageCount = sessionToSave.messageCount + 1,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                )
+                _pendingFoodLogEntry.value = PendingFoodLogEntry(
+                    name = result.name,
+                    category = result.category,
+                    calories = result.calories,
+                    description = result.description,
+                    mealType = result.mealType,
+                    carbsG = result.carbsG,
+                    proteinG = result.proteinG,
+                    fatG = result.fatG,
+                    sodiumMg = 0f,
+                    sugarG = 0f,
+                    fiberG = 0f
+                )
+            }
+            is AppRepository.AssistantResult.PendingFoodLogs -> {
+                val count = result.entries.size
+                val confirmationText = if (count == 1) {
+                    "I've prepared 1 food entry for you to review below."
+                } else {
+                    "I've prepared $count food entries for you to review below."
+                }
+                _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(
+                    confirmationText, false
+                )
+                repository.saveAssistantChatMessage(currentSessionId, confirmationText, false)
+                val firstName = result.entries.firstOrNull()?.name ?: "Food"
+                val previewText = if (count > 1) "Logged: $firstName +${count - 1} more" else "Logged: $firstName"
+                repository.saveAssistantSession(
+                    sessionToSave.copy(
+                        preview = previewText,
+                        messageCount = sessionToSave.messageCount + 1,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                )
+                _pendingFoodLogEntries.value = result.entries.map {
+                    PendingFoodLogEntry(
+                        name = it.name,
+                        category = it.category,
+                        calories = it.calories,
+                        description = it.description,
+                        mealType = it.mealType,
+                        carbsG = it.carbsG,
+                        proteinG = it.proteinG,
+                        fatG = it.fatG,
+                        sodiumMg = 0f,
+                        sugarG = 0f,
+                        fiberG = 0f
+                    )
+                }
+            }
         }
     }
 

@@ -16,10 +16,12 @@ import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.util.ai.AiEngineSetting
 import com.example.util.ai.BenchmarkResult
 import com.example.util.ai.LoadResult
 import com.example.util.ai.OnDeviceBenchmark
 import com.example.util.ai.OnDeviceLlm
+import com.example.util.ai.OnDeviceModelStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -65,7 +67,7 @@ data class ChatMessage(
 class OfflineAiViewModel(application: Application) : AndroidViewModel(application) {
 
     private val tag = "OfflineAiViewModel"
-    private val llm = OnDeviceLlm(application)
+    private val llm = OnDeviceLlm.shared(application)
 
     val defaultModelFileName = "gemma-4-E2B-it.litertlm"
 
@@ -92,6 +94,9 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
     private val _enableMtp = MutableStateFlow(true)
     val enableMtp: StateFlow<Boolean> = _enableMtp.asStateFlow()
 
+    private val _aiEngineSetting = MutableStateFlow(OnDeviceModelStore.getEngineSetting(application))
+    val aiEngineSetting: StateFlow<AiEngineSetting> = _aiEngineSetting.asStateFlow()
+
     private val _chatTranscript = MutableStateFlow<List<ChatMessage>>(emptyList())
     val chatTranscript: StateFlow<List<ChatMessage>> = _chatTranscript.asStateFlow()
 
@@ -110,16 +115,29 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
     private var lastLoadResult: LoadResult? = null
 
     init {
+        val prefs = application.getSharedPreferences("ShasthoPrefs", Context.MODE_PRIVATE)
+        _useGpu.value = prefs.getBoolean("ai_use_gpu", true)
+        _enableMtp.value = prefs.getBoolean("ai_use_mtp", true)
+
         refreshModelFileState()
         checkRemoteSize()
     }
 
     fun setUseGpu(enabled: Boolean) {
         _useGpu.value = enabled
+        getApplication<Application>().getSharedPreferences("ShasthoPrefs", Context.MODE_PRIVATE)
+            .edit().putBoolean("ai_use_gpu", enabled).apply()
     }
 
     fun setEnableMtp(enabled: Boolean) {
         _enableMtp.value = enabled
+        getApplication<Application>().getSharedPreferences("ShasthoPrefs", Context.MODE_PRIVATE)
+            .edit().putBoolean("ai_use_mtp", enabled).apply()
+    }
+
+    fun setAiEngineSetting(setting: AiEngineSetting) {
+        _aiEngineSetting.value = setting
+        OnDeviceModelStore.setEngineSetting(getApplication(), setting)
     }
 
     fun setModelUrl(url: String) {
@@ -445,6 +463,13 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun unloadModel() {
+        viewModelScope.launch(Dispatchers.IO) {
+            llm.close()
+            _loadState.value = LoadState.Unloaded
+        }
+    }
+
     fun deleteModel() {
         viewModelScope.launch(Dispatchers.IO) {
             llm.close()
@@ -711,6 +736,5 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
         super.onCleared()
         activeGenerationJob?.cancel()
         downloadPollingJob?.cancel()
-        llm.close()
     }
 }

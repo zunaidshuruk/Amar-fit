@@ -5,6 +5,7 @@ import java.util.Locale
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.util.ai.AiEngineSetting
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,6 +40,7 @@ fun OfflineAiScreen(
     val loadState by viewModel.loadState.collectAsState()
     val useGpu by viewModel.useGpu.collectAsState()
     val enableMtp by viewModel.enableMtp.collectAsState()
+    val aiEngineSetting by viewModel.aiEngineSetting.collectAsState()
     val chatTranscript by viewModel.chatTranscript.collectAsState()
     val isGenerating by viewModel.isGenerating.collectAsState()
     val benchmarkIndex by viewModel.benchmarkIndex.collectAsState()
@@ -127,6 +130,59 @@ fun OfflineAiScreen(
                         lineHeight = 18.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
+
+            // AI Engine Setting Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "AI Engine Setting",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Choose how the KardIQ Assistant answers your questions.",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val options = listOf(
+                        AiEngineSetting.CLOUD to "Cloud (Default, Gemini AI)",
+                        AiEngineSetting.AUTO to "Auto (On-device for chat, cloud for food/plans)",
+                        AiEngineSetting.ON_DEVICE to "On this phone (Gemma for everything possible)"
+                    )
+
+                    options.forEach { (setting, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.setAiEngineSetting(setting) }
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = aiEngineSetting == setting,
+                                onClick = { viewModel.setAiEngineSetting(setting) }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = label,
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
                 }
             }
 
