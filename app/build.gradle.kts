@@ -179,3 +179,10 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
     }
 }
 
+tasks.configureEach {
+    if (name.contains("UnitTestKotlin") && name.startsWith("ksp")) {
+        enabled = false
+    }
+}
+
+
