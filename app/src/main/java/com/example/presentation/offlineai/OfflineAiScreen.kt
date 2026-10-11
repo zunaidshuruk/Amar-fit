@@ -1,6 +1,7 @@
 package com.example.presentation.offlineai
 
 import android.net.Uri
+import java.util.Locale
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -22,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -42,8 +42,12 @@ fun OfflineAiScreen(
     val isGenerating by viewModel.isGenerating.collectAsState()
     val benchmarkIndex by viewModel.benchmarkIndex.collectAsState()
     val benchmarkResults by viewModel.benchmarkResults.collectAsState()
+    val modelUrlInput by viewModel.modelUrlInput.collectAsState()
+    val modelSizeLabel by viewModel.modelSizeLabel.collectAsState()
 
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showReplaceConfirmDialog by remember { mutableStateOf(false) }
+    var pendingAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     var chatInputText by remember { mutableStateOf("") }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -158,10 +162,43 @@ fun OfflineAiScreen(
                         fontWeight = FontWeight.Medium
                     )
 
+                    if (modelState.exists) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "You can delete the original file to save space.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = String.format(java.util.Locale.US, "Device Free Storage: %.1f GB", freeGb),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        value = modelUrlInput,
+                        onValueChange = { viewModel.setModelUrl(it) },
+                        label = { Text("Model link (direct .litertlm URL)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Remote size: $modelSizeLabel",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Smaller models (under 1 GB, such as Gemma 3 1B) use less space but answer less well. Download the file in your browser and use Import.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 16.sp
                     )
 
                     when (val dl = downloadState) {
@@ -203,18 +240,34 @@ fun OfflineAiScreen(
 
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
-                            onClick = { viewModel.startDownload() },
+                            onClick = {
+                                val action = { viewModel.startDownload() }
+                                if (modelState.exists) {
+                                    pendingAction = action
+                                    showReplaceConfirmDialog = true
+                                } else {
+                                    action()
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             enabled = downloadState !is DownloadState.Downloading,
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
                             Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Download Gemma 4 E2B (2.58 GB, Wi-Fi)")
+                            Text("Download model")
                         }
 
                         OutlinedButton(
-                            onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
+                            onClick = {
+                                val action = { filePickerLauncher.launch(arrayOf("*/*")) }
+                                if (modelState.exists) {
+                                    pendingAction = action
+                                    showReplaceConfirmDialog = true
+                                } else {
+                                    action()
+                                }
+                            },
                             modifier = Modifier.fillMaxWidth(),
                             enabled = downloadState !is DownloadState.Downloading
                         ) {
@@ -249,194 +302,104 @@ fun OfflineAiScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Engine Settings",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Use GPU", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-                            Text("Accelerated execution with CPU fallback", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Switch(checked = useGpu, onCheckedChange = { viewModel.setUseGpu(it) })
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Faster decoding (MTP)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-                            Text("Speculative decoding (recommended on GPU)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Switch(checked = enableMtp, onCheckedChange = { viewModel.setEnableMtp(it) })
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Button(
-                        onClick = { viewModel.loadModel() },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = modelState.exists && loadState !is LoadState.Loading
-                    ) {
-                        if (loadState is LoadState.Loading) {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Initializing Engine (10-15s)...")
-                        } else {
-                            Text("Load model")
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    when (val ls = loadState) {
-                        is LoadState.Loaded -> {
-                            val sec = ls.loadMillis / 1000.0
-                            Text(
-                                text = String.format(java.util.Locale.US, "Loaded on %s in %.1f s", ls.backendName, sec),
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        is LoadState.Error -> {
-                            Text(
-                                text = "Load error: ${ls.message}",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                        LoadState.Unloaded -> {
-                            Text(
-                                text = "Model not loaded in memory",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        LoadState.Loading -> {}
-                    }
-                }
-            }
-
-            // (d) Bare Streaming Chat Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Streaming Chat Test",
+                        text = "Engine Settings & Load",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    if (chatTranscript.isEmpty()) {
-                        Text(
-                            text = "No messages yet. Send a prompt below to test token streaming.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            chatTranscript.forEach { msg ->
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(
-                                            if (msg.isUser) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
-                                            RoundedCornerShape(10.dp)
-                                        )
-                                        .padding(10.dp)
-                                ) {
-                                    Text(
-                                        text = if (msg.isUser) "You" else "On-Device Gemma",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp,
-                                        color = if (msg.isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = msg.text,
-                                        fontSize = 13.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    if (!msg.stats.isNullOrBlank()) {
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = msg.stats,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.tertiary
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedTextField(
-                        value = chatInputText,
-                        onValueChange = { chatInputText = it },
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Ask something...", fontSize = 13.sp) },
-                        maxLines = 4,
-                        shape = RoundedCornerShape(12.dp)
-                    )
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Hardware Acceleration (GPU)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Uses OpenCL / Vulkan via LiteRT", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Switch(
+                            checked = useGpu,
+                            onCheckedChange = { viewModel.setUseGpu(it) }
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = {
-                                val t = chatInputText
-                                chatInputText = ""
-                                viewModel.sendChat(t)
-                            },
-                            enabled = loadState is LoadState.Loaded && !isGenerating && chatInputText.isNotBlank(),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Send")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Speculative Decoding (MTP)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Draft tokens for faster generation", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
+                        Switch(
+                            checked = enableMtp,
+                            onCheckedChange = { viewModel.setEnableMtp(it) }
+                        )
+                    }
 
-                        if (isGenerating) {
-                            OutlinedButton(
-                                onClick = { viewModel.stopGeneration() }
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    when (val ls = loadState) {
+                        LoadState.Unloaded -> {
+                            Button(
+                                onClick = { viewModel.loadModel() },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = modelState.exists
                             ) {
-                                Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Stop")
+                                Text("Load Model into Memory")
+                            }
+                        }
+                        LoadState.Loading -> {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text("Loading model...", fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                        is LoadState.Loaded -> {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    text = "Loaded successfully! Backend: ${ls.backendName} (${ls.loadMillis} ms)",
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                OutlinedButton(
+                                    onClick = { viewModel.deleteModel() },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Unload / Clear")
+                                }
+                            }
+                        }
+                        is LoadState.Error -> {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    text = "Load error: ${ls.message}",
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Button(
+                                    onClick = { viewModel.loadModel() },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Retry Loading")
+                                }
                             }
                         }
                     }
                 }
             }
 
-            // (e) 10-Prompt Test Sheet Card
+            // (d) Chat Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -447,57 +410,138 @@ fun OfflineAiScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "10-Prompt Benchmark Sheet",
+                        text = "Quick Chat Test",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "Evaluates Heart rate, Daily tips, Glucose range, Bangla, Workout plan, Food JSON, Diet chart, Calories arithmetic, Summary, and Safety prompts.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    if (chatTranscript.isNotEmpty()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 240.dp)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            chatTranscript.forEach { msg ->
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (msg.isUser) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.padding(10.dp)) {
+                                        Text(
+                                            text = if (msg.isUser) "You" else "Gemma",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (msg.isUser) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = msg.text,
+                                            fontSize = 13.sp,
+                                            color = if (msg.isUser) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                        )
+                                        if (!msg.stats.isNullOrBlank()) {
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = msg.stats,
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Button(
-                            onClick = { viewModel.runBenchmark() },
-                            enabled = loadState is LoadState.Loaded && benchmarkIndex == null,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            if (benchmarkIndex != null) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Running ($benchmarkIndex / 10)...")
-                            } else {
-                                Text("Run test sheet (10 prompts)")
-                            }
-                        }
+                        OutlinedTextField(
+                            value = chatInputText,
+                            onValueChange = { chatInputText = it },
+                            placeholder = { Text("Ask something...") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            enabled = loadState is LoadState.Loaded && !isGenerating
+                        )
 
-                        if (benchmarkResults.isNotEmpty()) {
-                            FilledTonalButton(
-                                onClick = { viewModel.copyReport() }
+                        if (isGenerating) {
+                            IconButton(
+                                onClick = { viewModel.stopGeneration() },
+                                modifier = Modifier.size(48.dp)
                             ) {
-                                Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Copy report")
+                                Icon(Icons.Default.Stop, contentDescription = "Stop", tint = MaterialTheme.colorScheme.error)
+                            }
+                        } else {
+                            Button(
+                                onClick = {
+                                    if (chatInputText.isNotBlank()) {
+                                        viewModel.sendChat(chatInputText)
+                                        chatInputText = ""
+                                    }
+                                },
+                                enabled = loadState is LoadState.Loaded && chatInputText.isNotBlank(),
+                                modifier = Modifier.height(48.dp)
+                            ) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = "Send")
                             }
                         }
                     }
+                }
+            }
 
-                    if (benchmarkResults.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(14.dp))
+            // (e) Benchmark Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = "Results (${benchmarkResults.size}/10):",
-                            fontSize = 14.sp,
+                            text = "Benchmark Test Sheet",
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
+                        if (benchmarkResults.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.copyReport() }) {
+                                Icon(Icons.Default.ContentCopy, contentDescription = "Copy Report")
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Runs 10 standard prompts to measure speed, memory, and thermal stability.",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Button(
+                        onClick = { viewModel.runBenchmark() },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = loadState is LoadState.Loaded && benchmarkIndex == null
+                    ) {
+                        Text(if (benchmarkIndex != null) "Running test $benchmarkIndex / 10..." else "Run 10-Prompt Test Sheet")
+                    }
+
+                    if (benchmarkResults.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -521,7 +565,7 @@ fun OfflineAiScreen(
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
-                                            text = String.format(java.util.Locale.US, "1st: %.1fs · %.1f tok/s", res.firstTokenMs / 1000.0, res.approxTokensPerSecond),
+                                            text = String.format(Locale.US, "1st: %.1fs · %.1f tok/s", res.firstTokenMs / 1000.0, res.approxTokensPerSecond),
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary
@@ -542,7 +586,7 @@ fun OfflineAiScreen(
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
             title = { Text("Delete Model File?") },
-            text = { Text("This will remove the downloaded Gemma 4 E2B model file from phone storage.") },
+            text = { Text("This will remove the downloaded model file from phone storage.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -555,6 +599,38 @@ fun OfflineAiScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showReplaceConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showReplaceConfirmDialog = false
+                pendingAction = null
+            },
+            title = { Text("Replace the current model?") },
+            text = { Text("An existing model file is already installed. Replacing it will remove the current model.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showReplaceConfirmDialog = false
+                        pendingAction?.invoke()
+                        pendingAction = null
+                    }
+                ) {
+                    Text("Replace", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showReplaceConfirmDialog = false
+                        pendingAction = null
+                    }
+                ) {
                     Text("Cancel")
                 }
             }

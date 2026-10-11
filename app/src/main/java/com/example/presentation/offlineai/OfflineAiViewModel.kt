@@ -11,6 +11,7 @@ import android.os.BatteryManager
 import android.os.Build
 import android.os.PowerManager
 import android.os.StatFs
+import android.provider.OpenableColumns
 import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
@@ -30,6 +31,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.Locale
 
 data class ModelFileState(
     val path: String = "",
@@ -64,7 +68,14 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
     private val llm = OnDeviceLlm(application)
 
     val defaultModelFileName = "gemma-4-E2B-it.litertlm"
-    private val modelUrl = "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm"
+
+    private val _modelUrlInput = MutableStateFlow("https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm")
+    val modelUrlInput: StateFlow<String> = _modelUrlInput.asStateFlow()
+
+    private val _modelSizeLabel = MutableStateFlow("Checking size…")
+    val modelSizeLabel: StateFlow<String> = _modelSizeLabel.asStateFlow()
+
+    private var remoteSizeBytes: Long = -1L
 
     private val _modelFileState = MutableStateFlow(ModelFileState())
     val modelFileState: StateFlow<ModelFileState> = _modelFileState.asStateFlow()
@@ -87,7 +98,7 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isGenerating = MutableStateFlow(false)
     val isGenerating: StateFlow<Boolean> = _isGenerating.asStateFlow()
 
-    private val _benchmarkIndex = MutableStateFlow<Int?>(null) // null if not running, 1..10
+    private val _benchmarkIndex = MutableStateFlow<Int?>(null)
     val benchmarkIndex: StateFlow<Int?> = _benchmarkIndex.asStateFlow()
 
     private val _benchmarkResults = MutableStateFlow<List<BenchmarkResult>>(emptyList())
@@ -100,6 +111,7 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
 
     init {
         refreshModelFileState()
+        checkRemoteSize()
     }
 
     fun setUseGpu(enabled: Boolean) {
@@ -110,18 +122,61 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
         _enableMtp.value = enabled
     }
 
+    fun setModelUrl(url: String) {
+        _modelUrlInput.value = url
+        checkRemoteSize()
+    }
+
+    fun checkRemoteSize() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _modelSizeLabel.value = "Checking size…"
+            val urlStr = _modelUrlInput.value.trim()
+            try {
+                val url = URL(urlStr)
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "HEAD"
+                connection.instanceFollowRedirects = true
+                connection.connectTimeout = 10000
+                connection.readTimeout = 10000
+                connection.connect()
+                val length = connection.contentLengthLong
+                remoteSizeBytes = length
+                connection.disconnect()
+
+                if (length > 0) {
+                    val sizeGb = length / (1024.0 * 1024.0 * 1024.0)
+                    _modelSizeLabel.value = if (sizeGb >= 1.0) {
+                        String.format(Locale.US, "%.2f GB", sizeGb)
+                    } else {
+                        val sizeMb = length / (1024.0 * 1024.0)
+                        String.format(Locale.US, "%.1f MB", sizeMb)
+                    }
+                } else {
+                    _modelSizeLabel.value = "size unknown"
+                }
+            } catch (e: Throwable) {
+                remoteSizeBytes = -1L
+                _modelSizeLabel.value = "size unknown"
+            }
+        }
+    }
+
     private fun getModelsDir(): File {
         val dir = File(getApplication<Application>().filesDir, "models")
         if (!dir.exists()) dir.mkdirs()
         return dir
     }
 
-    fun getModelFile(): File = File(getModelsDir(), defaultModelFileName)
+    fun getModelFile(): File? {
+        val dir = getModelsDir()
+        val files = dir.listFiles { _, name -> name.endsWith(".litertlm") }
+        return files?.firstOrNull() ?: files?.maxByOrNull { it.lastModified() }
+    }
 
     fun refreshModelFileState() {
         val file = getModelFile()
-        val exists = file.exists() && file.length() > 0L
-        val size = if (exists) file.length() else 0L
+        val exists = file != null && file.exists() && file.length() > 0L
+        val size = if (exists) file!!.length() else 0L
 
         val freeSpace = try {
             val stat = StatFs(getApplication<Application>().filesDir.absolutePath)
@@ -131,20 +186,39 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
         }
 
         _modelFileState.value = ModelFileState(
-            path = file.absolutePath,
+            path = file?.absolutePath ?: "",
             exists = exists,
             sizeBytes = size,
             freeSpaceBytes = freeSpace
         )
     }
 
+    private fun checkFreeSpace(expectedSize: Long): String? {
+        refreshModelFileState()
+        val free = _modelFileState.value.freeSpaceBytes
+        val required = (expectedSize * 1.15).toLong() + (300L * 1024L * 1024L)
+        if (free < required) {
+            val reqGb = required / (1024.0 * 1024.0 * 1024.0)
+            val freeGb = free / (1024.0 * 1024.0 * 1024.0)
+            val reqStr = if (reqGb >= 1.0) String.format(Locale.US, "%.1f GB", reqGb) else "${required / (1024 * 1024)} MB"
+            val freeStr = if (freeGb >= 1.0) String.format(Locale.US, "%.1f GB", freeGb) else "${free / (1024 * 1024)} MB"
+            return "Needs about $reqStr free, you have $freeStr"
+        }
+        return null
+    }
+
     fun startDownload() {
         val context = getApplication<Application>()
-        refreshModelFileState()
+        val rawUrl = _modelUrlInput.value.trim()
+        if (!rawUrl.startsWith("https://") || !rawUrl.endsWith(".litertlm", ignoreCase = true)) {
+            _downloadState.value = DownloadState.Failed("Enter a direct link ending in .litertlm")
+            return
+        }
 
-        val requiredBytes = 4L * 1024L * 1024L * 1024L // 4 GB
-        if (_modelFileState.value.freeSpaceBytes < requiredBytes) {
-            _downloadState.value = DownloadState.Failed("Not enough free space (needs about 4 GB)")
+        val expectedSize = if (remoteSizeBytes > 0) remoteSizeBytes else 3L * 1024L * 1024L * 1024L
+        val spaceError = checkFreeSpace(expectedSize)
+        if (spaceError != null) {
+            _downloadState.value = DownloadState.Failed(spaceError)
             return
         }
 
@@ -155,13 +229,14 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
         }
 
         try {
-            val destDir = context.getExternalFilesDir("models")
-            if (destDir != null && !destDir.exists()) destDir.mkdirs()
-            val destFile = File(destDir, defaultModelFileName)
+            val fileName = Uri.parse(rawUrl).lastPathSegment?.let { if (it.endsWith(".litertlm", ignoreCase = true)) it else null } ?: defaultModelFileName
+            val destDir = getModelsDir()
+            if (!destDir.exists()) destDir.mkdirs()
+            val destFile = File(destDir, fileName)
             if (destFile.exists()) destFile.delete()
 
-            val request = DownloadManager.Request(Uri.parse(modelUrl))
-                .setTitle("Gemma 4 E2B")
+            val request = DownloadManager.Request(Uri.parse(rawUrl))
+                .setTitle("AI Model")
                 .setDescription("Downloading LiteRT-LM model over Wi-Fi")
                 .setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI)
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
@@ -217,7 +292,7 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
                         completed = true
                         val reasonText = mapDownloadManagerReason(reason)
                         _downloadState.value = DownloadState.Failed(
-                            "Download failed: $reasonText. Model might require Hugging Face login or Wi-Fi. Please use Import."
+                            "Download failed: $reasonText. Please use Import."
                         )
                     }
                 }
@@ -230,20 +305,16 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
     private suspend fun onDownloadFinished(tempDestFile: File) {
         withContext(Dispatchers.IO) {
             try {
-                val targetFile = getModelFile()
-                if (tempDestFile.exists()) {
-                    if (targetFile.exists()) targetFile.delete()
-                    val copied = tempDestFile.renameTo(targetFile)
-                    if (!copied) {
-                        tempDestFile.copyTo(targetFile, overwrite = true)
-                        tempDestFile.delete()
-                    }
+                val modelsDir = getModelsDir()
+                val existingFiles = modelsDir.listFiles { _, name -> name.endsWith(".litertlm") }
+                existingFiles?.forEach {
+                    if (it.absolutePath != tempDestFile.absolutePath) it.delete()
                 }
                 refreshModelFileState()
                 _downloadState.value = DownloadState.Completed
             } catch (t: Throwable) {
-                Log.e(tag, "Failed to move downloaded model", t)
-                _downloadState.value = DownloadState.Failed("Error copying downloaded file: ${t.message}")
+                Log.e(tag, "Failed to finalize downloaded model", t)
+                _downloadState.value = DownloadState.Failed("Error finalizing downloaded file: ${t.message}")
             }
         }
     }
@@ -257,7 +328,7 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
             DownloadManager.ERROR_HTTP_DATA_ERROR -> "HTTP data error"
             DownloadManager.ERROR_INSUFFICIENT_SPACE -> "Insufficient storage space"
             DownloadManager.ERROR_TOO_MANY_REDIRECTS -> "Too many redirects"
-            DownloadManager.ERROR_UNHANDLED_HTTP_CODE -> "HTTP status error (e.g. 401/403 auth required)"
+            DownloadManager.ERROR_UNHANDLED_HTTP_CODE -> "HTTP status error"
             DownloadManager.ERROR_UNKNOWN -> "Network or server error"
             DownloadManager.PAUSED_QUEUED_FOR_WIFI -> "Waiting for Wi-Fi"
             DownloadManager.PAUSED_WAITING_FOR_NETWORK -> "Waiting for network"
@@ -271,24 +342,45 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val contentResolver = context.contentResolver
-                val targetFile = getModelFile()
-                if (targetFile.exists()) targetFile.delete()
-
-                val inputStream = contentResolver.openInputStream(uri)
-                    ?: throw IllegalStateException("Could not open input stream from file picker")
-
-                _downloadState.value = DownloadState.Downloading(0, 0, 0)
-
-                val outputStream = FileOutputStream(targetFile)
-                val buffer = ByteArray(64 * 1024)
-                var bytesRead: Int
-                var totalRead = 0L
+                var fileName: String? = null
+                contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (cursor.moveToFirst() && nameIndex >= 0) {
+                        fileName = cursor.getString(nameIndex)
+                    }
+                }
+                if (fileName.isNullOrBlank()) {
+                    fileName = uri.lastPathSegment ?: "model.litertlm"
+                }
+                if (!fileName!!.endsWith(".litertlm", ignoreCase = true)) {
+                    _downloadState.value = DownloadState.Failed("Please choose a .litertlm model file")
+                    return@launch
+                }
 
                 val fileSize = try {
                     contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize } ?: 0L
                 } catch (e: Exception) {
                     0L
                 }
+
+                val spaceError = checkFreeSpace(if (fileSize > 0) fileSize else 3L * 1024L * 1024L * 1024L)
+                if (spaceError != null) {
+                    _downloadState.value = DownloadState.Failed(spaceError)
+                    return@launch
+                }
+
+                val modelsDir = getModelsDir()
+                val tempFile = File(modelsDir, "import.tmp")
+                if (tempFile.exists()) tempFile.delete()
+
+                val inputStream = contentResolver.openInputStream(uri)
+                    ?: throw IllegalStateException("Could not open input stream")
+                _downloadState.value = DownloadState.Downloading(0, 0, fileSize)
+
+                val outputStream = FileOutputStream(tempFile)
+                val buffer = ByteArray(64 * 1024)
+                var bytesRead: Int
+                var totalRead = 0L
 
                 while (inputStream.read(buffer).also { bytesRead = it } != -1) {
                     outputStream.write(buffer, 0, bytesRead)
@@ -298,15 +390,29 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
                         _downloadState.value = DownloadState.Downloading(pct, totalRead, fileSize)
                     }
                 }
-
                 outputStream.flush()
                 outputStream.close()
                 inputStream.close()
+
+                // Copy finished successfully -> delete existing model files, rename tempFile
+                val existingFiles = modelsDir.listFiles { _, name -> name.endsWith(".litertlm") }
+                existingFiles?.forEach { it.delete() }
+
+                val targetFile = File(modelsDir, fileName!!)
+                if (targetFile.exists()) targetFile.delete()
+                val renamed = tempFile.renameTo(targetFile)
+                if (!renamed) {
+                    tempFile.copyTo(targetFile, overwrite = true)
+                    tempFile.delete()
+                }
 
                 refreshModelFileState()
                 _downloadState.value = DownloadState.Completed
             } catch (t: Throwable) {
                 Log.e(tag, "Failed to import model", t)
+                try {
+                    File(getModelsDir(), "import.tmp").delete()
+                } catch (e: Exception) {}
                 _downloadState.value = DownloadState.Failed("Import failed: ${t.message}")
             }
         }
@@ -316,10 +422,9 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch(Dispatchers.IO) {
             llm.close()
             _loadState.value = LoadState.Unloaded
-            val file = getModelFile()
-            if (file.exists()) {
-                file.delete()
-            }
+            val dir = getModelsDir()
+            val files = dir.listFiles { _, name -> name.endsWith(".litertlm") }
+            files?.forEach { it.delete() }
             refreshModelFileState()
             _downloadState.value = DownloadState.Idle
         }
@@ -327,7 +432,7 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun loadModel() {
         val file = getModelFile()
-        if (!file.exists() || file.length() == 0L) {
+        if (file == null || !file.exists() || file.length() == 0L) {
             _loadState.value = LoadState.Error("Model file not found. Download or import it first.")
             return
         }
@@ -392,7 +497,7 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
                 val tps = OnDeviceBenchmark.calculateTokensPerSecond(answerBuilder.length, firstTokenMs, totalTime)
 
                 val statsLine = String.format(
-                    java.util.Locale.US,
+                    Locale.US,
                     "first word %.1f s · about %.0f words/s",
                     firstTokenMs / 1000.0,
                     tps
@@ -500,7 +605,6 @@ class OfflineAiViewModel(application: Application) : AndroidViewModel(applicatio
                 batteryNote = batteryNote
             )
 
-            // Save report to clipboard automatically or on button tap
             copyTextToClipboard(context, report)
             Toast.makeText(context, "Benchmark finished! Report copied to clipboard", Toast.LENGTH_LONG).show()
         }
