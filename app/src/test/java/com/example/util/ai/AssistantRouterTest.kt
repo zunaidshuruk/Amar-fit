@@ -39,9 +39,9 @@ class AssistantRouterTest {
         val r5 = AssistantRouter.route(longMsg, AiEngineSetting.AUTO, modelReady = true, online = true)
         assertEquals(AssistantRoute.CLOUD, r5)
 
-        // AUTO + "আমার ক্যালরি কত?" -> CLOUD
+        // AUTO + "আমার ক্যালরি কত?" -> ON_DEVICE
         val r6 = AssistantRouter.route("আমার ক্যালরি কত?", AiEngineSetting.AUTO, modelReady = true, online = true)
-        assertEquals(AssistantRoute.CLOUD, r6)
+        assertEquals(AssistantRoute.ON_DEVICE, r6)
 
         // AUTO + "I have chest pain" -> ON_DEVICE
         val r7 = AssistantRouter.route("I have chest pain", AiEngineSetting.AUTO, modelReady = true, online = true)
@@ -58,6 +58,13 @@ class AssistantRouterTest {
         // AUTO + offline + "How do I sleep better?" -> ON_DEVICE
         val r10 = AssistantRouter.route("How do I sleep better?", AiEngineSetting.AUTO, modelReady = true, online = false)
         assertEquals(AssistantRoute.ON_DEVICE, r10)
+
+        // New AP-4b routing tests:
+        assertEquals(AssistantRoute.ON_DEVICE, AssistantRouter.route("What should I drink to sleep better?", AiEngineSetting.AUTO, modelReady = true, online = true))
+        assertEquals(AssistantRoute.ON_DEVICE, AssistantRouter.route("How did I sleep this week?", AiEngineSetting.AUTO, modelReady = true, online = true))
+        assertEquals(AssistantRoute.ON_DEVICE, AssistantRouter.route("What was my average glucose this week?", AiEngineSetting.AUTO, modelReady = true, online = true))
+        assertEquals(AssistantRoute.CLOUD, AssistantRouter.route("Is my glucose normal?", AiEngineSetting.AUTO, modelReady = true, online = true))
+        assertEquals(AssistantRoute.CLOUD, AssistantRouter.route("give me a recipe for better sleep", AiEngineSetting.AUTO, modelReady = true, online = true))
     }
 
     @Test
@@ -80,6 +87,10 @@ class AssistantRouterTest {
         val text = "Hello" + AssistantRouter.ON_DEVICE_FOOTER
         assertEquals("Hello", AssistantRouter.stripFooter(text))
         assertEquals("Hello", AssistantRouter.stripFooter("Hello"))
+
+        val tail = AssistantRouter.buildFooter("sleep (last 30 days)", listOf("Banana Peel Tea"), true)
+        val fullText = "Hello" + tail
+        assertEquals("Hello", AssistantRouter.stripFooter(fullText))
     }
 
     @Test

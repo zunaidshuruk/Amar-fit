@@ -11,6 +11,9 @@ import com.example.data.repository.FirebaseManager
 import com.example.util.ai.AiEngineSetting
 import com.example.util.ai.AssistantRouter
 import com.example.util.ai.AssistantRoute
+import com.example.util.ai.HealthFactsBuilder
+import com.example.util.ai.KnowledgeRetriever
+import com.example.util.ai.MedicalNotes
 import com.example.util.ai.OnDeviceModelStore
 import com.example.util.ai.OnDeviceLlm
 import kotlinx.coroutines.Dispatchers
@@ -2647,12 +2650,32 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                             }
                         } else {
                             val contextStr = AssistantRouter.buildContext(profile, metrics)
+                            val todayDate = java.time.LocalDate.now().toString()
+                            val topics = HealthFactsBuilder.detectTopics(message)
+                            val metrics30 = if (topics.isNotEmpty()) getMetricsHistoryFlow(30).first() else emptyList()
+                            val factsBlock = HealthFactsBuilder.build(topics, profile, metrics30, todayDate)
+                            val hits = KnowledgeRetriever.search(message, com.example.data.local.coachTopics, 4)
+                            val knowledgeBlock = KnowledgeRetriever.formatBlock(hits)
+
                             val sysInstruction = buildString {
                                 append(AssistantRouter.ON_DEVICE_SYSTEM_PROMPT)
                                 if (contextStr.isNotBlank()) {
                                     append("\n\nUser Context: $contextStr")
                                 }
+                                if (factsBlock.isNotBlank()) {
+                                    append("\n\n$factsBlock")
+                                }
+                                if (knowledgeBlock.isNotBlank()) {
+                                    append("\n\n$knowledgeBlock")
+                                }
                             }
+
+                            val footer = AssistantRouter.buildFooter(
+                                if (topics.isNotEmpty()) HealthFactsBuilder.sourceLabels(topics) else "",
+                                KnowledgeRetriever.protocolNames(hits),
+                                KnowledgeRetriever.needsDoctorNote(hits, message)
+                            )
+
                             val history = sessionHistoryForCall.takeLast(6).map { it.isUser to it.text.take(600) }
 
                             var accumulated = ""
@@ -2672,7 +2695,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                                     val now = System.currentTimeMillis()
                                     if (now - lastUiUpdate >= 120) {
                                         lastUiUpdate = now
-                                        val displayed = accumulated + AssistantRouter.ON_DEVICE_FOOTER
+                                        val displayed = accumulated + footer
                                         val currentList = _activeAssistantMessages.value.toMutableList()
                                         if (currentList.size > assistantMsgIndex) {
                                             currentList[assistantMsgIndex] = ChatMessage(displayed, false)
@@ -2709,7 +2732,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                                     )
                                 }
                             } else {
-                                val finalMsg = accumulated + AssistantRouter.ON_DEVICE_FOOTER
+                                val finalMsg = accumulated + footer
                                 val currentList = _activeAssistantMessages.value.toMutableList()
                                 if (currentList.size > assistantMsgIndex) {
                                     currentList[assistantMsgIndex] = ChatMessage(finalMsg, false)
@@ -2786,7 +2809,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             onStatusUpdate = { status -> _universalAssistantStatus.value = status }
         )) {
             is AppRepository.AssistantResult.Text -> {
-                val messageText = if (isOfflineError(result.message)) friendlyOfflineText else result.message
+                val rawMessage = if (isOfflineError(result.message)) friendlyOfflineText else result.message
+                val messageText = MedicalNotes.appendDoctorNote(rawMessage, userText = message)
                 _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(messageText, false)
                 repository.saveAssistantChatMessage(currentSessionId, messageText, false)
                 repository.saveAssistantSession(
@@ -2884,6 +2908,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     accumulated += chunk
                     _coachAdvice.value = accumulated
                 }
+                _coachAdvice.value = MedicalNotes.appendDoctorNote(accumulated, userText = "$topic $habit")
             } catch (e: Exception) {
                 _coachAdvice.value = "Sorry, I couldn't generate advice right now. Please try again."
             }
@@ -3072,6 +3097,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                         accumulated += chunk
                         _dietChart.value = accumulated
                     }
+                    _dietChart.value = MedicalNotes.appendDoctorNote(accumulated, userText = "${profile.healthGoals} ${profile.dietaryRestrictions}", beforeFinalMarker = false)
                 } catch (e: Exception) {
                     _dietChart.value = "The AI is currently busy or unavailable. Please try again in a minute."
                 }

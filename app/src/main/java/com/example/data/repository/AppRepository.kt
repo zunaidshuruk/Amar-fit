@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
 import com.example.presentation.viewmodel.ChatMessage
+import com.example.util.ai.DeshiFoodRules
+import com.example.util.ai.MedicalNotes
 
 private fun aiResponseStyle(maxWords: Int, followUps: Boolean = false): String {
     val base = """
@@ -645,7 +647,7 @@ class AppRepository(
             Evaluate if there is a SEVERE, CHRONIC deficiency in Protein, Carbs, or Fats.
             If there is a severe deficiency, reply with ONLY a short 1-sentence alert message (e.g., "You have a chronic protein deficiency, consider adding eggs or lentils."). 
             If there is NO severe deficiency, reply exactly with "NONE".
-        """.trimIndent()
+        """.trimIndent() + "\n\n" + DeshiFoodRules.SHORT
         
         val request = GenerateContentRequest(
             contents = listOf(Content(parts = listOf(Part(text = "Food Logs:\n$logsText")))),
@@ -654,7 +656,8 @@ class AppRepository(
         try {
             val response = executeGeminiCallWithBackoff(request)
             val text = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim() ?: "NONE"
-            if (text.uppercase() == "NONE" || text.isEmpty()) null else text
+            val resultText = if (text.uppercase() == "NONE" || text.isEmpty()) null else text
+            resultText?.let { MedicalNotes.appendDoctorNote(it) }
         } catch (e: Exception) {
             null
         }
@@ -697,7 +700,7 @@ class AppRepository(
             - Frame every suggestion as general wellness/lifestyle awareness only, never medical advice or a treatment plan.
             - Base suggestions only on patterns actually visible in the data provided (e.g. low exercise minutes, high evening readings, low water intake) — do not invent patterns that aren't there.
             - Format as a short markdown bullet list, one suggestion per bullet, each 1 sentence.
-        """.trimIndent()
+        """.trimIndent() + "\n\n" + DeshiFoodRules.SHORT
 
         val request = GenerateContentRequest(
             contents = listOf(Content(parts = listOf(Part(text = "7-Day Metrics (blood glucose values are in mmol/L):\n$metricsText")))),
@@ -705,8 +708,9 @@ class AppRepository(
         )
         try {
             val response = executeGeminiCallWithBackoff(request)
-            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
+            val text = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
                 ?: "Could not generate suggestions right now. Please try again later."
+            MedicalNotes.appendDoctorNote(text, force = true)
         } catch (e: Exception) {
             "Could not generate suggestions right now. Please try again later."
         }
@@ -736,7 +740,7 @@ class AppRepository(
             - Frame everything as general wellness/lifestyle awareness only, never medical advice.
             - Keep it encouraging and actionable, not alarming.
             - Do not use markdown formatting — plain sentences only.
-        """.trimIndent()
+        """.trimIndent() + "\n\n" + DeshiFoodRules.SHORT
 
         val request = GenerateContentRequest(
             contents = listOf(Content(parts = listOf(Part(text = "7-Day Metrics:\n$metricsText\n\nRecent Food Logs:\n$foodLogsText")))),
@@ -744,7 +748,8 @@ class AppRepository(
         )
         try {
             val response = executeGeminiCallWithBackoff(request)
-            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim() ?: "Keep up your healthy habits! Check back tomorrow for a fresh insight."
+            val text = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim() ?: "Keep up your healthy habits! Check back tomorrow for a fresh insight."
+            MedicalNotes.appendDoctorNote(text)
         } catch (e: Exception) {
             "Keep up your healthy habits! Check back tomorrow for a fresh insight."
         }
@@ -761,7 +766,7 @@ class AppRepository(
             2. Identify any potential macro-nutrient (protein, carbs, fats) deficiencies or imbalances based on the logged items.
             3. Provide a brief, actionable recommendation.
             Keep the response concise, friendly, and formatted nicely in markdown with bullet points.
-        """.trimIndent()
+        """.trimIndent() + "\n\n" + DeshiFoodRules.SHORT
         
         val request = GenerateContentRequest(
             contents = listOf(Content(parts = listOf(Part(text = "Food Logs:\n$logsText")))),
@@ -769,7 +774,8 @@ class AppRepository(
         )
         try {
             val response = executeGeminiCallWithBackoff(request)
-            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: "Could not generate insights."
+            val text = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: "Could not generate insights."
+            MedicalNotes.appendDoctorNote(text)
         } catch (e: HttpException) {
             if (e.code() == 429) "The AI is currently busy. Retries exhausted. Please try again in a minute."
             else "Error generating insights: ${e.message}"
@@ -989,7 +995,7 @@ class AppRepository(
             - Use bullet points for actionable steps to make it easily readable.
             - Explain WHY this habit works biologically or psychologically.
             - Keep it highly engaging, well-organized, and professional.
-        """.trimIndent() + "\n\n" + aiResponseStyle(250)
+        """.trimIndent() + "\n\n" + aiResponseStyle(250) + "\n\n" + DeshiFoodRules.SHORT + "\n\n" + MedicalNotes.PROMPT_RULE
         
         val request = GenerateContentRequest(
             contents = listOf(
@@ -1018,7 +1024,7 @@ class AppRepository(
             - Use bullet points for actionable steps to make it easily readable.
             - Explain WHY this habit works biologically or psychologically.
             - Keep it highly engaging, well-organized, and professional.
-        """.trimIndent() + "\n\n" + aiResponseStyle(250)
+        """.trimIndent() + "\n\n" + aiResponseStyle(250) + "\n\n" + DeshiFoodRules.SHORT + "\n\n" + MedicalNotes.PROMPT_RULE
         
         val request = GenerateContentRequest(
             contents = listOf(
@@ -1031,7 +1037,8 @@ class AppRepository(
         
         try {
             val response = executeGeminiCallWithBackoff(request)
-            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: "Could not generate coaching advice."
+            val text = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: "Could not generate coaching advice."
+            MedicalNotes.appendDoctorNote(text)
         } catch (e: HttpException) {
             if (e.code() == 429) "The AI is currently busy due to high traffic. Retries exhausted. Please try again in a minute."
             else "Error: ${e.message}"
@@ -1254,7 +1261,7 @@ class AppRepository(
         val contextPrompt = "User Context: ${profile.age}yo ${profile.gender}, Weight: ${profile.weightKg}kg, Height: ${profile.heightCm}cm, BMI: ${"%.1f".format(bmi)}, Goal: ${profile.healthGoals}, Restrictions: ${profile.dietaryRestrictions}."
         
         val systemInstruction = """
-            You are an expert AI Nutritionist. You MUST follow optimum bangladeshi style food practices and include local Bangladeshi ingredients where possible.
+            You are an expert AI Nutritionist.
             Generate a personalized $durationDays-day diet chart based on the user's profile.
             
             FORMATTING RULES:
@@ -1267,7 +1274,7 @@ class AppRepository(
             - Never put a YOUTUBE_SEARCH line inside a table and never output one without a dish name.
             
             $contextPrompt
-        """.trimIndent()
+        """.trimIndent() + "\n\n" + DeshiFoodRules.RULES + "\n\n" + MedicalNotes.PROMPT_RULE
 
         val request = GenerateContentRequest(
             contents = listOf(
@@ -1286,7 +1293,7 @@ class AppRepository(
         val contextPrompt = "User Context: ${profile.age}yo ${profile.gender}, Weight: ${profile.weightKg}kg, Height: ${profile.heightCm}cm, BMI: ${"%.1f".format(bmi)}, Goal: ${profile.healthGoals}, Restrictions: ${profile.dietaryRestrictions}."
         
         val systemInstruction = """
-            You are an expert AI Nutritionist. You MUST follow optimum bangladeshi style food practices and include local Bangladeshi ingredients where possible.
+            You are an expert AI Nutritionist.
             Generate a personalized $durationDays-day diet chart based on the user's profile.
             
             FORMATTING RULES:
@@ -1299,7 +1306,7 @@ class AppRepository(
             - Never put a YOUTUBE_SEARCH line inside a table and never output one without a dish name.
             
             $contextPrompt
-        """.trimIndent()
+        """.trimIndent() + "\n\n" + DeshiFoodRules.RULES + "\n\n" + MedicalNotes.PROMPT_RULE
 
         val request = GenerateContentRequest(
             contents = listOf(
@@ -1312,7 +1319,8 @@ class AppRepository(
 
         try {
             val response = executeGeminiCallWithBackoff(request)
-            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: "Could not generate diet chart."
+            val text = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: "Could not generate diet chart."
+            MedicalNotes.appendDoctorNote(text, userText = "${profile.healthGoals} ${profile.dietaryRestrictions}", beforeFinalMarker = false)
         } catch (e: HttpException) {
             if (e.code() == 429) "The AI is currently busy due to high traffic. Retries exhausted. Please try again in a minute."
             else "Error: ${e.message}"
@@ -1330,7 +1338,7 @@ class AppRepository(
             - Group items by category (e.g., Produce, Proteins, Dairy, Pantry).
             - Use bullet points.
             - Do not include the original diet chart, just the shopping list.
-        """.trimIndent()
+        """.trimIndent() + "\n\n" + DeshiFoodRules.SHOPPING
 
         val request = GenerateContentRequest(
             contents = listOf(
@@ -1372,7 +1380,7 @@ class AppRepository(
             6. At the VERY END of your response, output exactly: YOUTUBE_SEARCH: [Exact Name of Recipe]
               
             $contextPrompt
-        """.trimIndent()
+        """.trimIndent() + "\n\n" + DeshiFoodRules.RECIPE
         
         val request = GenerateContentRequest(
             contents = listOf(
@@ -1385,7 +1393,8 @@ class AppRepository(
         
         try {
             val response = executeGeminiCallWithBackoff(request)
-            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: "Could not generate recipe."
+            val text = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: "Could not generate recipe."
+            MedicalNotes.appendDoctorNote(text, userText = query, beforeFinalMarker = true)
         } catch (e: HttpException) {
             if (e.code() == 429) "The AI is currently busy due to high traffic. Retries exhausted. Please try again in a minute."
             else "Error: ${e.message}"
@@ -1625,7 +1634,7 @@ class AppRepository(
             When a tool result contains a line starting with "YOUTUBE_SEARCH:", copy that line exactly, on its own line, at the end of your reply.
 
             Keep replies conversational and concise. You are not a doctor -- frame health-related suggestions as general wellness guidance, never a diagnosis, and never claim certainty about a medical condition.
-        """.trimIndent() + "\n\n" + aiResponseStyle(150, followUps = true)
+        """.trimIndent() + "\n\n" + aiResponseStyle(150, followUps = true) + "\n\n" + DeshiFoodRules.SHORT + "\n\n" + MedicalNotes.PROMPT_RULE
 
         val contents = org.json.JSONArray()
         val rawMessages = mutableListOf<ChatMessage>()

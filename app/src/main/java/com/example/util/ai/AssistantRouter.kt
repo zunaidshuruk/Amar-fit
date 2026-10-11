@@ -24,11 +24,33 @@ object AssistantRouter {
     const val ON_DEVICE_FOOTER = "\n\n*Answered on this phone*"
 
     fun stripFooter(text: String): String {
-        return if (text.endsWith(ON_DEVICE_FOOTER)) {
-            text.substring(0, text.length - ON_DEVICE_FOOTER.length)
+        val markers = listOf(
+            "\n\n*Based on your records",
+            "\n\n*From KardIQ's lifestyle protocol",
+            "\n\n*Check with your doctor",
+            ON_DEVICE_FOOTER
+        )
+        val indices = markers.map { text.indexOf(it) }.filter { it >= 0 }
+        return if (indices.isNotEmpty()) {
+            text.substring(0, indices.minOrNull()!!)
         } else {
             text
         }
+    }
+
+    fun buildFooter(dataLabels: String, protocolNames: List<String>, doctorNote: Boolean): String {
+        val sb = StringBuilder()
+        if (dataLabels.isNotBlank()) {
+            sb.append("\n\n*Based on your records: $dataLabels*")
+        }
+        if (protocolNames.isNotEmpty()) {
+            sb.append("\n\n*From KardIQ's lifestyle protocol: ${protocolNames.joinToString("; ")}*")
+        }
+        if (doctorNote) {
+            sb.append("\n\n*" + MedicalNotes.DOCTOR_LINE + "*")
+        }
+        sb.append(ON_DEVICE_FOOTER)
+        return sb.toString()
     }
 
     fun isEmergency(message: String): Boolean {
@@ -41,24 +63,36 @@ object AssistantRouter {
         return keywords.any { lower.contains(it) }
     }
 
+    private val ALWAYS_CLOUD = listOf(
+        "i ate", "i had ", "i drank", "for breakfast", "for lunch", "for dinner", "for snack",
+        "log my", "log a", "add to my", "kcal", "macro", "meal plan", "recipe",
+        "what should i eat", "workout plan", "workout program", "training plan",
+        "workout routine", "generate", "create a plan", "make a plan", "hba1c", "mmol", "mg/dl",
+        "dose", "dosage", "medicine", "medication", "insulin", "diabetes", "cholesterol",
+        "normal", "too high", "too low", "dangerous", "is it safe", "healthy range",
+        "target range", "diet chart", "diet plan", "diet",
+        "ইনসুলিন", "ওষুধ", "রেসিপি", "ওয়ার্কআউট", "ডায়েট"
+    )
+
+    private val CLOUD_UNLESS_PERSONAL_DATA = listOf(
+        "calorie", "protein", "carb", "glucose", "blood sugar", "sugar level",
+        "blood pressure", "analyze", "analyse", "insight", "trend",
+        "ক্যালরি", "সুগার", "প্রেসার", "খাবার"
+    )
+
     fun isCloudOnlyTopic(message: String): Boolean {
         val trimmed = message.trim()
         if (trimmed.length > 400 || trimmed.lines().size >= 3) {
             return true
         }
         val lower = trimmed.lowercase(Locale.US)
-        val keywords = listOf(
-            "i ate", "i had ", "i drank", "for breakfast", "for lunch", "for dinner", "for snack",
-            "log my", "log a", "add to my", "calorie", "kcal", "macro", "protein", "carb",
-            "diet", "meal plan", "recipe", "what should i eat", "workout plan", "workout program",
-            "training plan", "routine", "generate", "create a plan", "make a plan",
-            "glucose", "blood sugar", "sugar level", "hba1c", "blood pressure", "mmol", "mg/dl",
-            "dose", "dosage", "medicine", "medication", "insulin", "diabetes", "cholesterol",
-            "normal range", "target range", "analyze", "analyse", "trend", "insight",
-            "my data", "last week", "this week",
-            "ক্যালরি", "খাবার", "ডায়েট", "সুগার", "প্রেসার", "ওষুধ", "ইনসুলিন", "ওয়ার্কআউট", "রেসিপি"
-        )
-        return keywords.any { lower.contains(it) }
+        if (ALWAYS_CLOUD.any { lower.contains(it) }) {
+            return true
+        }
+        if (CLOUD_UNLESS_PERSONAL_DATA.any { lower.contains(it) } && !HealthFactsBuilder.isPersonalDataQuestion(message)) {
+            return true
+        }
+        return false
     }
 
     fun route(message: String, setting: AiEngineSetting, modelReady: Boolean, online: Boolean): AssistantRoute {
@@ -95,8 +129,8 @@ object AssistantRouter {
         }
     }
 
-    const val ON_DEVICE_SYSTEM_PROMPT: String =
-        "You are KardIQ AI, a friendly health and fitness assistant inside the KardIQ app for users in Bangladesh. Answer in the same language the user writes in (English or Bangla). Be brief: at most 120 words unless the user asks for more. Use plain text and simple markdown (short bullet lists). Never use LaTeX or math markup; write numbers normally. You are not a doctor. Do not give diagnoses, medicine doses, or blood-glucose, blood-pressure or calorie targets or ranges; say you cannot give exact medical numbers here and suggest asking a doctor or using the app's own health goals. For emergencies (chest pain, trouble breathing, severe bleeding, fainting, stroke signs, thoughts of self-harm) tell the user to call 999 or go to the nearest hospital right now. Never claim you logged or changed anything in the app."
+    val ON_DEVICE_SYSTEM_PROMPT: String =
+        "You are KardIQ AI, a friendly health and fitness assistant inside the KardIQ app for users in Bangladesh. Answer in the same language the user writes in (English or Bangla). Be brief: at most 150 words unless the user asks for more. Use plain text and simple markdown (short bullet lists). Never use LaTeX or math markup; write numbers normally. You are not a doctor: do not diagnose, do not give medicine doses, and do not give blood-glucose, blood-pressure or calorie targets or normal ranges. You MAY suggest foods, drinks, habits and routines from the KARDIQ PROTOCOL section when one is provided: answer from it, name the entry you use, and never invent recipes, ingredients or amounts that are not in it. When a FACTS section is provided, use only the numbers in it, never calculate new totals or averages yourself, never say whether a number is good or bad, and if the user asks for data that is not in FACTS say you do not have it. For emergencies (chest pain, trouble breathing, severe bleeding, fainting, stroke signs, thoughts of self-harm) tell the user to call 999 or go to the nearest hospital right now. Never claim you logged or changed anything in the app. " + DeshiFoodRules.SHORT
 
     fun buildContext(profile: UserProfile, metrics: List<DailyMetric>): String {
         val profileParts = mutableListOf<String>()
