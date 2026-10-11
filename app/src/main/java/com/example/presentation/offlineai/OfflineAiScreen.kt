@@ -158,12 +158,12 @@ fun OfflineAiScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     val options = listOf(
-                        AiEngineSetting.CLOUD to "Cloud (Default, Gemini AI)",
-                        AiEngineSetting.AUTO to "Auto (On-device for chat, cloud for food/plans)",
-                        AiEngineSetting.ON_DEVICE to "On this phone (Gemma for everything possible)"
+                        Triple(AiEngineSetting.CLOUD, "Cloud (Gemini)", "Default. Best quality for everything."),
+                        Triple(AiEngineSetting.AUTO, "Auto", "Simple chat on this phone; food, calories, plans and health numbers use the cloud."),
+                        Triple(AiEngineSetting.ON_DEVICE, "On this phone only", "Works offline and never uses the cloud. Food logging, calories, plans and health numbers are not available.")
                     )
 
-                    options.forEach { (setting, label) ->
+                    options.forEach { (setting, title, subtitle) ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -176,13 +176,30 @@ fun OfflineAiScreen(
                                 onClick = { viewModel.setAiEngineSetting(setting) }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = label,
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = title,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = subtitle,
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "The model loads on the first phone answer (about 5 seconds) and unloads after 5 minutes of inactivity.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 16.sp
+                    )
                 }
             }
 

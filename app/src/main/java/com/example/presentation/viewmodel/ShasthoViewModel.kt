@@ -2611,7 +2611,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 val metrics = getMetricsHistoryFlow(7).first()
                 val foodLogs = repository.getRecentFoodLogs().first()
 
-                val sessionHistoryForCall = historyBeforeThisMessage.takeLast(10)
+                val sessionHistoryForCall = historyBeforeThisMessage.takeLast(10).map { it.copy(text = AssistantRouter.stripFooter(it.text)) }
 
                 val engineSetting = _aiEngineSetting.value
                 val modelReady = OnDeviceModelStore.findModelFile(getApplication()) != null
@@ -2638,8 +2638,21 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                         _universalAssistantStatus.value = "Running on device..."
                         val loadResult = OnDeviceLlm.shared(getApplication()).ensureLoaded()
                         if (!loadResult.ok) {
-                            val fallbackNotice = "Could not load on-device model (${loadResult.error ?: "error"}). Falling back to cloud AI..."
-                            executeCloudAssistant(message, currentSessionId, sessionToSave, sessionHistoryForCall, profile, metrics, foodLogs, fallbackNotice)
+                            if (engineSetting == AiEngineSetting.ON_DEVICE) {
+                                val errText = "Could not load the offline AI model (${loadResult.error ?: "error"}). Check Settings > Offline AI (beta), or switch the AI engine to Cloud."
+                                _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(errText, false)
+                                repository.saveAssistantChatMessage(currentSessionId, errText, false)
+                                repository.saveAssistantSession(
+                                    sessionToSave.copy(
+                                        preview = errText.take(70),
+                                        messageCount = sessionToSave.messageCount + 1,
+                                        updatedAt = System.currentTimeMillis()
+                                    )
+                                )
+                            } else {
+                                val fallbackNotice = "Could not load on-device model (${loadResult.error ?: "error"}). Falling back to cloud AI..."
+                                executeCloudAssistant(message, currentSessionId, sessionToSave, sessionHistoryForCall, profile, metrics, foodLogs, fallbackNotice)
+                            }
                         } else {
                             val contextStr = AssistantRouter.buildContext(profile, metrics)
                             val sysInstruction = buildString {
@@ -2648,41 +2661,78 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                                     append("\n\nUser Context: $contextStr")
                                 }
                             }
-                            val history = sessionHistoryForCall.map { it.isUser to it.text }
+                            val history = sessionHistoryForCall.takeLast(6).map { it.isUser to it.text.take(600) }
 
                             var accumulated = ""
                             val assistantMsgIndex = _activeAssistantMessages.value.size
                             _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage("", false)
+                            var lastUiUpdate = 0L
+                            var success = false
 
-                            OnDeviceLlm.shared(getApplication()).generate(
-                                prompt = message,
-                                systemInstruction = sysInstruction,
-                                history = history
-                            ).collect { chunk ->
-                                accumulated += chunk
-                                val displayed = accumulated + AssistantRouter.ON_DEVICE_FOOTER
+                            try {
+                                OnDeviceLlm.shared(getApplication()).generate(
+                                    prompt = message,
+                                    systemInstruction = sysInstruction,
+                                    history = history,
+                                    maxOutputTokens = 400
+                                ).collect { chunk ->
+                                    accumulated += chunk
+                                    val now = System.currentTimeMillis()
+                                    if (now - lastUiUpdate >= 120) {
+                                        lastUiUpdate = now
+                                        val displayed = accumulated + AssistantRouter.ON_DEVICE_FOOTER
+                                        val currentList = _activeAssistantMessages.value.toMutableList()
+                                        if (currentList.size > assistantMsgIndex) {
+                                            currentList[assistantMsgIndex] = ChatMessage(displayed, false)
+                                            _activeAssistantMessages.value = currentList
+                                        }
+                                    }
+                                }
+                                if (accumulated.isNotBlank()) {
+                                    success = true
+                                }
+                            } catch (e: Throwable) {
+                                if (e is kotlinx.coroutines.CancellationException) throw e
+                                android.util.Log.e("ShasthoViewModel", "OnDevice generation exception", e)
+                            }
+
+                            if (!success) {
                                 val currentList = _activeAssistantMessages.value.toMutableList()
                                 if (currentList.size > assistantMsgIndex) {
-                                    currentList[assistantMsgIndex] = ChatMessage(displayed, false)
+                                    currentList.removeAt(assistantMsgIndex)
                                     _activeAssistantMessages.value = currentList
                                 }
-                            }
+                                if (engineSetting == AiEngineSetting.AUTO) {
+                                    executeCloudAssistant(message, currentSessionId, sessionToSave, sessionHistoryForCall, profile, metrics, foodLogs, "The phone's AI had a problem, so the cloud AI answered.")
+                                } else {
+                                    val errText = "The offline AI could not answer right now. Please try again, or switch the AI engine to Cloud."
+                                    _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(errText, false)
+                                    repository.saveAssistantChatMessage(currentSessionId, errText, false)
+                                    repository.saveAssistantSession(
+                                        sessionToSave.copy(
+                                            preview = errText.take(70),
+                                            messageCount = sessionToSave.messageCount + 1,
+                                            updatedAt = System.currentTimeMillis()
+                                        )
+                                    )
+                                }
+                            } else {
+                                val finalMsg = accumulated + AssistantRouter.ON_DEVICE_FOOTER
+                                val currentList = _activeAssistantMessages.value.toMutableList()
+                                if (currentList.size > assistantMsgIndex) {
+                                    currentList[assistantMsgIndex] = ChatMessage(finalMsg, false)
+                                    _activeAssistantMessages.value = currentList
+                                }
 
-                            val finalMsg = if (accumulated.isNotBlank()) accumulated + AssistantRouter.ON_DEVICE_FOOTER else "I am sorry, I couldn't generate a response."
-                            val currentList = _activeAssistantMessages.value.toMutableList()
-                            if (currentList.size > assistantMsgIndex) {
-                                currentList[assistantMsgIndex] = ChatMessage(finalMsg, false)
-                                _activeAssistantMessages.value = currentList
-                            }
-
-                            repository.saveAssistantChatMessage(currentSessionId, finalMsg, false)
-                            repository.saveAssistantSession(
-                                sessionToSave.copy(
-                                    preview = finalMsg.take(70),
-                                    messageCount = sessionToSave.messageCount + 1,
-                                    updatedAt = System.currentTimeMillis()
+                                repository.saveAssistantChatMessage(currentSessionId, finalMsg, false)
+                                repository.saveAssistantSession(
+                                    sessionToSave.copy(
+                                        preview = finalMsg.take(70),
+                                        messageCount = sessionToSave.messageCount + 1,
+                                        updatedAt = System.currentTimeMillis()
+                                    )
                                 )
-                            )
+                            }
                         }
                     }
                     AssistantRoute.CLOUD -> {
