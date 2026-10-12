@@ -70,36 +70,94 @@ object OfflineReview {
         }
 
         // ## Support from the KardIQ protocol
+        val supportLines = mutableListOf<String>()
         if (topics.isNotEmpty()) {
-            val protocolLines = mutableListOf<String>()
-            val seenHits = mutableSetOf<String>()
-            for (topic in topics) {
-                val hits = KnowledgeRetriever.search(topic.condition, listOf(topic), 2)
-                for (hit in hits) {
-                    val key = "${hit.topic.condition}:${hit.topic.habit}"
-                    if (seenHits.add(key)) {
-                        protocolLines.add("- ${hit.topic.condition}: ${hit.topic.habit}")
-                    }
-                }
+            val eligible = dossier.findings.filter { it.topic != FindingTopic.DATA }
+            val sortedEligible = eligible.sortedByDescending { it.severity }
+            val sev23 = sortedEligible.filter { it.severity >= 2 }
+            val sev1NotGood = sortedEligible.filter { it.severity == 1 && !isGoodNews(it) }
+
+            val chosenFindings = if (sev23.size >= 2) {
+                sev23.take(4)
+            } else {
+                (sev23 + sev1NotGood).take(4)
             }
-            if (protocolLines.isNotEmpty()) {
-                sb.append("## Support from the KardIQ protocol\n")
-                for (pLine in protocolLines) {
-                    sb.append("$pLine\n")
+
+            val usedHitsSet = mutableSetOf<String>()
+
+            for (finding in chosenFindings) {
+                if (supportLines.size >= 3) break
+                val query = when (finding.topic) {
+                    FindingTopic.SLEEP -> "sleep insomnia relax"
+                    FindingTopic.GLUCOSE -> "sugar glucose insulin"
+                    FindingTopic.BLOOD_PRESSURE -> "heart artery pressure"
+                    FindingTopic.ACTIVITY -> "exercise walking"
+                    FindingTopic.NUTRITION -> "weight fat sugar"
+                    FindingTopic.HEART -> "heart stress"
+                    FindingTopic.WEIGHT -> "weight fat"
+                    FindingTopic.HYDRATION -> "drink water"
+                    FindingTopic.DATA -> ""
                 }
-                sb.append("\n")
+                if (query.isBlank()) continue
+
+                val hits = KnowledgeRetriever.search(query, topics, 3)
+                val bestHit = hits.firstOrNull { hit ->
+                    val key = "${hit.topic.condition}:${hit.topic.habit}"
+                    !usedHitsSet.contains(key)
+                }
+
+                if (bestHit != null) {
+                    val key = "${bestHit.topic.condition}:${bestHit.topic.habit}"
+                    usedHitsSet.add(key)
+                    val name = KnowledgeRetriever.protocolNames(listOf(bestHit)).firstOrNull() ?: bestHit.topic.habit
+                    val cleanTitle = finding.title.trim().removeSuffix(".")
+                    val benefitsTrimmed = bestHit.topic.benefits.trim().take(200)
+                    supportLines.add("- **$name** (for: $cleanTitle): $benefitsTrimmed")
+                }
             }
         }
 
-        var result = sb.toString().trimEnd()
+        if (supportLines.isNotEmpty()) {
+            sb.append("## Support from the KardIQ protocol\n")
+            sb.append("*General wellness suggestions from the lifestyle protocol, not medical advice.*\n")
+            for (line in supportLines) {
+                sb.append("$line\n")
+            }
+            sb.append("\n")
+        }
 
-        val needsDoc = MedicalNotes.needsDoctorNote(result, dossier.profileLine, dossier.medicalLines.joinToString(" ")) ||
+        // ## Track and discuss
+        sb.append("## Track and discuss\n")
+        for (finding in dossier.findings) {
+            if (finding.topic == FindingTopic.DATA) {
+                val cleanTitle = finding.title.trim().removeSuffix(".")
+                sb.append("- Add readings: $cleanTitle\n")
+            }
+        }
+        for (finding in dossier.findings) {
+            if (finding.severity == 3) {
+                val cleanTitle = finding.title.trim().removeSuffix(".")
+                sb.append("- Discuss with your doctor: $cleanTitle\n")
+            }
+        }
+        sb.append("- Re-check these numbers again in a week.\n")
+
+        val supportText = supportLines.joinToString(" ")
+        val needsDoctorNote = MedicalNotes.needsDoctorNote(supportText) ||
+                dossier.flags.any { it.equals("diabetes", ignoreCase = true) || it.equals("hypertension", ignoreCase = true) } ||
                 dossier.findings.any { it.severity == 3 }
 
-        if (needsDoc && !result.contains(MedicalNotes.DOCTOR_LINE)) {
-            result += "\n\n*${MedicalNotes.DOCTOR_LINE}*"
+        var result = sb.toString().trimEnd()
+        if (needsDoctorNote) {
+            result += "\n\n*" + MedicalNotes.DOCTOR_LINE + "*"
         }
-
         return result
+    }
+
+    private fun isGoodNews(finding: Finding): Boolean {
+        val tagLower = finding.tag.lowercase()
+        val titleLower = finding.title.lowercase()
+        return tagLower.contains("goal_met") || tagLower.contains("good") || tagLower.contains("at or above") ||
+                titleLower.contains("goal_met") || titleLower.contains("good") || titleLower.contains("at or above")
     }
 }

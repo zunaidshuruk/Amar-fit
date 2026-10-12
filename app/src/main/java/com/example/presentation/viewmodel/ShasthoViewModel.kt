@@ -2655,11 +2655,13 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                         dossier ?: buildDossier(profile),
                         com.example.data.local.coachTopics
                     )
-                    _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(reviewText, false)
-                    repository.saveAssistantChatMessage(currentSessionId, reviewText, false)
+                    val footer = AssistantRouter.buildFooter("your records (last 30 days)", emptyList(), false)
+                    val finalText = reviewText + footer
+                    _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(finalText, false)
+                    repository.saveAssistantChatMessage(currentSessionId, finalText, false)
                     repository.saveAssistantSession(
                         sessionToSave.copy(
-                            preview = reviewText.take(70),
+                            preview = finalText.take(70),
                             messageCount = sessionToSave.messageCount + 1,
                             updatedAt = System.currentTimeMillis()
                         )
