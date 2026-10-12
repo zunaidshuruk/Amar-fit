@@ -210,6 +210,13 @@ class MainActivity : ComponentActivity() {
                               }
                           },
                           actions = {
+                              IconButton(onClick = { navController.navigate("settings") }) {
+                                  Icon(
+                                      imageVector = Icons.Default.Settings,
+                                      contentDescription = "Settings",
+                                      tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                  )
+                              }
                               Box(
                                   modifier = Modifier
                                       .padding(end = 16.dp)
@@ -218,7 +225,7 @@ class MainActivity : ComponentActivity() {
                                       .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Emerald200)
                                       .border(2.dp, if (isDark) MaterialTheme.colorScheme.outline else Color.White, CircleShape)
                                       .shadow(2.dp, CircleShape)
-                                      .clickable { navController.navigate("settings") },
+                                      .clickable { navController.navigate("profile") },
                                   contentAlignment = Alignment.Center
                               ) {
                                   if (!userProfile?.profilePictureUri.isNullOrEmpty()) {
@@ -382,7 +389,8 @@ class MainActivity : ComponentActivity() {
                   composable("badges") { BadgeGalleryScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("recipe") { RecipeScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("foodlog") { FoodLogScreen(viewModel = viewModel, navController = navController, onNavigateToScanner = { navController.navigate("scanner") }, onNavigateBack = { navController.popBackStack() }) }
-                  composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }, onNavigateToHealthGoals = { navController.navigate("health_goals") }, onNavigateToFriends = { navController.navigate("friends") }, onNavigateToAbout = { navController.navigate("about") }) }
+                  composable("profile") { com.example.presentation.profile.ProfileScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onOpenSettings = { navController.navigate("settings") }, onOpenHealthGoals = { navController.navigate("health_goals") }) }
+                  composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }, onNavigateToHealthGoals = { navController.navigate("health_goals") }, onNavigateToFriends = { navController.navigate("friends") }, onNavigateToAbout = { navController.navigate("about") }, onOpenProfile = { navController.navigate("profile") }) }
                   composable("privacy_consent") {
                       com.example.presentation.auth.ConsentGateScreen(
                           onAccept = {

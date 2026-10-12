@@ -51,8 +51,6 @@ import android.widget.Toast
 import androidx.activity.result.IntentSenderRequest
 import com.google.android.gms.auth.api.identity.Identity
 import com.example.data.repository.DriveBackupPayload
-import com.example.util.formatHeight
-import com.example.util.formatWeight
 import com.example.util.WorkoutMusic
 
 
@@ -64,54 +62,12 @@ fun SettingsScreen(
     onLogout: () -> Unit = {},
     onNavigateToHealthGoals: () -> Unit = {},
     onNavigateToFriends: () -> Unit = {},
-    onNavigateToAbout: () -> Unit = {}
+    onNavigateToAbout: () -> Unit = {},
+    onOpenProfile: () -> Unit = {}
 ) {
     val profile by viewModel.userProfile.collectAsState()
     val isDark = true
 
-    var name by remember { mutableStateOf("") }
-    var age by remember { mutableStateOf("") }
-    var weight by remember { mutableStateOf("70.0") }
-    var height by remember { mutableStateOf("170.0") }
-    var waist by remember { mutableStateOf("0.0") }
-    var neck by remember { mutableStateOf("0.0") }
-    var hip by remember { mutableStateOf("0.0") }
-    var bodyFatCalcGender by remember { mutableStateOf("") }
-    var activityLevel by remember { mutableStateOf("Moderate") }
-    var expandedActivityLevel by remember { mutableStateOf(false) }
-    val activityLevelOptions = listOf("Sedentary", "Light", "Moderate", "Active", "Very Active")
-    var showWeightDialog by remember { mutableStateOf(false) }
-    var showHeightDialog by remember { mutableStateOf(false) }
-
-    if (showWeightDialog) {
-        com.example.ui.components.HeightWeightPickerDialog(
-            mode = com.example.ui.components.PickerMode.WEIGHT,
-            initialValue = weight.toFloatOrNull() ?: 70f,
-            useImperialUnits = profile?.useImperialUnits ?: false,
-            onDismiss = { showWeightDialog = false },
-            onConfirm = { kg ->
-                weight = kg.toString()
-                showWeightDialog = false
-            }
-        )
-    }
-
-    if (showHeightDialog) {
-        com.example.ui.components.HeightWeightPickerDialog(
-            mode = com.example.ui.components.PickerMode.HEIGHT,
-            initialValue = height.toFloatOrNull() ?: 170f,
-            useImperialUnits = profile?.useImperialUnits ?: false,
-            onDismiss = { showHeightDialog = false },
-            onConfirm = { cm ->
-                height = cm.toString()
-                showHeightDialog = false
-            }
-        )
-    }
-
-    var calorieLimit by remember { mutableStateOf("") }
-    var showSavedMessage by remember { mutableStateOf(false) }
-    var isSaving by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showPasswordReauthDialog by remember { mutableStateOf(false) }
@@ -129,8 +85,6 @@ fun SettingsScreen(
     var useImperialUnits by remember { mutableStateOf(false) }
     var notificationsEnabled by remember { mutableStateOf(true) }
     var remindersEnabled by remember { mutableStateOf(true) }
-
-    var profilePictureUri by remember { mutableStateOf<String?>(null) }
 
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -168,11 +122,6 @@ fun SettingsScreen(
     val historyPermissionLauncher = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) { granted ->
         historyGranted = HealthConnectManager.HISTORY_PERMISSION in granted
         if (historyGranted) Toast.makeText(context, "Full history enabled", Toast.LENGTH_SHORT).show()
-    }
-
-
-    val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
-        profilePictureUri = uri?.toString()
     }
 
     var isBackingUp by remember { mutableStateOf(false) }
@@ -254,17 +203,6 @@ fun SettingsScreen(
 
     LaunchedEffect(profile) {
         if (profile != null) {
-            name = profile!!.name
-            age = profile!!.age.toString()
-            weight = profile!!.weightKg.toString()
-            height = profile!!.heightCm.toString()
-            waist = profile!!.waistCm.toString()
-            neck = profile!!.neckCm.toString()
-            hip = profile!!.hipCm.toString()
-            bodyFatCalcGender = profile!!.bodyFatCalcGender
-            activityLevel = profile!!.activityLevel
-            calorieLimit = profile!!.dailyCalorieLimit.toString()
-            profilePictureUri = profile!!.profilePictureUri
             isDarkMode = profile!!.isDarkMode
             useImperialUnits = profile!!.useImperialUnits
             notificationsEnabled = profile!!.notificationsEnabled
@@ -288,7 +226,7 @@ fun SettingsScreen(
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
             }
             Text(
-                text = "Profile & Settings",
+                text = "Settings",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -298,271 +236,84 @@ fun SettingsScreen(
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RoundedCornerShape(20.dp),
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .clickable { onOpenProfile() }
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Profile Picture Selector
                 Box(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(100.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                            .clickable { launcher.launch("image/*") },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (profilePictureUri.isNullOrEmpty()) {
-                            Icon(Icons.Default.CameraAlt, contentDescription = "Select Profile Picture", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(40.dp))
-                        } else {
-                            var decodedBitmap: androidx.compose.ui.graphics.ImageBitmap? = null
-                            if (!profilePictureUri!!.startsWith("http") && !profilePictureUri!!.startsWith("content://")) {
-                                try {
-                                    val decodedBytes = android.util.Base64.decode(profilePictureUri, android.util.Base64.DEFAULT)
-                                    decodedBitmap = android.graphics.BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)?.let { it.asImageBitmap() }
-                                } catch (e: Exception) { }
-                            }
-                            
-                            if (decodedBitmap != null) {
-                                androidx.compose.foundation.Image(
-                                    bitmap = decodedBitmap,
-                                    contentDescription = "Profile Picture",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                AsyncImage(
-                                    model = profilePictureUri,
-                                    contentDescription = "Profile Picture",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
+                    val pUri = profile?.profilePictureUri
+                    if (!pUri.isNullOrEmpty()) {
+                        var decodedBitmap: androidx.compose.ui.graphics.ImageBitmap? = null
+                        if (!pUri.startsWith("http") && !pUri.startsWith("content://")) {
+                            try {
+                                val decodedBytes = android.util.Base64.decode(pUri, android.util.Base64.DEFAULT)
+                                decodedBitmap = android.graphics.BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)?.let { it.asImageBitmap() }
+                            } catch (e: Exception) { }
                         }
-                    }
-                }
 
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Name") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = age,
-                        onValueChange = { age = it },
-                        label = { Text("Age") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = calorieLimit,
-                        onValueChange = { calorieLimit = it },
-                        label = { Text("Daily Calories") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        OutlinedTextField(
-                            value = formatHeight(height.toFloatOrNull() ?: 170f, profile?.useImperialUnits ?: false),
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Height") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Box(modifier = Modifier.matchParentSize().clickable { showHeightDialog = true })
-                    }
-                    Box(modifier = Modifier.weight(1f)) {
-                        OutlinedTextField(
-                            value = formatWeight(weight.toFloatOrNull() ?: 70f, profile?.useImperialUnits ?: false),
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Weight") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Box(modifier = Modifier.matchParentSize().clickable { showWeightDialog = true })
-                    }
-                }
-
-                Text("Body Measurements (for Body Fat %)", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = waist,
-                        onValueChange = { waist = it },
-                        label = { Text("Waist (cm)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = neck,
-                        onValueChange = { neck = it },
-                        label = { Text("Neck (cm)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                val effectiveGenderLower = profile?.gender?.trim()?.lowercase() ?: ""
-                val needsHip = effectiveGenderLower == "female" || (effectiveGenderLower != "male" && effectiveGenderLower != "female" && bodyFatCalcGender.equals("female", ignoreCase = true))
-                if (needsHip) {
-                    OutlinedTextField(
-                        value = hip,
-                        onValueChange = { hip = it },
-                        label = { Text("Hip (cm)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
-                if (effectiveGenderLower != "male" && effectiveGenderLower != "female") {
-                    Text("Calculate my body fat using:", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = bodyFatCalcGender.equals("male", ignoreCase = true),
-                            onClick = { bodyFatCalcGender = "male" },
-                            label = { Text("Male formula") }
-                        )
-                        FilterChip(
-                            selected = bodyFatCalcGender.equals("female", ignoreCase = true),
-                            onClick = { bodyFatCalcGender = "female" },
-                            label = { Text("Female formula") }
-                        )
-                    }
-                }
-
-                ExposedDropdownMenuBox(
-                    expanded = expandedActivityLevel,
-                    onExpandedChange = { expandedActivityLevel = !expandedActivityLevel },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
-                ) {
-                    OutlinedTextField(
-                        value = activityLevel,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Activity Level") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedActivityLevel) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expandedActivityLevel,
-                        onDismissRequest = { expandedActivityLevel = false }
-                    ) {
-                        activityLevelOptions.forEach { selectionOption ->
-                            DropdownMenuItem(
-                                text = { Text(selectionOption) },
-                                onClick = {
-                                    activityLevel = selectionOption
-                                    expandedActivityLevel = false
-                                }
+                        if (decodedBitmap != null) {
+                            androidx.compose.foundation.Image(
+                                bitmap = decodedBitmap,
+                                contentDescription = "Profile Picture",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            AsyncImage(
+                                model = pUri,
+                                contentDescription = "Profile Picture",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
                             )
                         }
-                    }
-                }
-
-                Button(
-                    onClick = {
-                        profile?.let {
-                            coroutineScope.launch {
-                                isSaving = true
-                                var finalPhotoUrl = profilePictureUri
-                                if (finalPhotoUrl != null && finalPhotoUrl.startsWith("content://")) {
-                                    try {
-                                        val uri = android.net.Uri.parse(finalPhotoUrl)
-                                        val inputStream = context.contentResolver.openInputStream(uri)
-                                        val originalBitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
-                                        inputStream?.close()
-                                        
-                                        if (originalBitmap != null) {
-                                            val maxSize = 300
-                                            val ratio = maxSize.toFloat() / Math.max(originalBitmap.width, originalBitmap.height)
-                                            val resizedBitmap = if (ratio < 1) {
-                                                android.graphics.Bitmap.createScaledBitmap(originalBitmap, (originalBitmap.width * ratio).toInt(), (originalBitmap.height * ratio).toInt(), true)
-                                            } else {
-                                                originalBitmap
-                                            }
-                                            
-                                            var quality = 70
-                                            var base64String = ""
-                                            val out = java.io.ByteArrayOutputStream()
-                                            
-                                            do {
-                                                out.reset()
-                                                resizedBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, quality, out)
-                                                val bytes = out.toByteArray()
-                                                base64String = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
-                                                quality -= 10
-                                            } while (bytes.size > 300 * 1024 && quality > 10)
-                                            
-                                            if (base64String.length * 2 > 800 * 1024) {
-                                                throw Exception("Image is still too large after compression")
-                                            }
-                                            
-                                            finalPhotoUrl = base64String
-                                            profilePictureUri = finalPhotoUrl
-                                        } else {
-                                            throw Exception("Could not decode image")
-                                        }
-                                    } catch(e: Exception) {
-                                        e.printStackTrace()
-                                        Toast.makeText(context, "Failed to compress image: ${e.message}", Toast.LENGTH_LONG).show()
-                                        finalPhotoUrl = it.profilePictureUri
-                                        profilePictureUri = finalPhotoUrl
-                                    }
-                                }
-                                val updated = it.copy(
-                                    name = name,
-                                    age = age.toIntOrNull() ?: it.age,
-                                    weightKg = weight.toFloatOrNull() ?: it.weightKg,
-                                    heightCm = height.toFloatOrNull() ?: it.heightCm,
-                                    waistCm = waist.toFloatOrNull() ?: it.waistCm,
-                                    neckCm = neck.toFloatOrNull() ?: it.neckCm,
-                                    hipCm = hip.toFloatOrNull() ?: it.hipCm,
-                                    bodyFatCalcGender = bodyFatCalcGender,
-                                    activityLevel = activityLevel,
-                                    dailyCalorieLimit = calorieLimit.toIntOrNull() ?: it.dailyCalorieLimit,
-                                    profilePictureUri = finalPhotoUrl,
-                                    isDarkMode = isDarkMode,
-                                    useImperialUnits = useImperialUnits,
-                                    notificationsEnabled = notificationsEnabled,
-                                    remindersEnabled = remindersEnabled
-                                )
-                                viewModel.saveProfile(updated)
-                                showSavedMessage = true
-                                isSaving = false
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    enabled = !isSaving
-                ) {
-                    if (isSaving) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
                     } else {
-                        Text("Save Profile")
+                        val initial = profile?.name?.firstOrNull()?.toString()?.uppercase() ?: "U"
+                        Text(
+                            text = initial,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
 
-                if (showSavedMessage) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 12.dp)
+                ) {
                     Text(
-                        text = "Profile updated successfully!",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 14.sp
+                        text = profile?.name?.ifBlank { "User Profile" } ?: "User Profile",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "View and edit your profile",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
@@ -590,7 +341,14 @@ fun SettingsScreen(
                     Text("Use Imperial Units (ft/in, lbs)", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                     Switch(
                         checked = useImperialUnits,
-                        onCheckedChange = { useImperialUnits = it },
+                        onCheckedChange = { checked ->
+                            useImperialUnits = checked
+                            viewModel.userProfile.value?.let { p ->
+                                coroutineScope.launch {
+                                    viewModel.saveProfile(p.copy(useImperialUnits = checked))
+                                }
+                            }
+                        },
                         colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary, checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                     )
                 }
@@ -604,7 +362,14 @@ fun SettingsScreen(
                     Text("Push Notifications", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                     Switch(
                         checked = notificationsEnabled,
-                        onCheckedChange = { notificationsEnabled = it },
+                        onCheckedChange = { checked ->
+                            notificationsEnabled = checked
+                            viewModel.userProfile.value?.let { p ->
+                                coroutineScope.launch {
+                                    viewModel.saveProfile(p.copy(notificationsEnabled = checked))
+                                }
+                            }
+                        },
                         colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary, checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                     )
                 }
@@ -618,7 +383,14 @@ fun SettingsScreen(
                     Text("Daily Reminders", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                     Switch(
                         checked = remindersEnabled,
-                        onCheckedChange = { remindersEnabled = it },
+                        onCheckedChange = { checked ->
+                            remindersEnabled = checked
+                            viewModel.userProfile.value?.let { p ->
+                                coroutineScope.launch {
+                                    viewModel.saveProfile(p.copy(remindersEnabled = checked))
+                                }
+                            }
+                        },
                         colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary, checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                     )
                 }
