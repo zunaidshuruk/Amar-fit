@@ -1328,17 +1328,17 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 val wasUpdated = metricsWriteLock.withLock {
                     val current = repository.getMetricsForDate(dateStr).firstOrNull() ?: DailyMetric(date = dateStr)
                     val updated = current.copy(
-                        steps = if (day.steps > 0) day.steps else current.steps,
-                        distanceMeters = if (day.distanceMeters > 0f) day.distanceMeters else current.distanceMeters,
-                        activeCaloriesBurned = if (day.activeCalories > 0) day.activeCalories else current.activeCaloriesBurned,
+                        steps = maxOf(day.steps, current.steps),
+                        distanceMeters = maxOf(day.distanceMeters, current.distanceMeters),
+                        activeCaloriesBurned = maxOf(day.activeCalories, current.activeCaloriesBurned),
                         sleepHours = if (day.sleepHours > 0f) day.sleepHours else current.sleepHours,
-                        exerciseMinutes = if (day.exerciseMinutes > 0) day.exerciseMinutes else current.exerciseMinutes,
+                        exerciseMinutes = maxOf(day.exerciseMinutes, current.exerciseMinutes),
                         restingHeartRate = if (day.restingHeartRate > 0) day.restingHeartRate else current.restingHeartRate,
                         heartRateVariability = if (day.hrv > 0f) day.hrv else current.heartRateVariability,
                         oxygenSaturation = if (day.spo2 > 0f) day.spo2 else current.oxygenSaturation,
                         skinTemperatureCelsius = if (day.skinTemp != 0f) day.skinTemp else current.skinTemperatureCelsius,
                         respiratoryRate = if (day.respiratoryRate > 0f) day.respiratoryRate else current.respiratoryRate,
-                        mindfulnessMinutes = if (day.mindfulnessMinutes > 0) day.mindfulnessMinutes else current.mindfulnessMinutes,
+                        mindfulnessMinutes = maxOf(day.mindfulnessMinutes, current.mindfulnessMinutes),
                         heartRateMin = if (day.heartRateMin > 0) day.heartRateMin else current.heartRateMin,
                         heartRateMax = if (day.heartRateMax > 0) day.heartRateMax else current.heartRateMax,
                         heartRate = if (day.heartRateAvg > 0) day.heartRateAvg else current.heartRate,
@@ -1739,7 +1739,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 metricsWriteLock.withLock {
                     val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
                     val updated = current.copy(
-                        steps = if (totalSteps > 0) totalSteps else current.steps,
+                        steps = maxOf(totalSteps, current.steps),
                         sleepHours = if (sleepHours > 0f) sleepHours else current.sleepHours,
                         bloodPressure = if (bloodPressure.isNotEmpty()) bloodPressure else current.bloodPressure,
                         bloodGlucoseMorning = if (bloodGlucose > 0f) bloodGlucose else current.bloodGlucoseMorning,
@@ -1747,15 +1747,15 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                         heartRateMin = if (heartRateMin > 0) heartRateMin else current.heartRateMin,
                         heartRateMax = if (heartRateMax > 0) heartRateMax else current.heartRateMax,
                         restingHeartRate = if (restingHeartRateValue > 0) restingHeartRateValue else current.restingHeartRate,
-                        distanceMeters = if (totalDistance > 0f) totalDistance else current.distanceMeters,
-                        exerciseMinutes = if (exerciseMinutes > 0) exerciseMinutes else current.exerciseMinutes,
-                        externalNutritionCalories = if (externalNutritionCalories > 0) externalNutritionCalories else current.externalNutritionCalories,
-                        activeCaloriesBurned = if (activeCaloriesBurned > 0) activeCaloriesBurned else current.activeCaloriesBurned,
+                        distanceMeters = maxOf(totalDistance, current.distanceMeters),
+                        exerciseMinutes = maxOf(exerciseMinutes, current.exerciseMinutes),
+                        externalNutritionCalories = maxOf(externalNutritionCalories, current.externalNutritionCalories),
+                        activeCaloriesBurned = maxOf(activeCaloriesBurned, current.activeCaloriesBurned),
                         heartRateVariability = if (heartRateVariability > 0f) heartRateVariability else current.heartRateVariability,
                         oxygenSaturation = if (oxygenSaturation > 0f) oxygenSaturation else current.oxygenSaturation,
                         skinTemperatureCelsius = if (skinTemperatureCelsius > 0f) skinTemperatureCelsius else current.skinTemperatureCelsius,
                         respiratoryRate = if (respiratoryRate > 0f) respiratoryRate else current.respiratoryRate,
-                        mindfulnessMinutes = if (mindfulnessMinutes > 0) mindfulnessMinutes else current.mindfulnessMinutes
+                        mindfulnessMinutes = maxOf(mindfulnessMinutes, current.mindfulnessMinutes)
                     )
                     repository.saveMetrics(updated)
                 }

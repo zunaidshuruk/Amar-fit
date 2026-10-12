@@ -46,7 +46,8 @@ data class UserProfile(
     val todayTileSlots: String = "",
     val bloodGlucoseTargetMin: Float = 0f,
     val bloodGlucoseTargetMax: Float = 0f,
-    val navTabs: String = ""
+    val navTabs: String = "",
+    val updatedAt: Long = 0L
 )
 
 @Entity(tableName = "daily_metrics")
@@ -84,7 +85,8 @@ data class DailyMetric(
     val mindfulnessMinutes: Int = 0,
     val carbsG: Float = 0f,
     val proteinG: Float = 0f,
-    val fatG: Float = 0f
+    val fatG: Float = 0f,
+    val updatedAt: Long = 0L
 )
 
 @Entity(tableName = "food_logs", indices = [Index(value = ["cloudId"], unique = true)])

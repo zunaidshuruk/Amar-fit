@@ -375,13 +375,14 @@ class AppRepository(
 
     fun getMetricsHistoryRange(startDate: String, endDate: String) = metricsDao.getMetricsHistoryRange(startDate, endDate)
 
-    suspend fun saveUserProfile(profile: UserProfile) {
-        val profileToSave = if (profile.friendCode.isBlank()) {
+    suspend fun saveUserProfile(profile: UserProfile, stampTime: Boolean = true) {
+        val stamped = if (stampTime) profile.copy(updatedAt = System.currentTimeMillis()) else profile
+        val profileToSave = if (stamped.friendCode.isBlank()) {
             val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
             val claimedCode = if (user != null) FirebaseManager.claimFriendCode(user.uid) else null
-            if (claimedCode != null) profile.copy(friendCode = claimedCode) else profile
+            if (claimedCode != null) stamped.copy(friendCode = claimedCode) else stamped
         } else {
-            profile
+            stamped
         }
         userDao.insertProfile(profileToSave)
         try {
@@ -398,16 +399,25 @@ class AppRepository(
         }
     }
     
-    suspend fun saveMetrics(metric: DailyMetric) {
-        metricsDao.insertMetrics(metric)
-        try {
-            FirebaseManager.syncMetric(metric)
-            val currentProfile = userDao.getUserProfile().firstOrNull()
-            if (currentProfile != null && metric.date == java.time.LocalDate.now().toString()) {
-                FirebaseManager.syncFriendStats(metric, currentProfile)
+    suspend fun saveMetrics(metric: DailyMetric, stampTime: Boolean = true) {
+        val existing = metricsDao.getMetricsForDate(metric.date).firstOrNull()
+        val changed = existing == null || existing.copy(updatedAt = 0L) != metric.copy(updatedAt = 0L)
+        val toSave = if (stampTime && changed) {
+            metric.copy(updatedAt = System.currentTimeMillis())
+        } else {
+            metric.copy(updatedAt = if (stampTime) (existing?.updatedAt ?: metric.updatedAt) else metric.updatedAt)
+        }
+        metricsDao.insertMetrics(toSave)
+        if (changed || existing == null) {
+            try {
+                FirebaseManager.syncMetric(toSave)
+                val currentProfile = userDao.getUserProfile().firstOrNull()
+                if (currentProfile != null && toSave.date == java.time.LocalDate.now().toString()) {
+                    FirebaseManager.syncFriendStats(toSave, currentProfile)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 
