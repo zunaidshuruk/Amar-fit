@@ -84,11 +84,12 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
     var showWaterDialog by remember { mutableStateOf(false) }
     var showLogBottomSheet by remember { mutableStateOf(false) }
 
-    var selectedDate by remember { mutableStateOf(java.time.LocalDate.now()) }
+    val todayStr by viewModel.todayDate.collectAsState()
+    var selectedDate by remember(todayStr) { mutableStateOf(java.time.LocalDate.parse(todayStr)) }
     val selectedDateString = remember(selectedDate) { selectedDate.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE) }
 
     val metrics by viewModel.getMetricsForDateFlow(selectedDateString).collectAsState(initial = null)
-    val last7Metrics by viewModel.getMetricsHistoryFlow(7).collectAsState(initial = emptyList())
+    val last7Metrics by remember(todayStr) { viewModel.getMetricsHistoryFlow(7) }.collectAsState(initial = emptyList())
     val healthInsight by viewModel.healthInsight.collectAsState()
     val isLoadingHealthInsight by viewModel.isLoadingHealthInsight.collectAsState()
     val todayFoodLogs by viewModel.getFoodLogsForDateFlow(selectedDateString).collectAsState(initial = emptyList())

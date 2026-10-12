@@ -196,8 +196,17 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             set(java.util.Calendar.MILLISECOND, 999)
         }.timeInMillis
 
-    val todayActivityEvents: StateFlow<List<com.example.data.local.ActivityEvent>> = repository
-        .getTodayActivityEvents(startOfDayMillis, endOfDayMillis)
+    private val _todayDate = MutableStateFlow(java.time.LocalDate.now().toString())
+    val todayDate: StateFlow<String> = _todayDate.asStateFlow()
+    val todayDateString: String get() = java.time.LocalDate.now().toString()
+
+    fun refreshToday() {
+        _todayDate.value = java.time.LocalDate.now().toString()
+    }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val todayActivityEvents: StateFlow<List<com.example.data.local.ActivityEvent>> = _todayDate
+        .flatMapLatest { repository.getTodayActivityEvents(startOfDayMillis, endOfDayMillis) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -237,20 +246,37 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         initialValue = null
     )
     
-    val todayDateString = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-    
-    val todayMetrics = repository.getMetricsForDate(todayDateString).stateIn(
+    // todayDate definitions moved up
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val todayMetrics = _todayDate.flatMapLatest { dateStr ->
+        repository.getMetricsForDate(dateStr)
+    }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
         initialValue = null
     )
     private val metricsWriteLock = kotlinx.coroutines.sync.Mutex()
     
-    val metricsHistory = repository.getMetricsHistory(startDateForRange(90)).stateIn(
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val metricsHistory = _todayDate.flatMapLatest { _ ->
+        repository.getMetricsHistory(startDateForRange(90))
+    }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
+
+    init {
+        viewModelScope.launch {
+            while (true) {
+                val now = java.time.LocalDateTime.now()
+                val nextMidnight = now.toLocalDate().plusDays(1).atStartOfDay()
+                kotlinx.coroutines.delay(java.time.Duration.between(now, nextMidnight).toMillis() + 1_000L)
+                refreshToday()
+            }
+        }
+    }
 
     // Converts a "last N days" window into an actual calendar start date (yyyy-MM-dd).
     // getMetricsHistory used to take a row LIMIT instead of a date range, which meant every
@@ -518,7 +544,10 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         afterDinner?.let { writeGlucoseToHealthConnect(it, MealType.MEAL_TYPE_DINNER, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource, date) }
     }
 
-    val todayFoodLogs = repository.getFoodLogsForDate(todayDateString).stateIn(
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val todayFoodLogs = _todayDate.flatMapLatest { dateStr ->
+        repository.getFoodLogsForDate(dateStr)
+    }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()

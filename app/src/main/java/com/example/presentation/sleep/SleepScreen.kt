@@ -51,7 +51,8 @@ fun SleepScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val metrics by viewModel.todayMetrics.collectAsState()
     val sleepHours = metrics?.sleepHours ?: 0f
     var showSleepDialog by remember { mutableStateOf(false) }
-    val sleepHistoryFlow = remember { viewModel.getMetricsHistoryFlow(7) }
+    val todayStr by viewModel.todayDate.collectAsState()
+    val sleepHistoryFlow = remember(todayStr) { viewModel.getMetricsHistoryFlow(7) }
     val sleepHistory by sleepHistoryFlow.collectAsState(initial = emptyList())
     val chronologicalSleepHistory = remember(sleepHistory) { sleepHistory.reversed() }
 
