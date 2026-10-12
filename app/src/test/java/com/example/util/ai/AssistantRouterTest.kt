@@ -105,4 +105,21 @@ class AssistantRouterTest {
         assertTrue(contextStr.contains("70.0 kg") || contextStr.contains("70 kg"))
         assertTrue(contextStr.contains("8000 steps"))
     }
+
+    @Test
+    fun testDeepRequestAndHealthQuestions() {
+        assertTrue(AssistantRouter.isDeepRequest(AssistantRouter.DEEP_REVIEW_PROMPT))
+        assertTrue(AssistantRouter.isDeepRequest(AssistantRouter.GO_DEEPER_PREFIX + "how is my sleep"))
+        org.junit.Assert.assertFalse(AssistantRouter.isDeepRequest("hello"))
+        org.junit.Assert.assertFalse(AssistantRouter.isDeepRequest("what is a deep review"))
+
+        assertTrue(AssistantRouter.isCloudOnlyTopic(AssistantRouter.DEEP_REVIEW_PROMPT))
+        assertEquals(AssistantRoute.CLOUD, AssistantRouter.route(AssistantRouter.DEEP_REVIEW_PROMPT, AiEngineSetting.AUTO, modelReady = true, online = true))
+        assertEquals(AssistantRoute.NEEDS_INTERNET, AssistantRouter.route(AssistantRouter.DEEP_REVIEW_PROMPT, AiEngineSetting.AUTO, modelReady = true, online = false))
+        assertEquals(AssistantRoute.NEEDS_CLOUD_ENGINE, AssistantRouter.route(AssistantRouter.DEEP_REVIEW_PROMPT, AiEngineSetting.ON_DEVICE, modelReady = true, online = true))
+
+        assertTrue(AssistantRouter.isHealthQuestion("how did I sleep this week"))
+        assertTrue(AssistantRouter.isHealthQuestion("what should I eat for lunch"))
+        org.junit.Assert.assertFalse(AssistantRouter.isHealthQuestion("hello"))
+    }
 }

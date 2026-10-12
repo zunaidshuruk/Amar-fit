@@ -1470,7 +1470,7 @@ class AppRepository(
 
         declarations.put(parameterless(
             "read_health_data",
-            "Reads the user's recent health metrics (steps, sleep, heart rate, blood pressure, blood glucose, weight, water, calories, macros) and recent food logs. Call this whenever you need real data about the user to give an accurate, personalized answer or suggestion -- do not guess or assume their numbers."
+            "Returns the user's full 30-day health dossier: profile and goals, medical records, ranked findings and per-topic numbers for sleep, steps, workouts, calories and macros, glucose, blood pressure, heart and body, and weight. Call it when you need detail beyond the compact dossier already in your instructions."
         ))
 
         declarations.put(parameterless(
@@ -1624,25 +1624,19 @@ class AppRepository(
         profile: UserProfile,
         metrics: List<com.example.data.local.DailyMetric>,
         foodLogs: List<com.example.data.local.FoodLog>,
-        onStatusUpdate: (String) -> Unit = {}
+        onStatusUpdate: (String) -> Unit = {},
+        dossierCompact: String = "",
+        dossierFull: String = "",
+        deep: Boolean = false
     ): AssistantResult = withContext(Dispatchers.IO) {
-        val isDeepReview = userMessage.contains("deep review", ignoreCase = true) ||
-                           userMessage.contains("deep analysis", ignoreCase = true) ||
-                           userMessage.contains("30-day review", ignoreCase = true) ||
-                           userMessage.contains("30-day analysis", ignoreCase = true)
-
-        val styleInstructions = if (isDeepReview) {
-            "\n\n" + DeepAnalysisStyle.PROMPT_INSTRUCTIONS
+        val stylePart = if (deep) {
+            "\n\n" + DeepAnalysisStyle.DEEP_STYLE + "\n\n" + DeshiFoodRules.RULES + "\n\n" + MedicalNotes.PROMPT_RULE + "\n\n" + dossierFull
         } else {
-            "\n\n" + aiResponseStyle(150, followUps = true)
+            "\n\n" + aiResponseStyle(150, followUps = true) + "\n\n" + DeshiFoodRules.SHORT + "\n\n" + MedicalNotes.PROMPT_RULE + "\n\n" + DeepAnalysisStyle.SHORT_SPECIFIC_RULES + (if (dossierCompact.isNotBlank()) "\n\n" + DeepAnalysisStyle.TOOL_RULE + "\n\n" + dossierCompact else "")
         }
 
         val systemInstruction = """
             You are KardIQ AI, a universal health assistant for the KardIQ app. You can log food, generate diet charts, generate workouts, create multi-day workout programs, suggest medicinal recipes, generate health insights, and give glucose guidance -- all through natural conversation.
-
-            When the user asks for a 30-day deep health review or deep analysis, ALWAYS call read_health_data first to inspect their full health dossier.
-
-            Only call read_health_data when the user's real numbers would genuinely change your answer (e.g. they ask about their own trends, or want a suggestion grounded in their actual data). For simple greetings, general questions, or requests that don't need personal data, just respond directly without calling any tool -- this keeps replies fast.
 
             When the user describes food they ate, call log_foods ONCE with one entry per distinct food or dish (even for a single food). If the message lists several meals or items (breakfast, lunch, snacks, dinner, drinks, sweets), include ALL of them in the same call and never drop any; give every entry its own mealType from the context, a clear name that includes the quantity (for example "2 boiled eggs", "3 parata"), and your best calorie and macro estimate for exactly that quantity using typical Bangladeshi portion sizes. Ask a question only if you cannot tell what a food is at all; otherwise estimate. It shows the user a confirmation card listing everything, so you don't need to over-clarify first.
 
@@ -1650,8 +1644,8 @@ class AppRepository(
 
             When a tool result contains a line starting with "YOUTUBE_SEARCH:", copy that line exactly, on its own line, at the end of your reply.
 
-            Keep replies conversational and concise unless a deep review style is specified. You are not a doctor -- frame health-related suggestions as general wellness guidance, never a diagnosis, and never claim certainty about a medical condition.
-        """.trimIndent() + styleInstructions + "\n\n" + DeshiFoodRules.SHORT + "\n\n" + MedicalNotes.PROMPT_RULE
+            Keep replies conversational. You are not a doctor -- frame health-related suggestions as general wellness guidance, never a diagnosis, and never claim certainty about a medical condition.
+        """.trimIndent() + stylePart
 
         val contents = org.json.JSONArray()
         val rawMessages = mutableListOf<ChatMessage>()
@@ -1702,6 +1696,27 @@ class AppRepository(
                 put("role", "user")
                 put("parts", org.json.JSONArray().put(org.json.JSONObject().put("text", userMessage.ifBlank { "Hello" })))
             })
+        }
+
+        if (deep) {
+            onStatusUpdate("Analysing your last 30 days...")
+            try {
+                val tools = org.json.JSONArray()
+                val responseJson = executeRawGeminiCall(contents, systemInstruction, tools)
+                val candidate = responseJson.optJSONArray("candidates")?.optJSONObject(0)
+                    ?: return@withContext AssistantResult.Text("Sorry, I couldn't process that. Please try again.")
+                val contentObj = candidate.optJSONObject("content")
+                val parts = contentObj?.optJSONArray("parts")
+                val firstPart = parts?.optJSONObject(0)
+                val text = firstPart?.optString("text")
+                if (!text.isNullOrBlank()) {
+                    return@withContext AssistantResult.Text(text.trim())
+                }
+                return@withContext AssistantResult.Text("Sorry, I couldn't generate the review. Please try again.")
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                return@withContext AssistantResult.Text("Sorry, I encountered an issue while generating your 30-day review: ${e.message}")
+            }
         }
 
         val tools = buildAssistantToolsJson()
@@ -1777,24 +1792,30 @@ class AppRepository(
                     )
                     when (fnName) {
                         "read_health_data" -> {
-                            val todayDateString = java.time.LocalDate.now().toString()
-                            val medRecords = medicalRecordDao?.getAllMedicalRecords()?.firstOrNull() ?: emptyList()
-                            val actEvents = activityEventDao?.getAllEvents()?.firstOrNull() ?: emptyList()
-                            val now = System.currentTimeMillis()
-                            val thirtyDaysAgo = now - 30L * 86400000L
-                            val exSessions = healthExerciseSessionDao?.observeBetween(thirtyDaysAgo, now + 86400000L)?.firstOrNull() ?: emptyList()
+                            if (dossierFull.isNotBlank()) {
+                                dossierFull
+                            } else {
+                                val todayDateString = java.time.LocalDate.now().toString()
+                                val thirtyDaysAgoString = java.time.LocalDate.now().minusDays(29).toString()
+                                val metrics30 = metricsDao.getMetricsHistoryRange(thirtyDaysAgoString, todayDateString).firstOrNull() ?: metrics
+                                val medRecords = medicalRecordDao?.getAllMedicalRecords()?.firstOrNull() ?: emptyList()
+                                val actEvents = activityEventDao?.getAllEvents()?.firstOrNull() ?: emptyList()
+                                val now = System.currentTimeMillis()
+                                val thirtyDaysAgoMillis = now - 30L * 86400000L
+                                val exSessions = healthExerciseSessionDao?.observeBetween(thirtyDaysAgoMillis, now + 86400000L)?.firstOrNull() ?: emptyList()
 
-                            val dossierInput = DossierInput(
-                                profile = profile,
-                                metrics = metrics,
-                                foodLogs = foodLogs,
-                                exerciseSessions = exSessions,
-                                activityEvents = actEvents,
-                                medicalRecords = medRecords,
-                                todayDate = todayDateString
-                            )
-                            val dossier = HealthDossierBuilder.build(dossierInput)
-                            dossier.toPromptText(DossierMode.FULL)
+                                val dossierInput = DossierInput(
+                                    profile = profile,
+                                    metrics = metrics30,
+                                    foodLogs = foodLogs,
+                                    exerciseSessions = exSessions,
+                                    activityEvents = actEvents,
+                                    medicalRecords = medRecords,
+                                    todayDate = todayDateString
+                                )
+                                val dossier = HealthDossierBuilder.build(dossierInput)
+                                dossier.toPromptText(DossierMode.FULL)
+                            }
                         }
                         "get_health_insight" -> generateHealthInsight(profile, metrics, foodLogs)
                         "get_glucose_guidance" -> generateGlucoseGuidance(profile, metrics)

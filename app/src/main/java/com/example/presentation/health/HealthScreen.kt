@@ -36,6 +36,7 @@ import androidx.navigation.NavController
 import com.example.data.health.HealthGoalCalculator
 import com.example.presentation.navigation.navigateToTab
 import com.example.presentation.viewmodel.ShasthoViewModel
+import com.example.util.ai.AssistantRouter
 import com.example.ui.components.StatTileCard
 import com.example.ui.theme.*
 import com.example.util.formatGlucoseNumber
@@ -366,8 +367,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 .clip(RoundedCornerShape(20.dp))
                 .background(MaterialTheme.colorScheme.primaryContainer)
                 .clickable {
-                    viewModel.sendUniversalAssistantMessage("Perform a 30-day deep health review based on my health dossier")
-                    navController.navigate("assistant")
+                    navController.navigate("universal_assistant?starter=" + android.net.Uri.encode(AssistantRouter.DEEP_REVIEW_PROMPT) + "&fresh=true")
                 }
                 .padding(20.dp)
         ) {
@@ -388,8 +388,8 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "30-Day Deep Health Review", color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                        Text(text = "AI analysis of trends, findings & records", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f), fontSize = 13.sp)
+                        Text(text = "Full 30-day health review", color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        Text(text = "Sleep, steps, workouts, food, glucose, blood pressure and trends analysed together", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f), fontSize = 13.sp)
                     }
                 }
                 Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Start Deep Review", tint = MaterialTheme.colorScheme.onPrimaryContainer)

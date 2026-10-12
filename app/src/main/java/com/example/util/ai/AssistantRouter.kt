@@ -22,6 +22,28 @@ enum class AssistantRoute {
 object AssistantRouter {
 
     const val ON_DEVICE_FOOTER = "\n\n*Answered on this phone*"
+    const val DEEP_REVIEW_PROMPT = "Give me a full 30-day deep review of my health data and a 7-day action plan."
+    const val GO_DEEPER_PREFIX = "Go deeper on this: "
+
+    fun isDeepRequest(message: String): Boolean {
+        val trimmed = message.trim()
+        return trimmed == DEEP_REVIEW_PROMPT || trimmed.startsWith(GO_DEEPER_PREFIX)
+    }
+
+    fun isHealthQuestion(message: String): Boolean {
+        if (HealthFactsBuilder.detectTopics(message).isNotEmpty()) {
+            return true
+        }
+        val lower = message.lowercase(Locale.US)
+        val keywords = listOf(
+            "my health", "my data", "my numbers", "how am i", "my progress",
+            "what should i", "what should i do", "suggest", "advice", "improve", "lower my",
+            "reduce", "diet", "workout", "meal", "exercise", "sleep", "glucose",
+            "sugar", "pressure", "weight", "recommend", "plan", "food", "eat", "lunch", "dinner", "breakfast",
+            "ঘুম", "সুগার", "প্রেসার", "ওজন", "স্বাস্থ্য"
+        )
+        return keywords.any { lower.contains(it) }
+    }
 
     fun stripFooter(text: String): String {
         val markers = listOf(
@@ -81,6 +103,9 @@ object AssistantRouter {
     )
 
     fun isCloudOnlyTopic(message: String): Boolean {
+        if (isDeepRequest(message)) {
+            return true
+        }
         val trimmed = message.trim()
         if (trimmed.length > 400 || trimmed.lines().size >= 3) {
             return true
@@ -123,8 +148,8 @@ object AssistantRouter {
     fun notice(route: AssistantRoute): String {
         return when (route) {
             AssistantRoute.NEEDS_SETUP -> "Offline AI isn't set up yet. Open Settings > Offline AI (beta) to download the model, or switch the AI engine to Cloud."
-            AssistantRoute.NEEDS_INTERNET -> "This kind of question (food logging, calories, diet and workout plans, health numbers) needs the cloud AI, and you're offline. Please try again when you have a connection."
-            AssistantRoute.NEEDS_CLOUD_ENGINE -> "This needs the cloud AI because it involves food, calories, plans or health numbers. Switch the AI engine to Auto or Cloud in Settings > Offline AI (beta) and ask again."
+            AssistantRoute.NEEDS_INTERNET -> "This kind of question (food logging, calories, diet and workout plans, deep health reviews, health numbers) needs the cloud AI, and you're offline. Please try again when you have a connection."
+            AssistantRoute.NEEDS_CLOUD_ENGINE -> "This needs the cloud AI because it involves food, calories, plans, deep health reviews or health numbers. Switch the AI engine to Auto or Cloud in Settings > Offline AI (beta) and ask again."
             else -> ""
         }
     }

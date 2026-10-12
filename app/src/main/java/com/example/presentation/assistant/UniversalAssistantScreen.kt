@@ -26,7 +26,9 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.*
+import com.example.util.ai.AssistantRouter
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -286,58 +288,92 @@ fun UniversalAssistantScreen(
                     tonalElevation = 2.dp,
                     color = MaterialTheme.colorScheme.surface
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .navigationBarsPadding()
                             .imePadding()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        IconButton(
-                            onClick = {
-                                if (micPermissionState.status.isGranted) {
-                                    launchVoiceInput()
-                                } else {
-                                    micPermissionState.launchPermissionRequest()
+                        if (!isLoading && !reviewPending) {
+                            val activeMsgs by viewModel.activeAssistantMessages.collectAsState()
+                            val hasAssistantMsg = activeMsgs.any { !it.isUser }
+                            val lastUserMsg = activeMsgs.lastOrNull { it.isUser }?.text.orEmpty()
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                SuggestionChip(
+                                    onClick = { viewModel.sendUniversalAssistantMessage(AssistantRouter.DEEP_REVIEW_PROMPT) },
+                                    label = { Text("Deep review", fontSize = 12.sp, fontWeight = FontWeight.Medium) },
+                                    icon = { Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(14.dp)) },
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                if (hasAssistantMsg && lastUserMsg.isNotBlank()) {
+                                    SuggestionChip(
+                                        onClick = { viewModel.sendUniversalAssistantMessage(AssistantRouter.GO_DEEPER_PREFIX + lastUserMsg) },
+                                        label = { Text("Go deeper", fontSize = 12.sp, fontWeight = FontWeight.Medium) },
+                                        icon = { Icon(Icons.Default.TrendingUp, contentDescription = null, modifier = Modifier.size(14.dp)) },
+                                        shape = RoundedCornerShape(16.dp)
+                                    )
                                 }
-                            },
-                            enabled = !isLoading && !reviewPending,
-                            modifier = Modifier.testTag("assistant_mic_button")
-                        ) {
-                            Icon(
-                                Icons.Default.Mic,
-                                contentDescription = "Voice input",
-                                tint = if (!isLoading && !reviewPending) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                            )
+                            }
                         }
-                        OutlinedTextField(
-                            value = input,
-                            onValueChange = { input = it },
-                            placeholder = { Text("Ask about meals, workouts, trends...", fontSize = 14.sp) },
+
+                        Row(
                             modifier = Modifier
-                                .weight(1f)
-                                .testTag("assistant_input"),
-                            shape = RoundedCornerShape(24.dp),
-                            enabled = !isLoading && !reviewPending,
-                            maxLines = 4
-                        )
-                        IconButton(
-                            onClick = {
-                                if (input.isNotBlank() && !isLoading && !reviewPending) {
-                                    viewModel.sendUniversalAssistantMessage(input)
-                                    input = ""
-                                }
-                            },
-                            enabled = input.isNotBlank() && !isLoading && !reviewPending,
-                            modifier = Modifier.testTag("assistant_send_button")
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Send,
-                                contentDescription = "Send",
-                                tint = if (input.isNotBlank() && !isLoading && !reviewPending) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                            IconButton(
+                                onClick = {
+                                    if (micPermissionState.status.isGranted) {
+                                        launchVoiceInput()
+                                    } else {
+                                        micPermissionState.launchPermissionRequest()
+                                    }
+                                },
+                                enabled = !isLoading && !reviewPending,
+                                modifier = Modifier.testTag("assistant_mic_button")
+                            ) {
+                                Icon(
+                                    Icons.Default.Mic,
+                                    contentDescription = "Voice input",
+                                    tint = if (!isLoading && !reviewPending) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                )
+                            }
+                            OutlinedTextField(
+                                value = input,
+                                onValueChange = { input = it },
+                                placeholder = { Text("Ask about meals, workouts, trends...", fontSize = 14.sp) },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("assistant_input"),
+                                shape = RoundedCornerShape(24.dp),
+                                enabled = !isLoading && !reviewPending,
+                                maxLines = 4
                             )
+                            IconButton(
+                                onClick = {
+                                    if (input.isNotBlank() && !isLoading && !reviewPending) {
+                                        viewModel.sendUniversalAssistantMessage(input)
+                                        input = ""
+                                    }
+                                },
+                                enabled = input.isNotBlank() && !isLoading && !reviewPending,
+                                modifier = Modifier.testTag("assistant_send_button")
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Send,
+                                    contentDescription = "Send",
+                                    tint = if (input.isNotBlank() && !isLoading && !reviewPending) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                )
+                            }
                         }
                     }
                 }
@@ -796,7 +832,7 @@ private fun EmptyChatState(
         Spacer(modifier = Modifier.height(8.dp))
 
         val starterPrompts = listOf(
-            "🔬 Perform a 30-day deep health review based on my health dossier" to "Deep 30-Day Review",
+            AssistantRouter.DEEP_REVIEW_PROMPT to "Full 30-day health review",
             "🥗 Log grilled chicken salad with avocado for lunch" to "Log meal",
             "📊 Analyze my heart rate and sleep trends this week" to "Health trends",
             "🏃 Suggest a 20-minute bodyweight cardio routine" to "Workout plan",

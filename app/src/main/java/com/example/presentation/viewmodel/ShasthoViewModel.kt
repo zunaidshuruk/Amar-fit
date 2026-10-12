@@ -2635,6 +2635,14 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 val metrics = getMetricsHistoryFlow(7).first()
                 val foodLogs = repository.getRecentFoodLogs().first()
 
+                val deep = AssistantRouter.isDeepRequest(message)
+                if (deep) {
+                    _universalAssistantStatus.value = "Analysing your last 30 days..."
+                }
+                val dossier = if (deep || AssistantRouter.isHealthQuestion(message)) buildDossier(profile) else null
+                val dossierCompact = dossier?.toPromptText(com.example.util.ai.DossierMode.COMPACT).orEmpty()
+                val dossierFull = dossier?.toPromptText(com.example.util.ai.DossierMode.FULL).orEmpty()
+
                 val sessionHistoryForCall = historyBeforeThisMessage.takeLast(10).map { it.copy(text = AssistantRouter.stripFooter(it.text)) }
 
                 val engineSetting = OnDeviceModelStore.getEngineSetting(getApplication())
@@ -2675,7 +2683,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                                 )
                             } else {
                                 val fallbackNotice = "Could not load on-device model (${loadResult.error ?: "error"}). Falling back to cloud AI..."
-                                executeCloudAssistant(message, currentSessionId, sessionToSave, sessionHistoryForCall, profile, metrics, foodLogs, fallbackNotice)
+                                executeCloudAssistant(message, currentSessionId, sessionToSave, sessionHistoryForCall, profile, metrics, foodLogs, fallbackNotice, dossierCompact, dossierFull, deep)
                             }
                         } else {
                             val contextStr = AssistantRouter.buildContext(profile, metrics)
@@ -2747,7 +2755,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                                     _activeAssistantMessages.value = currentList
                                 }
                                 if (engineSetting == AiEngineSetting.AUTO) {
-                                    executeCloudAssistant(message, currentSessionId, sessionToSave, sessionHistoryForCall, profile, metrics, foodLogs, "The phone's AI had a problem, so the cloud AI answered.")
+                                    executeCloudAssistant(message, currentSessionId, sessionToSave, sessionHistoryForCall, profile, metrics, foodLogs, "The phone's AI had a problem, so the cloud AI answered.", dossierCompact, dossierFull, deep)
                                 } else {
                                     val errText = "The offline AI could not answer right now. Please try again, or switch the AI engine to Cloud."
                                     _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(errText, false)
@@ -2780,7 +2788,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                         }
                     }
                     AssistantRoute.CLOUD -> {
-                        executeCloudAssistant(message, currentSessionId, sessionToSave, sessionHistoryForCall, profile, metrics, foodLogs, null)
+                        executeCloudAssistant(message, currentSessionId, sessionToSave, sessionHistoryForCall, profile, metrics, foodLogs, null, dossierCompact, dossierFull, deep)
                     }
                 }
             } catch (e: Exception) {
@@ -2804,6 +2812,41 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private suspend fun buildDossier(profile: UserProfile): com.example.util.ai.Dossier = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        try {
+            val now = System.currentTimeMillis()
+            val startMillis = now - 29L * 86400000L
+            val endMillis = now
+            val metrics30 = getMetricsHistoryFlow(30).first()
+            val recentFood = repository.getRecentFoodLogs().first()
+            val exSessions = repository.observeHealthExerciseSessions(startMillis, endMillis).first()
+            val actEvents = repository.getTodayActivityEvents(startMillis, endMillis).first()
+            val medRecords = repository.getMedicalRecords().first()
+            val input = com.example.util.ai.DossierInput(
+                profile = profile,
+                metrics = metrics30,
+                foodLogs = recentFood,
+                exerciseSessions = exSessions,
+                activityEvents = actEvents,
+                medicalRecords = medRecords,
+                todayDate = todayDateString
+            )
+            com.example.util.ai.HealthDossierBuilder.build(input)
+        } catch (e: Exception) {
+            com.example.util.ai.HealthDossierBuilder.build(
+                com.example.util.ai.DossierInput(
+                    profile = profile,
+                    metrics = emptyList(),
+                    foodLogs = emptyList(),
+                    exerciseSessions = emptyList(),
+                    activityEvents = emptyList(),
+                    medicalRecords = emptyList(),
+                    todayDate = todayDateString
+                )
+            )
+        }
+    }
+
     private fun isOfflineError(msg: String?, throwable: Throwable? = null): Boolean {
         val raw = msg ?: throwable?.message ?: ""
         val lower = raw.lowercase()
@@ -2823,7 +2866,10 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         profile: UserProfile,
         metrics: List<DailyMetric>,
         foodLogs: List<com.example.data.local.FoodLog>,
-        prefixNotice: String?
+        prefixNotice: String?,
+        dossierCompact: String = "",
+        dossierFull: String = "",
+        deep: Boolean = false
     ) {
         if (prefixNotice != null) {
             _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(prefixNotice, false)
@@ -2835,7 +2881,10 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             profile = profile,
             metrics = metrics,
             foodLogs = foodLogs,
-            onStatusUpdate = { status -> _universalAssistantStatus.value = status }
+            onStatusUpdate = { status -> _universalAssistantStatus.value = status },
+            dossierCompact = dossierCompact,
+            dossierFull = dossierFull,
+            deep = deep
         )) {
             is AppRepository.AssistantResult.Text -> {
                 val rawMessage = if (isOfflineError(result.message)) friendlyOfflineText else result.message
