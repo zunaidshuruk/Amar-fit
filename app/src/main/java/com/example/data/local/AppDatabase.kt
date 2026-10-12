@@ -277,13 +277,6 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        val MIGRATION_48_49 = object : Migration(48, 49) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE daily_metrics ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
-                db.execSQL("ALTER TABLE user_profile ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
-            }
-        }
-
         val MIGRATION_42_43 = object : Migration(42, 43) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""
