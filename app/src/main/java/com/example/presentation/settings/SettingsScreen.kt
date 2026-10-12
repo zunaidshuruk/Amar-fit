@@ -63,7 +63,8 @@ fun SettingsScreen(
     onNavigateToHealthGoals: () -> Unit = {},
     onNavigateToFriends: () -> Unit = {},
     onNavigateToAbout: () -> Unit = {},
-    onOpenProfile: () -> Unit = {}
+    onOpenProfile: () -> Unit = {},
+    onNavigateToCustomizeNav: () -> Unit = {}
 ) {
     val profile by viewModel.userProfile.collectAsState()
     val isDark = true
@@ -899,18 +900,18 @@ fun SettingsScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onNavigateToFriends() }
+                        .clickable { onNavigateToCustomizeNav() }
                         .padding(vertical = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("Friends", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
-                        Text("Add friends, challenges, and leaderboard", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Customize navigation bar", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
+                        Text("Choose which tabs show in the bottom bar", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
-                        contentDescription = "Friends",
+                        contentDescription = "Customize navigation bar",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

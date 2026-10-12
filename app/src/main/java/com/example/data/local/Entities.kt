@@ -45,7 +45,8 @@ data class UserProfile(
     val selectedLanguage: String = "English",
     val todayTileSlots: String = "",
     val bloodGlucoseTargetMin: Float = 0f,
-    val bloodGlucoseTargetMax: Float = 0f
+    val bloodGlucoseTargetMax: Float = 0f,
+    val navTabs: String = ""
 )
 
 @Entity(tableName = "daily_metrics")

@@ -77,6 +77,8 @@ sealed class TabScreen(val route: String, val label: String, val icon: ImageVect
     object Nutrition : TabScreen("nutrition", "Nutrition", Icons.Rounded.RestaurantMenu)
     object Sleep : TabScreen("sleep", "Sleep", Icons.Rounded.Bedtime)
     object Health : TabScreen("health", "Health", Icons.Rounded.Favorite)
+    object Friends : TabScreen("friends", "Friends", Icons.Rounded.People)
+    object Settings : TabScreen("settings", "Settings", Icons.Rounded.Settings)
 }
 
 val bottomTabs = listOf(
@@ -86,6 +88,17 @@ val bottomTabs = listOf(
     TabScreen.Sleep,
     TabScreen.Health
 )
+
+val chooseableTabs = listOf(
+    TabScreen.Fitness,
+    TabScreen.Nutrition,
+    TabScreen.Sleep,
+    TabScreen.Health,
+    TabScreen.Friends,
+    TabScreen.Settings
+)
+
+fun tabForRoute(route: String): TabScreen? = chooseableTabs.firstOrNull { it.route == route }
 
 class MainActivity : ComponentActivity() {
   private val viewModel: ShasthoViewModel by viewModels()
