@@ -573,11 +573,13 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
             onDismissRequest = { showSaveDialog = false },
             title = { Text("Save Workout") },
             text = {
-                OutlinedTextField(
-                    value = workoutTitle,
-                    onValueChange = { workoutTitle = it },
-                    label = { Text("Workout Title") }
-                )
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    OutlinedTextField(
+                        value = workoutTitle,
+                        onValueChange = { workoutTitle = it },
+                        label = { Text("Workout Title") }
+                    )
+                }
             },
             confirmButton = {
                 TextButton(onClick = {

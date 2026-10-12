@@ -346,7 +346,7 @@ class MainActivity : ComponentActivity() {
                 NavHost(
                   navController = navController,
                   startDestination = initialRoute,
-                  modifier = Modifier.padding(innerPadding)
+                  modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding).imePadding()
                 ) {
                   composable("auth") {
                     AuthScreen(

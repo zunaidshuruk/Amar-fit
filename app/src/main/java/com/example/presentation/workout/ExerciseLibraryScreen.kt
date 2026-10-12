@@ -504,13 +504,15 @@ fun ExerciseLibraryScreen(
             onDismissRequest = { showWorkoutTitleDialog = false },
             title = { Text("Workout Title") },
             text = {
-                OutlinedTextField(
-                    value = workoutTitleInput,
-                    onValueChange = { workoutTitleInput = it },
-                    label = { Text("Title") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    OutlinedTextField(
+                        value = workoutTitleInput,
+                        onValueChange = { workoutTitleInput = it },
+                        label = { Text("Title") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             },
             confirmButton = {
                 TextButton(

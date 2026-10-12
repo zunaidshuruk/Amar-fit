@@ -1,6 +1,8 @@
 package com.example.presentation.foodlog
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -111,7 +113,10 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, navController: androidx.navigatio
             onDismissRequest = { showEditDialog = false },
             title = { Text("Edit Food Entry") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     OutlinedTextField(
                         value = editName,
                         onValueChange = { editName = it },
@@ -226,7 +231,7 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, navController: androidx.navigatio
             },
             title = { Text("Manual Food Entry") },
             text = {
-                Column {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     // Segmented 2-option toggle: "Describe" vs "Enter Values"
                     Row(
                         modifier = Modifier

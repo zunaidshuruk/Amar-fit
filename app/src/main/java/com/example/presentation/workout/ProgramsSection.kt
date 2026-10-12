@@ -459,7 +459,9 @@ fun ProgramsSection(
             title = { Text("Generate a program") },
             text = {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Row(
@@ -575,13 +577,15 @@ fun ProgramsSection(
             onDismissRequest = { showNewProgramDialog = false },
             title = { Text("New program") },
             text = {
-                OutlinedTextField(
-                    value = newProgramName,
-                    onValueChange = { if (it.length <= 40) newProgramName = it },
-                    label = { Text("Program name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    OutlinedTextField(
+                        value = newProgramName,
+                        onValueChange = { if (it.length <= 40) newProgramName = it },
+                        label = { Text("Program name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             },
             confirmButton = {
                 Button(
@@ -615,7 +619,9 @@ fun ProgramsSection(
             title = { Text("Add a day") },
             text = {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     TextButton(

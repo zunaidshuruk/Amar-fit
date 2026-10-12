@@ -1018,7 +1018,9 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
             },
             text = {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Row(
@@ -1187,7 +1189,10 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
             onDismissRequest = { showBmiDialog = false },
             title = { Text("BMI Calculator") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Box(modifier = Modifier.fillMaxWidth()) {
                         OutlinedTextField(
                             value = formatWeight(weightInput.toFloatOrNull() ?: 70f, profile?.useImperialUnits ?: false),

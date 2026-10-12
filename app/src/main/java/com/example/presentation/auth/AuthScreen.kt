@@ -4,6 +4,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -213,324 +215,327 @@ fun AuthScreen(
     ) { paddingValues ->
         if (isVerificationRequired) {
             val userEmail = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.email ?: email
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
+            BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues).imePadding()) {
+                val minHeight = maxHeight
+                Column(
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).heightIn(min = minHeight).padding(horizontal = 24.dp, vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.MarkEmailRead,
-                        contentDescription = "Verify Email",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(48.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Text(
-                    text = "Verify your email",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = "We've sent a verification link to $userEmail. Please check your inbox and verify your email to continue.",
-                    fontSize = 15.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                Button(
-                    onClick = { authViewModel.checkVerificationStatus() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    shape = RoundedCornerShape(16.dp),
-                    enabled = !isLoading
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
-                    } else {
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "I've verified",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimary
+                            imageVector = Icons.Default.MarkEmailRead,
+                            contentDescription = "Verify Email",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(48.dp)
                         )
                     }
-                }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                OutlinedButton(
-                    onClick = {
-                        if (resendCooldownSeconds == 0) {
-                            resendCooldownSeconds = 30
-                            authViewModel.resendVerificationEmail()
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    enabled = resendCooldownSeconds == 0 && !isLoading
-                ) {
                     Text(
-                        text = if (resendCooldownSeconds > 0) {
-                            "Resend email (${resendCooldownSeconds}s)"
+                        text = "Verify your email",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "We've sent a verification link to $userEmail. Please check your inbox and verify your email to continue.",
+                        fontSize = 15.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Button(
+                        onClick = { authViewModel.checkVerificationStatus() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        shape = RoundedCornerShape(16.dp),
+                        enabled = !isLoading
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
                         } else {
-                            "Resend email"
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "I've verified",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            if (resendCooldownSeconds == 0) {
+                                resendCooldownSeconds = 30
+                                authViewModel.resendVerificationEmail()
+                            }
                         },
-                        color = if (resendCooldownSeconds == 0 && !isLoading) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        enabled = resendCooldownSeconds == 0 && !isLoading
+                    ) {
+                        Text(
+                            text = if (resendCooldownSeconds > 0) {
+                                "Resend email (${resendCooldownSeconds}s)"
+                            } else {
+                                "Resend email"
+                            },
+                            color = if (resendCooldownSeconds == 0 && !isLoading) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Text(
+                        text = "Use a different account",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.clickable {
+                            viewModel.logout {
+                                authViewModel.resetState()
+                            }
+                        }
                     )
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Text(
-                    text = "Use a different account",
-                    color = MaterialTheme.colorScheme.primary,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.clickable {
-                        viewModel.logout {
-                            authViewModel.resetState()
-                        }
-                    }
-                )
             }
         } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                // App Icon
-                Box(
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(MaterialTheme.colorScheme.surface)
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
+            BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(paddingValues).consumeWindowInsets(paddingValues).imePadding()) {
+                val minHeight = maxHeight
+                Column(
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).heightIn(min = minHeight).padding(horizontal = 24.dp, vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                        contentDescription = "App Icon",
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                Text(
-                    text = "KardIQ",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                
-                Text(
-                    text = txtWelcome,
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
-                )
-
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text(txtEmail) },
-                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    singleLine = true
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text(txtPassword) },
-                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    singleLine = true
-                )
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                if (isLogin) {
-                    TextButton(
-                        onClick = {
-                            resetEmail = email
-                            showForgotPasswordDialog = true
-                        },
-                        modifier = Modifier.align(Alignment.End)
+                    // App Icon
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("Forgot Password?", fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                            contentDescription = "App Icon",
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
-                } else {
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Text(
+                        text = "KardIQ",
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    Text(
+                        text = txtWelcome,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text(txtEmail) },
+                        leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        singleLine = true
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text(txtPassword) },
+                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        singleLine = true
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    if (isLogin) {
+                        TextButton(
+                            onClick = {
+                                resetEmail = email
+                                showForgotPasswordDialog = true
+                            },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text("Forgot Password?", fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(checked = hasAcceptedTerms, onCheckedChange = { hasAcceptedTerms = it })
+                            Text("I agree to the ", fontSize = 11.sp)
+                            Text(
+                                "Privacy Policy",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.clickable { showPrivacyPolicyFromAuth = true }
+                            )
+                            Text(" and ", fontSize = 11.sp)
+                            Text(
+                                "Terms of Service",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.clickable { showTermsFromAuth = true }
+                            )
+                        }
+                    }
+                    
+                    Button(
+                        onClick = { 
+                            if (isLogin) {
+                                authViewModel.signIn(email, password)
+                            } else {
+                                authViewModel.signUp(email, password)
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = !isLoading && (isLogin || hasAcceptedTerms)
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
+                        } else {
+                            Text(
+                                text = txtBtn,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Checkbox(checked = hasAcceptedTerms, onCheckedChange = { hasAcceptedTerms = it })
-                        Text("I agree to the ", fontSize = 11.sp)
-                        Text(
-                            "Privacy Policy",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable { showPrivacyPolicyFromAuth = true }
-                        )
-                        Text(" and ", fontSize = 11.sp)
-                        Text(
-                            "Terms of Service",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable { showTermsFromAuth = true }
-                        )
+                        HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+                        Text(txtOr, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp))
+                        HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
                     }
-                }
-                
-                Button(
-                    onClick = { 
-                        if (isLogin) {
-                            authViewModel.signIn(email, password)
-                        } else {
-                            authViewModel.signUp(email, password)
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = !isLoading && (isLogin || hasAcceptedTerms)
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
-                    } else {
-                        Text(
-                            text = txtBtn,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
-                    Text(txtOr, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp))
-                    HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                OutlinedButton(
-                    onClick = { 
-                        if (isLoading) return@OutlinedButton
-                        coroutineScope.launch {
-                            try {
-                                val googleIdOption = GetGoogleIdOption.Builder()
-                                    .setFilterByAuthorizedAccounts(false)
-                                    .setServerClientId(context.getString(R.string.default_web_client_id))
-                                    .build()
-                                    
-                                val request = GetCredentialRequest.Builder()
-                                    .addCredentialOption(googleIdOption)
-                                    .build()
-                                    
-                                val credentialManager = CredentialManager.create(context)
-                                val result = credentialManager.getCredential(context = context, request = request)
-                                authViewModel.signInWithGoogle(result.credential)
-                            } catch (e: GetCredentialCancellationException) {
-                                authViewModel.resetState()
-                            } catch (e: NoCredentialException) {
-                                authViewModel.setCustomError("No Google account found on this device. Add one in your device's Settings > Accounts, or sign in with email instead.")
-                            } catch (e: GetCredentialException) {
-                                authViewModel.setCustomError(e.message ?: "Google Sign-In failed")
-                            } catch (e: Exception) {
-                                authViewModel.setCustomError(e.message ?: "Unknown error")
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    OutlinedButton(
+                        onClick = { 
+                            if (isLoading) return@OutlinedButton
+                            coroutineScope.launch {
+                                try {
+                                    val googleIdOption = GetGoogleIdOption.Builder()
+                                        .setFilterByAuthorizedAccounts(false)
+                                        .setServerClientId(context.getString(R.string.default_web_client_id))
+                                        .build()
+                                        
+                                    val request = GetCredentialRequest.Builder()
+                                        .addCredentialOption(googleIdOption)
+                                        .build()
+                                        
+                                    val credentialManager = CredentialManager.create(context)
+                                    val result = credentialManager.getCredential(context = context, request = request)
+                                    authViewModel.signInWithGoogle(result.credential)
+                                } catch (e: GetCredentialCancellationException) {
+                                    authViewModel.resetState()
+                                } catch (e: NoCredentialException) {
+                                    authViewModel.setCustomError("No Google account found on this device. Add one in your device's Settings > Accounts, or sign in with email instead.")
+                                } catch (e: GetCredentialException) {
+                                    authViewModel.setCustomError(e.message ?: "Google Sign-In failed")
+                                } catch (e: Exception) {
+                                    authViewModel.setCustomError(e.message ?: "Unknown error")
+                                }
                             }
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = txtSso,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = txtPrompt,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = txtToggle,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable { isLogin = !isLogin }
-                    )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = txtSso,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = txtPrompt,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = txtToggle,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clickable { isLogin = !isLogin }
+                        )
+                    }
                 }
             }
         }
     }
 
     if (showPrivacyPolicyFromAuth) {
-        Dialog(onDismissRequest = { showPrivacyPolicyFromAuth = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Dialog(
+            onDismissRequest = { showPrivacyPolicyFromAuth = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        ) {
             com.example.presentation.settings.LegalDocumentScreen(
                 title = "Privacy Policy",
                 content = com.example.data.model.LegalContent.PRIVACY_POLICY,
@@ -539,7 +544,10 @@ fun AuthScreen(
         }
     }
     if (showTermsFromAuth) {
-        Dialog(onDismissRequest = { showTermsFromAuth = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Dialog(
+            onDismissRequest = { showTermsFromAuth = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        ) {
             com.example.presentation.settings.LegalDocumentScreen(
                 title = "Terms of Service",
                 content = com.example.data.model.LegalContent.TERMS_OF_SERVICE,

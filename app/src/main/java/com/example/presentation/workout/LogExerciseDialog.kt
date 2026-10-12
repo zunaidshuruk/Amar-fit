@@ -83,7 +83,7 @@ fun LogExerciseDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
@@ -92,7 +92,7 @@ fun LogExerciseDialog(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .imePadding()
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {

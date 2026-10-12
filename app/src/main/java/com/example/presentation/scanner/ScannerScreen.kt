@@ -30,11 +30,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.example.ui.components.MarkdownText
@@ -419,7 +421,11 @@ fun CameraPreviewView(
         // Close button
         IconButton(
             onClick = onClose,
-            modifier = Modifier.padding(16.dp).background(Color.Black.copy(alpha = 0.5f), CircleShape).align(Alignment.TopStart)
+            modifier = Modifier
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(16.dp)
+                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                .align(Alignment.TopStart)
         ) {
             Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
         }
@@ -428,6 +434,7 @@ fun CameraPreviewView(
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
                 .padding(bottom = 32.dp)
                 .size(72.dp)
                 .background(Color.White, CircleShape)

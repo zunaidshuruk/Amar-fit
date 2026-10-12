@@ -962,7 +962,10 @@ fun SettingsScreen(
                             onDismissRequest = { showAddPlaylistDialog = false },
                             title = { Text("Add playlist") },
                             text = {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(
+                                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
                                     OutlinedTextField(
                                         value = newPlaylistName,
                                         onValueChange = {
@@ -1226,7 +1229,9 @@ fun SettingsScreen(
             },
             title = { Text("Restore Backup?") },
             text = {
-                Text("This will replace your local data with the backup from $backupDate — continue?")
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text("This will replace your local data with the backup from $backupDate — continue?")
+                }
             },
             confirmButton = {
                 Button(
@@ -1282,7 +1287,11 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Delete Account") },
-            text = { Text("This will permanently delete your account and all data. Are you sure?") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text("This will permanently delete your account and all data. Are you sure?")
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
@@ -1354,7 +1363,10 @@ fun SettingsScreen(
             },
             title = { Text("Re-authentication Required") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text("Please enter your current password to confirm account deletion.")
                     OutlinedTextField(
                         value = reauthPassword,
@@ -1417,7 +1429,10 @@ fun SettingsScreen(
             },
             title = { Text("Change Password") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     OutlinedTextField(
                         value = currentPasswordInput,
                         onValueChange = { currentPasswordInput = it },
@@ -1506,7 +1521,10 @@ fun SettingsScreen(
             },
             title = { Text("Change Email") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     OutlinedTextField(
                         value = currentPasswordForEmailChange,
                         onValueChange = { currentPasswordForEmailChange = it },
@@ -1585,7 +1603,10 @@ fun SettingsScreen(
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     Text(
                         text = "Some permissions were not granted or may need to be enabled manually in Health Connect settings:",
                         fontSize = 14.sp,

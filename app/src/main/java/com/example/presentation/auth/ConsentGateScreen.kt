@@ -2,8 +2,8 @@ package com.example.presentation.auth
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,28 +34,37 @@ fun ConsentGateScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "Privacy Policy & Terms Update",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
-                textAlign = TextAlign.Center
-            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Privacy Policy & Terms Update",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "We have updated our terms to better protect your data and health information. Please review and accept to continue using the app.",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "We have updated our terms to better protect your data and health information. Please review and accept to continue using the app.",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -88,7 +97,7 @@ fun ConsentGateScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = onAccept,
@@ -110,7 +119,10 @@ fun ConsentGateScreen(
     }
 
     if (showPrivacyPolicy) {
-        Dialog(onDismissRequest = { showPrivacyPolicy = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Dialog(
+            onDismissRequest = { showPrivacyPolicy = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        ) {
             LegalDocumentScreen(
                 title = "Privacy Policy",
                 content = LegalContent.PRIVACY_POLICY,
@@ -120,7 +132,10 @@ fun ConsentGateScreen(
     }
 
     if (showTerms) {
-        Dialog(onDismissRequest = { showTerms = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Dialog(
+            onDismissRequest = { showTerms = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        ) {
             LegalDocumentScreen(
                 title = "Terms of Service",
                 content = LegalContent.TERMS_OF_SERVICE,

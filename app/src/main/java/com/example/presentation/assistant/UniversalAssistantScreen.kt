@@ -193,13 +193,15 @@ fun UniversalAssistantScreen(
     if (legacyChatToView != null) {
         Dialog(
             onDismissRequest = { legacyChatToView = null },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
         ) {
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background
             ) {
-                LegacyChatViewer(chat = legacyChatToView!!, onBack = { legacyChatToView = null })
+                Box(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+                    LegacyChatViewer(chat = legacyChatToView!!, onBack = { legacyChatToView = null })
+                }
             }
         }
     }

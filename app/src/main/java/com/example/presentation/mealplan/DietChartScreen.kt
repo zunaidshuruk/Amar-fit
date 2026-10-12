@@ -291,11 +291,13 @@ fun GenerateNewDietView(
             onDismissRequest = { showSaveDialog = false },
             title = { Text("Save Diet Plan") },
             text = {
-                OutlinedTextField(
-                    value = chartName,
-                    onValueChange = { chartName = it },
-                    label = { Text("Plan Name") }
-                )
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    OutlinedTextField(
+                        value = chartName,
+                        onValueChange = { chartName = it },
+                        label = { Text("Plan Name") }
+                    )
+                }
             },
             confirmButton = {
                 TextButton(onClick = {

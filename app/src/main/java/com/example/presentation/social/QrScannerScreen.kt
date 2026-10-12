@@ -30,7 +30,7 @@ fun QrScannerScreen(
 
     Dialog(
         onDismissRequest = onClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             CameraPreviewView(
