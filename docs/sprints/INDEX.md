@@ -38,7 +38,12 @@ Open work: [ACTIVE.md](ACTIVE.md). Closed Parts link to their verbatim archive. 
 | AK | Breathing animation synced to inhale/hold/exhale timings (mindfulness) | ✅ done (sprint 12) | — | [ACTIVE](archive/PART-AK-AM-sprint-12.md) |
 | AL | Mindful walking: step counter, saved playlists (real Spotify integration later) | ✅ done except AL-2b (sprint 12) | — | [ACTIVE](archive/PART-AK-AM-sprint-12.md) |
 | AM | Bug: stale todayMetrics overwrites today's row (water add does nothing) | ✅ fixed `9aa6272` (sprint 12) | — | [ACTIVE](archive/PART-AK-AM-sprint-12.md) |
-| AN | Floating dynamic navigation bar, More sheet, new Mind & Body tab | ⏳ scoped (sprint 13) | — | [ACTIVE](ACTIVE.md#sprint-13--navigation-redesign-part-an-planned-2026-10-08-not-started) |
+| AN | Floating dynamic navigation bar, More sheet, new Mind & Body, Friends and Settings tabs, Profile screen with Edit, delete workouts | ⏳ scoped (sprint 13) | — | [ACTIVE](ACTIVE.md#sprint-13--navigation-redesign-part-an-planned-2026-10-08-not-started) |
+| AO | Granular notifications: per-category switches and times under Settings > Notifications | ⏳ scoped (sprint 14) | — | [ACTIVE](ACTIVE.md#sprint-14--granular-notifications-part-ao-planned-2026-10-08-not-started) |
+| AP | On-device AI (Offline AI beta): LiteRT-LM + Gemma, hybrid with Gemini | ⏳ scoped (sprint 15) | — | [ACTIVE](ACTIVE.md#sprint-15--on-device-ai-offline-ai-part-ap-idea-2026-10-08-not-scoped) |
+| AQ | UI insets, scrolling and keyboard audit (Add exercise, sign-up, dialogs) | 📤 prompts sent (3) | — | [ACTIVE](ACTIVE.md#bug-batch--insets-scrolling-and-keyboard-audit-part-aq-2026-10-12) |
+| AR | 360 degree Health Analyst: dossier + findings, deep Gemini analysis, offline review | ⏳ scoped (sprint 16) | — | [ACTIVE](ACTIVE.md#sprint-16--360-degree-health-analyst-part-ar-planned-2026-10-12-not-started) |
+| AS | Bug: the view model's "today" frozen at app start (sleep missing on Today) | 📤 prompt sent | — | [ACTIVE](ACTIVE.md#bug--the-view-models-today-is-frozen-when-the-app-starts-part-as-2026-10-12) |
 | Y | AI response overhaul (renderer, style guide, card, follow-up chips) | ✅ closed (4/4) | `166f38c` | [archive](archive/PART-Y-ai-response-overhaul.md) |
 | AA | Exercise tab powered by Health Connect (sessions, history, calories) | ✅ closed | `bd467ad` | [archive](archive/PART-AA-AB-exercise-sprint.md) |
 | AB | Customizable workouts (sets, reps, time, rest, rounds; edit AI/saved/custom) | ✅ closed (AI generator returning rounds not built) | `2d112dc` | [archive](archive/PART-AA-AB-exercise-sprint.md) |
