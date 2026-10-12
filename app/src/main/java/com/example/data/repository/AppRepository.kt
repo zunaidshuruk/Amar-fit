@@ -1575,7 +1575,7 @@ class AppRepository(
             put("systemInstruction", org.json.JSONObject().apply {
                 put("parts", org.json.JSONArray().put(org.json.JSONObject().put("text", systemInstruction)))
             })
-            put("tools", tools)
+            if (tools.length() > 0) put("tools", tools)
         }
 
         var lastError: Exception? = null

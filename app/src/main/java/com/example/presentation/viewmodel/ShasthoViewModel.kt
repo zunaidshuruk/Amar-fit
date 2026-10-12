@@ -2650,6 +2650,25 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 val online = OnDeviceModelStore.isOnline(getApplication())
                 val route = AssistantRouter.route(message, engineSetting, modelReady, online)
 
+                if (deep && route != AssistantRoute.CLOUD) {
+                    val reviewText = com.example.util.ai.OfflineReview.build(
+                        dossier ?: buildDossier(profile),
+                        com.example.data.local.coachTopics
+                    )
+                    _activeAssistantMessages.value = _activeAssistantMessages.value + ChatMessage(reviewText, false)
+                    repository.saveAssistantChatMessage(currentSessionId, reviewText, false)
+                    repository.saveAssistantSession(
+                        sessionToSave.copy(
+                            preview = reviewText.take(70),
+                            messageCount = sessionToSave.messageCount + 1,
+                            updatedAt = System.currentTimeMillis()
+                        )
+                    )
+                    _isLoadingUniversalAssistant.value = false
+                    _universalAssistantStatus.value = null
+                    return@launch
+                }
+
                 when (route) {
                     AssistantRoute.NEEDS_SETUP, AssistantRoute.NEEDS_INTERNET, AssistantRoute.NEEDS_CLOUD_ENGINE -> {
                         val notice = AssistantRouter.notice(route)
@@ -2698,6 +2717,9 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                                 append(AssistantRouter.ON_DEVICE_SYSTEM_PROMPT)
                                 if (contextStr.isNotBlank()) {
                                     append("\n\nUser Context: $contextStr")
+                                }
+                                if (dossierCompact.isNotBlank()) {
+                                    append("\n\nHealth Dossier:\n$dossierCompact")
                                 }
                                 if (factsBlock.isNotBlank()) {
                                     append("\n\n$factsBlock")
