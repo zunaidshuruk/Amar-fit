@@ -1,9 +1,21 @@
 package com.example.presentation.navigation
 
 object NavTabs {
-    val CHOOSABLE_ROUTES = listOf("fitness", "nutrition", "sleep", "health", "friends", "settings")
+    val CHOOSABLE_ROUTES = listOf("fitness", "nutrition", "sleep", "health", "mind_body", "friends", "settings")
     val DEFAULT_BAR = listOf("fitness", "nutrition", "health")
     const val MAX_BAR = 3
+
+    /** Screens that show the greeting top bar (the dashboard-style tabs). */
+    val TOP_BAR_ROUTES = setOf("today", "fitness", "nutrition", "sleep", "health", "mind_body")
+
+    /** True for Today and every chooseable tab: the bottom bar is visible on these routes. */
+    fun isTabRoute(route: String?): Boolean {
+        return route != null && (route == "today" || route in CHOOSABLE_ROUTES)
+    }
+
+    fun showsTopBar(route: String?): Boolean {
+        return route != null && route in TOP_BAR_ROUTES
+    }
 
     fun parse(csv: String?): List<String> {
         if (csv.isNullOrBlank()) return DEFAULT_BAR

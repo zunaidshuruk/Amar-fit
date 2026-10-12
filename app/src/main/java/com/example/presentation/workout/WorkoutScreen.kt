@@ -446,13 +446,6 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                     Spacer(modifier = Modifier.height(24.dp))
                 }
                 
-                Text(
-                    text = "Core Protocol Practices",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
                 OutlinedButton(
                     onClick = { navController?.navigate("exercise_library") },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -463,30 +456,6 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                     Text("Create Custom Workout", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                ProtocolPracticeCard(
-                    title = "Physical Exercise & HIIT",
-                    description = "High-Intensity Interval Training to deplete glycogen stores and boost growth hormone.",
-                    icon = Icons.Default.FitnessCenter,
-                    accent = AccentTokens.caloriesAccent(isDark),
-                    videoQuery = "Keto HIIT workout 20 min"
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                ProtocolPracticeCard(
-                    title = "Hormonal Health & Sun",
-                    description = "Morning sunlight exposure to regulate circadian rhythm and optimize Vitamin D / Cortisol balance.",
-                    icon = Icons.Default.WbSunny,
-                    accent = AccentTokens.pointsAccent(isDark),
-                    videoQuery = "Morning sunlight circadian rhythm optimization"
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                ProtocolPracticeCard(
-                    title = "Breathwork & Meditation",
-                    description = "Diaphragmatic breathing to activate the parasympathetic nervous system and reduce cortisol.",
-                    icon = Icons.Default.SelfImprovement,
-                    accent = AccentTokens.stepsAccent(isDark),
-                    videoQuery = "Wim Hof method breathing tutorial",
-                    onStartSession = { navController?.navigate("mindfulness_timer") }
-                )
             } else if (selectedTab == 1) {
                 // Saved View
                 if (savedWorkouts.isEmpty()) {

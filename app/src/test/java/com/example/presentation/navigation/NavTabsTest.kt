@@ -20,7 +20,7 @@ class NavTabsTest {
 
     @Test
     fun testHidden() {
-        assertEquals(listOf("sleep", "friends", "settings"), NavTabs.hidden(NavTabs.DEFAULT_BAR))
+        assertEquals(listOf("sleep", "mind_body", "friends", "settings"), NavTabs.hidden(NavTabs.DEFAULT_BAR))
     }
 
     @Test
@@ -30,6 +30,25 @@ class NavTabsTest {
         assertEquals(listOf("fitness"), NavTabs.toggle(listOf("fitness"), "fitness")) // never empty
         assertEquals(listOf("fitness", "sleep"), NavTabs.toggle(listOf("fitness"), "sleep"))
         assertEquals(listOf("fitness"), NavTabs.toggle(listOf("fitness"), "unknown"))
+    }
+
+    @Test
+    fun testMindBodyIsChooseable() {
+        assertEquals(listOf("mind_body", "health"), NavTabs.toggle(listOf("mind_body"), "health"))
+        assertEquals(listOf("sleep", "mind_body"), NavTabs.parse("sleep,mind_body"))
+    }
+
+    @Test
+    fun testTabRoutes() {
+        assertEquals(true, NavTabs.isTabRoute("today"))
+        assertEquals(true, NavTabs.isTabRoute("mind_body"))
+        assertEquals(true, NavTabs.isTabRoute("settings"))
+        assertEquals(false, NavTabs.isTabRoute("profile"))
+        assertEquals(false, NavTabs.isTabRoute(null))
+        assertEquals(true, NavTabs.showsTopBar("health"))
+        assertEquals(true, NavTabs.showsTopBar("mind_body"))
+        assertEquals(false, NavTabs.showsTopBar("friends"))
+        assertEquals(false, NavTabs.showsTopBar("settings"))
     }
 
     @Test
