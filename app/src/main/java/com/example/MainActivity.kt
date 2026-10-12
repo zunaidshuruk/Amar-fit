@@ -68,6 +68,9 @@ import com.example.ui.theme.*
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import kotlinx.coroutines.launch
+import com.example.presentation.navigation.NavTabs
+import com.example.presentation.navigation.MoreSheet
+import com.example.presentation.navigation.CustomizeNavScreen
 
 val LocalNavController = androidx.compose.runtime.staticCompositionLocalOf<NavHostController?> { null }
 
@@ -173,7 +176,9 @@ class MainActivity : ComponentActivity() {
             }
         } else {
             val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-            val isMainTab = bottomTabs.any { it.route == currentRoute }
+            val activeTabs = listOf(TabScreen.Today) + NavTabs.parse(userProfile?.navTabs).mapNotNull { tabForRoute(it) }.take(3)
+            val isMainTab = currentRoute == TabScreen.Today.route || chooseableTabs.any { it.route == currentRoute }
+            var showMoreSheet by remember { mutableStateOf(false) }
 
             LaunchedEffect(pendingNavigationRoute, sessionChecked) {
                 val route = pendingNavigationRoute
@@ -298,7 +303,7 @@ class MainActivity : ComponentActivity() {
                       horizontalArrangement = Arrangement.SpaceBetween,
                       verticalAlignment = Alignment.CenterVertically
                     ) {
-                      bottomTabs.forEach { tab ->
+                      activeTabs.forEach { tab ->
                           val isSelected = currentRoute == tab.route
                           val color = if (isSelected) (if (isDark) MaterialTheme.colorScheme.primary else Emerald600) else Slate400
                           val pillColor = if (isSelected) (if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Emerald50) else Color.Transparent
@@ -334,6 +339,35 @@ class MainActivity : ComponentActivity() {
                                   modifier = Modifier.fillMaxWidth()
                               )
                           }
+                      }
+                      
+                      val isMoreSelected = chooseableTabs.any { it.route == currentRoute } && activeTabs.none { it.route == currentRoute }
+                      val moreColor = if (isMoreSelected) (if (isDark) MaterialTheme.colorScheme.primary else Emerald600) else Slate400
+                      val morePillColor = if (isMoreSelected) (if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Emerald50) else Color.Transparent
+                      
+                      Column(
+                          horizontalAlignment = Alignment.CenterHorizontally,
+                          verticalArrangement = Arrangement.spacedBy(2.dp),
+                          modifier = Modifier
+                              .weight(1f)
+                              .clip(RoundedCornerShape(16.dp))
+                              .clickable { showMoreSheet = true }
+                              .background(morePillColor)
+                              .padding(vertical = 8.dp)
+                      ) {
+                          Icon(imageVector = Icons.Rounded.MoreHoriz, contentDescription = "More", tint = moreColor, modifier = Modifier.size(20.dp))
+                          Text(
+                              text = "More",
+                              fontSize = 10.sp,
+                              letterSpacing = 0.sp,
+                              fontWeight = FontWeight.Bold,
+                              color = moreColor,
+                              textAlign = TextAlign.Center,
+                              maxLines = 1,
+                              softWrap = false,
+                              overflow = TextOverflow.Ellipsis,
+                              modifier = Modifier.fillMaxWidth()
+                          )
                       }
                     }
                   }
@@ -475,6 +509,7 @@ class MainActivity : ComponentActivity() {
                   composable("exercise_library") { ExerciseLibraryScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("mindfulness_timer") { com.example.presentation.mindfulness.MindfulnessTimerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("edit_focus") { com.example.presentation.today.EditFocusScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                  composable("customize_nav") { CustomizeNavScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("offline_ai") { OfflineAiScreen(onNavigateBack = { navController.popBackStack() }) }
                   composable(
                       route = "metric_detail/{metricKey}",
@@ -485,6 +520,32 @@ class MainActivity : ComponentActivity() {
                   }
                 }
               }
+            }
+
+            if (showMoreSheet) {
+                val hiddenTabs = chooseableTabs.filter { it.route !in activeTabs.map { t -> t.route } }
+                MoreSheet(
+                    hiddenTabs = hiddenTabs,
+                    onOpenTab = { route ->
+                        showMoreSheet = false
+                        navController.navigate(route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onOpenShortcut = { route ->
+                        showMoreSheet = false
+                        navController.navigate(route)
+                    },
+                    onCustomize = {
+                        showMoreSheet = false
+                        navController.navigate("customize_nav")
+                    },
+                    onDismiss = { showMoreSheet = false }
+                )
             }
         }
       }

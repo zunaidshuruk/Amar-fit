@@ -7,12 +7,12 @@ object NavTabs {
 
     fun parse(csv: String?): List<String> {
         if (csv.isNullOrBlank()) return DEFAULT_BAR
-        val parsed = csv.split(",")
+        val routes = csv.split(",")
             .map { it.trim().lowercase() }
             .filter { it in CHOOSABLE_ROUTES }
             .distinct()
             .take(MAX_BAR)
-        return if (parsed.isEmpty()) DEFAULT_BAR else parsed
+        return if (routes.isEmpty()) DEFAULT_BAR else routes
     }
 
     fun toCsv(routes: List<String>): String {
@@ -26,29 +26,37 @@ object NavTabs {
     fun toggle(bar: List<String>, route: String): List<String> {
         if (route !in CHOOSABLE_ROUTES) return bar
         return if (route in bar) {
-            if (bar.size <= 1) bar else bar.filter { it != route }
+            if (bar.size > 1) {
+                bar.filter { it != route }
+            } else {
+                bar
+            }
         } else {
-            if (bar.size >= MAX_BAR) bar else bar + route
+            if (bar.size < MAX_BAR) {
+                bar + route
+            } else {
+                bar
+            }
         }
     }
 
     fun moveUp(bar: List<String>, route: String): List<String> {
         val index = bar.indexOf(route)
         if (index <= 0) return bar
-        val mutable = bar.toMutableList()
-        val temp = mutable[index]
-        mutable[index] = mutable[index - 1]
-        mutable[index - 1] = temp
-        return mutable
+        val newList = bar.toMutableList()
+        val temp = newList[index]
+        newList[index] = newList[index - 1]
+        newList[index - 1] = temp
+        return newList
     }
 
     fun moveDown(bar: List<String>, route: String): List<String> {
         val index = bar.indexOf(route)
         if (index < 0 || index >= bar.size - 1) return bar
-        val mutable = bar.toMutableList()
-        val temp = mutable[index]
-        mutable[index] = mutable[index + 1]
-        mutable[index + 1] = temp
-        return mutable
+        val newList = bar.toMutableList()
+        val temp = newList[index]
+        newList[index] = newList[index + 1]
+        newList[index + 1] = temp
+        return newList
     }
 }
