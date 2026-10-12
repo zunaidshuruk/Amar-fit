@@ -796,6 +796,7 @@ private fun EmptyChatState(
         Spacer(modifier = Modifier.height(8.dp))
 
         val starterPrompts = listOf(
+            "🔬 Perform a 30-day deep health review based on my health dossier" to "Deep 30-Day Review",
             "🥗 Log grilled chicken salad with avocado for lunch" to "Log meal",
             "📊 Analyze my heart rate and sleep trends this week" to "Health trends",
             "🏃 Suggest a 20-minute bodyweight cardio routine" to "Workout plan",

@@ -359,6 +359,43 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
             }
         }
 
+        // 30-Day Deep Health Review Card
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .clickable {
+                    viewModel.sendUniversalAssistantMessage("Perform a 30-day deep health review based on my health dossier")
+                    navController.navigate("assistant")
+                }
+                .padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = "Deep Review", tint = MaterialTheme.colorScheme.primary)
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "30-Day Deep Health Review", color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        Text(text = "AI analysis of trends, findings & records", color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f), fontSize = 13.sp)
+                    }
+                }
+                Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Start Deep Review", tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
+        }
+
         // Key metrics section
         Spacer(modifier = Modifier.height(4.dp))
         Text(

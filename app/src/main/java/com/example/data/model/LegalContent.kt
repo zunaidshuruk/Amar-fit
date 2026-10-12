@@ -39,7 +39,7 @@ Depending on which features you use, we may collect:
 Most of this data comes from **Google Health Connect**, which syncs data from your phone's sensors and any other health apps you've connected on your device. Some of it (food logs, manual entries, medical records) is entered directly by you.
 
 ### 1.3 AI-Processed Content
-When you use food-scanning, food-chat, or AI coaching features, the text, photos, or voice input you provide is sent to **Google's Gemini API** for analysis (e.g., to estimate calories from a food description or photo). This content is processed by Google's AI systems according to Google's own data handling terms for the Gemini API.
+When you use food-scanning, food-chat, AI health analysis, or 30-day deep review features, your logged health metrics, food logs, medical records, text, photos, or voice input are compiled into an encrypted health dossier and sent to **Google's Gemini API** to generate personalized health insights, findings, and coaching. This content is processed by Google's AI systems according to Google's data handling terms for the Gemini API.
 
 ### 1.4 Social Features
 If you use KardIQ's friend/social features, we collect:

@@ -15,7 +15,11 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
 import com.example.presentation.viewmodel.ChatMessage
+import com.example.util.ai.DeepAnalysisStyle
 import com.example.util.ai.DeshiFoodRules
+import com.example.util.ai.DossierInput
+import com.example.util.ai.DossierMode
+import com.example.util.ai.HealthDossierBuilder
 import com.example.util.ai.MedicalNotes
 
 private fun aiResponseStyle(maxWords: Int, followUps: Boolean = false): String {
@@ -1622,8 +1626,21 @@ class AppRepository(
         foodLogs: List<com.example.data.local.FoodLog>,
         onStatusUpdate: (String) -> Unit = {}
     ): AssistantResult = withContext(Dispatchers.IO) {
+        val isDeepReview = userMessage.contains("deep review", ignoreCase = true) ||
+                           userMessage.contains("deep analysis", ignoreCase = true) ||
+                           userMessage.contains("30-day review", ignoreCase = true) ||
+                           userMessage.contains("30-day analysis", ignoreCase = true)
+
+        val styleInstructions = if (isDeepReview) {
+            "\n\n" + DeepAnalysisStyle.PROMPT_INSTRUCTIONS
+        } else {
+            "\n\n" + aiResponseStyle(150, followUps = true)
+        }
+
         val systemInstruction = """
             You are KardIQ AI, a universal health assistant for the KardIQ app. You can log food, generate diet charts, generate workouts, create multi-day workout programs, suggest medicinal recipes, generate health insights, and give glucose guidance -- all through natural conversation.
+
+            When the user asks for a 30-day deep health review or deep analysis, ALWAYS call read_health_data first to inspect their full health dossier.
 
             Only call read_health_data when the user's real numbers would genuinely change your answer (e.g. they ask about their own trends, or want a suggestion grounded in their actual data). For simple greetings, general questions, or requests that don't need personal data, just respond directly without calling any tool -- this keeps replies fast.
 
@@ -1633,8 +1650,8 @@ class AppRepository(
 
             When a tool result contains a line starting with "YOUTUBE_SEARCH:", copy that line exactly, on its own line, at the end of your reply.
 
-            Keep replies conversational and concise. You are not a doctor -- frame health-related suggestions as general wellness guidance, never a diagnosis, and never claim certainty about a medical condition.
-        """.trimIndent() + "\n\n" + aiResponseStyle(150, followUps = true) + "\n\n" + DeshiFoodRules.SHORT + "\n\n" + MedicalNotes.PROMPT_RULE
+            Keep replies conversational and concise unless a deep review style is specified. You are not a doctor -- frame health-related suggestions as general wellness guidance, never a diagnosis, and never claim certainty about a medical condition.
+        """.trimIndent() + styleInstructions + "\n\n" + DeshiFoodRules.SHORT + "\n\n" + MedicalNotes.PROMPT_RULE
 
         val contents = org.json.JSONArray()
         val rawMessages = mutableListOf<ChatMessage>()
@@ -1760,11 +1777,24 @@ class AppRepository(
                     )
                     when (fnName) {
                         "read_health_data" -> {
-                            val metricsText = metrics.take(7).joinToString("\n") { m ->
-                                "${m.date}: steps=${m.steps}, sleepHours=${m.sleepHours}, restingHR=${m.restingHeartRate}, weightKg=${m.weightKg}, waterLiters=${m.waterLiters}, caloriesConsumed=${m.caloriesConsumed}, carbsG=${m.carbsG}, proteinG=${m.proteinG}, fatG=${m.fatG}, bloodGlucose=${maxOf(m.bloodGlucoseMorning, m.bloodGlucoseNight, m.bloodGlucoseBeforeBreakfast, m.bloodGlucoseAfterBreakfast, m.bloodGlucoseBeforeLunch, m.bloodGlucoseAfterLunch, m.bloodGlucoseBeforeDinner, m.bloodGlucoseAfterDinner)}, bloodPressure=${m.bloodPressure}, oxygenSaturation=${m.oxygenSaturation}"
-                            }
-                            val foodLogsText = foodLogs.take(14).joinToString("\n") { "${it.date}: ${it.name} (${it.calories} kcal)" }
-                            "Profile: ${profile.age}yo ${profile.gender}, ${profile.heightCm}cm, ${profile.weightKg}kg, activity level ${profile.activityLevel}, calorie goal ${profile.dailyCalorieLimit}.\n\n7-Day Metrics:\n$metricsText\n\nRecent Food Logs:\n$foodLogsText"
+                            val todayDateString = java.time.LocalDate.now().toString()
+                            val medRecords = medicalRecordDao?.getAllMedicalRecords()?.firstOrNull() ?: emptyList()
+                            val actEvents = activityEventDao?.getAllEvents()?.firstOrNull() ?: emptyList()
+                            val now = System.currentTimeMillis()
+                            val thirtyDaysAgo = now - 30L * 86400000L
+                            val exSessions = healthExerciseSessionDao?.observeBetween(thirtyDaysAgo, now + 86400000L)?.firstOrNull() ?: emptyList()
+
+                            val dossierInput = DossierInput(
+                                profile = profile,
+                                metrics = metrics,
+                                foodLogs = foodLogs,
+                                exerciseSessions = exSessions,
+                                activityEvents = actEvents,
+                                medicalRecords = medRecords,
+                                todayDate = todayDateString
+                            )
+                            val dossier = HealthDossierBuilder.build(dossierInput)
+                            dossier.toPromptText(DossierMode.FULL)
                         }
                         "get_health_insight" -> generateHealthInsight(profile, metrics, foodLogs)
                         "get_glucose_guidance" -> generateGlucoseGuidance(profile, metrics)
