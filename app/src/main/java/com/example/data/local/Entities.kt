@@ -47,6 +47,10 @@ data class UserProfile(
     val bloodGlucoseTargetMin: Float = 0f,
     val bloodGlucoseTargetMax: Float = 0f,
     val navTabs: String = "",
+    /** Everything in Settings > Notifications as JSON (see NotificationPrefs). Empty = defaults. */
+    val notificationPrefsJson: String = "",
+    /** Workout days per week the user aims for (weekly workout goal notification). */
+    val weeklyWorkoutGoal: Int = 3,
     val updatedAt: Long = 0L
 )
 
