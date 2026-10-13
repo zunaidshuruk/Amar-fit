@@ -22,19 +22,27 @@ recommended defaults; the open decisions are at the bottom. Nothing here is buil
    `REQUIRED_PERMISSIONS` entry, see the hard rules) so history from another app can be imported and what is logged here is shared
    back. If the app is ever published on Google Play, the Health Connect data-type declaration in the Play Console is required.
 7. **Where it lives.** A dedicated Cycle screen, a card on Today ("Cycle day 12, period expected in 16 days") and a card on Health,
-   only when the feature is switched on; also choosable in Customize navigation bar and listed in More.
+   only for Female profiles that switched the feature on; also choosable in Customize navigation bar and listed in More.
 
 **Left out of v1 on purpose:** pregnancy mode, any contraception or "safe days" claim, sexual activity log, ovulation tests, cervical
 mucus, basal body temperature, partner sharing, app lock. Cycle data is never added to `friend_stats`, `public_profiles`, challenges or
 the activity feed (a test will guard this).
 
 ## Privacy and safety (this is reproductive health data: the most sensitive thing the app would hold)
-* **Opt-in, off by default for everyone.** A feature-specific consent screen explains what is stored and where; the time of consent is
-  saved. The app does not decide from the gender field who gets it.
+* **Only for profiles set to Female (Zunaid's decision), and opt-in.** The feature (Settings entry, Today and Health cards, notifications) is
+  offered only when `profile.gender` is "Female" (the profile offers Male, Female, Other; compared ignoring case); it is off until the user
+  switches it on and agrees on a feature-specific consent screen that says what is stored and where; the time of consent is saved. If the
+  gender is later changed away from Female the feature hides, its notifications stop and the data is kept (not deleted) until the gender is
+  Female again; account deletion still removes it. Consequence to be aware of: someone who menstruates but chose Other or Male cannot use
+  it unless they change that field; the gender field is only a gate in the screens, not a security control.
 * **Discreet notifications by default.** The lock screen shows a generic "KardIQ reminder"; the details show after unlocking
   (`VISIBILITY_PRIVATE` with a generic public version). Phones are often shared at home.
-* **AI.** Cycle data is NOT sent to Gemini unless the user switches on "Use my cycle in AI answers" (default off). The on-device AI can use
-  it. The health analyst (dossier, offline review) gets a cycle finding only with the same switch.
+* **AI: ON by default (Zunaid's decision; Claude had recommended off).** To keep that decision safe, three design rules: (1) the consent screen
+  shows the "Use my cycle in AI answers" switch, already ON and clearly labelled, so the user sees and can turn it off at the moment they agree,
+  not buried later; (2) only a short summary is shared (current phase, cycle day, expected period date, typical cycle length), never the
+  raw day logs, symptoms or mood; (3) the privacy policy and the consent screen say plainly that this summary goes to Google's Gemini for
+  cloud answers, like the other health summaries the Assistant already sends. The on-device AI and the health analyst use the same summary
+  and respect the same switch.
 * **Cloud.** Stored in the user's private area (`users/{uid}/period_logs`, `users/{uid}/cycle_days`, already allowed by the live rules),
   synced with the same merge and 30-day deletion markers as everything else, removed by account deletion, included in the Drive backup.
 * **Privacy policy.** A cycle section is added with the release that ships the feature (policy must describe real behaviour). Because the
@@ -62,10 +70,11 @@ the activity feed (a test will guard this).
 | CY-7 | Opt-in AI and analyst integration |
 | CY-8 | Privacy policy cycle section, tests, docs |
 
-## Decisions
-1. Who sees the feature: recommended = a switch in Settings for everyone, suggested during onboarding to women.
-2. Lock screen: recommended = details hidden until unlock.
-3. AI use of cycle data: recommended = off until the user switches it on.
-4. Assumed, change if wrong: v1 scope as above; sync like the rest of the data; the policy PR ships first as 2.9.1 and the cycle tracker
-   gets its own consent later, so nobody is asked to re-accept twice.
+## Decisions (answered by Zunaid 2026-10-13)
+1. **Who sees the feature: only profiles set to Female.** (Claude had recommended a switch for everyone.) Built as described in the privacy section.
+2. **Lock screen: details hidden until the phone is unlocked** (as recommended).
+3. **AI Assistant may use cycle data: ON by default.** (Claude had recommended off.) Built with the safeguards in the privacy section:
+   visible ON switch on the consent screen, summary only, plain disclosure in the policy.
+4. Assumed, change if wrong: v1 scope as above; sync like the rest of the data; the policy PR (#6) ships first as 2.9.1 and the cycle
+   tracker gets its own consent later, so nobody is asked to re-accept twice.
 5. Open question for Zunaid: is Ramadan fasting relevant for users (tracking missed fasting days to make up)? Not in v1 unless he says so.
