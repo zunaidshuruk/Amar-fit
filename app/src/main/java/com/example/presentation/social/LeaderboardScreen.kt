@@ -79,6 +79,7 @@ fun LeaderboardScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = 
                         Text("${entry.points} pts", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary)
                     }
                 }
+                item { Spacer(modifier = Modifier.height(88.dp)) }
             }
         }
     }

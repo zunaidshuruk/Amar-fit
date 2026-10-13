@@ -847,7 +847,7 @@ fun WorkoutSessionScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(40.dp))
+                    Spacer(modifier = Modifier.height(88.dp))
                 }
             }
         }

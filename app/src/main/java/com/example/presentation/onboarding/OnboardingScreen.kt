@@ -1,6 +1,7 @@
 package com.example.presentation.onboarding
 
 import androidx.compose.foundation.background
+import com.example.presentation.common.appSafeInsets
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -150,7 +151,7 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .windowInsetsPadding(appSafeInsets())
             .padding(horizontal = 24.dp)
             .verticalScroll(rememberScrollState())
             .imePadding()

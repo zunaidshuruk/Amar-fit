@@ -198,6 +198,8 @@ fun MedicalRecordsScreen(
                 }
             }
         }
+        // keeps the last items clear of the assistant button
+        Spacer(modifier = Modifier.height(88.dp))
     }
 
     // Add Record Dialog

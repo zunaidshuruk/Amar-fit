@@ -1,6 +1,7 @@
 package com.example.presentation.social
 
 import androidx.compose.foundation.background
+import com.example.presentation.common.FullScreenDialog
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -16,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.example.presentation.scanner.CameraPreviewView
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
@@ -28,10 +28,7 @@ fun QrScannerScreen(
 ) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    Dialog(
-        onDismissRequest = onClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
-    ) {
+    FullScreenDialog(onDismissRequest = onClose, safePadding = false) {
         Box(modifier = Modifier.fillMaxSize()) {
             CameraPreviewView(
                 onImageCaptured = { bitmap ->

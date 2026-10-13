@@ -330,6 +330,7 @@ fun FriendsScreen(
                                 }
                             }
                         }
+                        item { Spacer(modifier = Modifier.height(88.dp)) }
                     }
                 }
                 4 -> {

@@ -1,6 +1,7 @@
 package com.example.presentation.auth
 
 import androidx.compose.foundation.Image
+import com.example.presentation.common.FullScreenDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -41,7 +42,6 @@ import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import kotlinx.coroutines.launch
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -532,9 +532,8 @@ fun AuthScreen(
     }
 
     if (showPrivacyPolicyFromAuth) {
-        Dialog(
-            onDismissRequest = { showPrivacyPolicyFromAuth = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        FullScreenDialog(
+            onDismissRequest = { showPrivacyPolicyFromAuth = false }
         ) {
             com.example.presentation.settings.LegalDocumentScreen(
                 title = "Privacy Policy",
@@ -544,9 +543,8 @@ fun AuthScreen(
         }
     }
     if (showTermsFromAuth) {
-        Dialog(
-            onDismissRequest = { showTermsFromAuth = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        FullScreenDialog(
+            onDismissRequest = { showTermsFromAuth = false }
         ) {
             com.example.presentation.settings.LegalDocumentScreen(
                 title = "Terms of Service",

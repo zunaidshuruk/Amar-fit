@@ -145,7 +145,7 @@ fun HealthCorrelationsScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> 
                     .map { it.waterLiters to it.steps.toFloat() }
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(88.dp))
         }
     }
 }

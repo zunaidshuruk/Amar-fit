@@ -1080,7 +1080,7 @@ fun MetricDetailScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(64.dp))
+            Spacer(modifier = Modifier.height(88.dp))
         }
     }
 }

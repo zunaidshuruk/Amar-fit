@@ -1,6 +1,7 @@
 package com.example.presentation.navigation
 
 import androidx.compose.foundation.background
+import com.example.presentation.common.appSafeInsets
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -53,7 +54,7 @@ fun CustomizeNavScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .windowInsetsPadding(appSafeInsets())
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState())
             .imePadding()

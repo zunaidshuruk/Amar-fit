@@ -1041,7 +1041,9 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 Text(text = "Health records", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = medicalAccent.onBg.copy(alpha = 0.8f))
             }
         }
-    }
+            // keeps the last items clear of the assistant button
+            Spacer(modifier = Modifier.height(88.dp))
+        }
     }
 
     if (showBpDialog) {

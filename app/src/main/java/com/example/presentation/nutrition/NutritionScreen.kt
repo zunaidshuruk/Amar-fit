@@ -198,6 +198,8 @@ fun NutritionScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 accent = recipeAccent,
                 onClick = { navController.navigate("recipe") }
             )
+            // keeps the last items clear of the assistant button
+            Spacer(modifier = Modifier.height(88.dp))
         }
     }
 }

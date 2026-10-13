@@ -10,6 +10,10 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import com.example.presentation.common.LocalAppInsets
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -83,5 +87,8 @@ fun MyApplicationTheme(
     }
   }
 
-  MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+  // the main window's insets, for full-screen dialogs (see AppInsets.kt)
+  CompositionLocalProvider(LocalAppInsets provides WindowInsets.safeDrawing) {
+    MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+  }
 }

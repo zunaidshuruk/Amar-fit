@@ -1,6 +1,7 @@
 package com.example.presentation.navigation
 
 import androidx.compose.foundation.clickable
+import com.example.presentation.common.bottomSafePadding
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,7 +34,7 @@ fun MoreSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
+                .bottomSafePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
