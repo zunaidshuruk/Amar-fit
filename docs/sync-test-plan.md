@@ -21,11 +21,15 @@ own Health Connect; the day totals still sync through the rules above).
 * Every time the app is opened (at most every 30 seconds): last 7 days of metrics, profile, items, chats, events.
 * Once a day: the last 60 days. On a new phone (first run after signing in or after this update): the WHOLE history.
 * Live: a listener on the last 3 days of metrics, so a change on one phone shows on the other within seconds.
+* Upload timing: things you enter (glucose, weight, water, food, sleep, ...) are uploaded at once. Walking totals
+  (steps, distance, active calories, heart rate) are uploaded at most every 30 minutes, with the newest values sent when
+  the wait is over; **Sync now** sends them immediately, and the next app open sends them if the app was closed first.
 * Settings > Cloud sync shows the last time and the result, and "Sync now" runs it immediately.
 
 ## Test plan (two phones, same account, both on the new build, both online)
-1. **Counters.** Phone A: walk or add steps so it shows more than phone B. Open the app on B (or tap Sync now): B shows
-   A's higher number and keeps it (Health Connect no longer pulls it back down).
+1. **Counters.** Phone A: walk or add steps so it shows more than phone B, then tap **Sync now** on A (walking totals
+   otherwise wait up to 30 minutes). Open the app on B (or tap Sync now): B shows A's higher number and keeps it
+   (Health Connect no longer pulls it back down).
 2. **Readings.** On A log a glucose reading and a weight; on B log a different weight a minute later. After a sync both
    phones show B's weight (newest) and A's glucose reading (a value beats empty).
 3. **Delete everywhere.** On A delete a food log, a saved workout (swipe) and a medical record. Open B: all three are gone.

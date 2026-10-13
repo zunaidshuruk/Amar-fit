@@ -11,6 +11,7 @@ import com.example.data.sync.MetricMerger
 import com.example.data.sync.MetricReconciler
 import com.example.data.sync.ProfileMerger
 import com.example.data.sync.SyncIds
+import com.example.data.sync.UploadPolicy
 import com.example.data.sync.ReconcileResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -548,20 +549,53 @@ class AppRepository(
         }
         metricsDao.insertMetrics(toSave)
         if (changed || existing == null) {
-            syncScope.launch {
-                try {
-                    // Read-merge-write in the cloud: another phone's higher counters / newer readings are kept,
-                    // and whatever it holds that this phone lacks comes straight back into the local row.
-                    val merged = FirebaseManager.syncMetricMerged(toSave)
-                    if (merged != null) applyRemoteMetric(merged)
-                    val currentProfile = userDao.getUserProfile().firstOrNull()
-                    if (currentProfile != null && toSave.date == java.time.LocalDate.now().toString()) {
-                        FirebaseManager.syncFriendStats(toSave, currentProfile)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+            val passiveOnly = existing != null && UploadPolicy.isPassiveOnlyChange(existing, toSave)
+            scheduleMetricUpload(toSave.date, passiveOnly)
+        }
+    }
+
+    private val lastCloudWriteAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val pendingUploads = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Job>()
+
+    /**
+     * Walking updates (steps, distance, active calories, heart rate) are uploaded at most every 30 minutes;
+     * the newest values go out when the wait is over. Anything the user enters is uploaded straight away.
+     * If the app is closed while an upload is waiting, the next app open (or "Sync now") sends it.
+     */
+    private fun scheduleMetricUpload(date: String, passiveOnly: Boolean) {
+        if (!passiveOnly) {
+            pendingUploads.remove(date)?.cancel()
+            syncScope.launch { uploadMetricNow(date) }
+            return
+        }
+        val wait = UploadPolicy.delayUntilNextWrite(System.currentTimeMillis(), lastCloudWriteAt[date] ?: 0L)
+        if (wait == 0L) {
+            pendingUploads.remove(date)?.cancel()
+            syncScope.launch { uploadMetricNow(date) }
+        } else if (pendingUploads[date]?.isActive != true) {
+            pendingUploads[date] = syncScope.launch {
+                kotlinx.coroutines.delay(wait)
+                pendingUploads.remove(date)
+                uploadMetricNow(date)
             }
+        }
+    }
+
+    /** Uploads the CURRENT local row of [date] (read-merge-write) and takes back what the cloud added. */
+    private suspend fun uploadMetricNow(date: String) {
+        try {
+            val row = metricsDao.getMetricsForDate(date).firstOrNull() ?: return
+            lastCloudWriteAt[date] = System.currentTimeMillis()
+            // Read-merge-write in the cloud: another phone's higher counters / newer readings are kept,
+            // and whatever it holds that this phone lacks comes straight back into the local row.
+            val merged = FirebaseManager.syncMetricMerged(row)
+            if (merged != null) applyRemoteMetric(merged)
+            val currentProfile = userDao.getUserProfile().firstOrNull()
+            if (currentProfile != null && date == java.time.LocalDate.now().toString()) {
+                FirebaseManager.syncFriendStats(row, currentProfile)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 

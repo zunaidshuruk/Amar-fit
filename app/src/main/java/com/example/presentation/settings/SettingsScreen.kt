@@ -551,7 +551,7 @@ fun SettingsScreen(
                         Text(cloudSync.message, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Text(
-                        "Your data is kept the same on every phone you sign in to. For steps and other counters the higher value wins; for readings the newest entry wins.",
+                        "Your data is kept the same on every phone you sign in to. For steps and other counters the higher value wins; for readings the newest entry wins. Walking totals are uploaded at most every 30 minutes (Sync now sends them at once); everything you enter is uploaded immediately.",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp)
