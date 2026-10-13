@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.data.local.*
 import com.example.data.sync.CollectionReconciler
 import com.example.data.sync.MetricMerger
+import com.example.data.sync.SyncIds
 import com.example.data.sync.ProfileMerger
 import kotlinx.coroutines.flow.firstOrNull
 import com.google.firebase.auth.FirebaseAuth
@@ -980,6 +981,148 @@ object FirebaseManager {
             CollectionPull(live, deleted)
         } catch (e: Exception) {
             Log.e("FirebaseManager", "fetchCollection($name) failed", e)
+            null
+        }
+    }
+
+    // ---------------------------------------------------------------- assistant chats and activity events
+
+    private fun userCollection(name: String) =
+        FirebaseAuth.getInstance().currentUser?.let {
+            FirebaseFirestore.getInstance().collection("users").document(it.uid).collection(name)
+        }
+
+    suspend fun syncAssistantSession(session: AssistantChatSession): Boolean {
+        val col = userCollection("assistant_chats") ?: return false
+        return try {
+            col.document(session.id).set(session, SetOptions.merge()).await()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun syncAssistantMessage(sessionId: String, message: AssistantChatMessage): Boolean {
+        val col = userCollection("assistant_chats") ?: return false
+        return try {
+            col.document(sessionId).collection("messages")
+                .document(SyncIds.messageId(message.timestamp, message.isUser, message.text))
+                .set(
+                    mapOf(
+                        "sessionId" to sessionId,
+                        "text" to message.text,
+                        "isUser" to message.isUser,
+                        "timestamp" to message.timestamp
+                    ),
+                    SetOptions.merge()
+                ).await()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    /** Deleting a chat leaves a tombstone (with a fresh updatedAt so other phones notice it). */
+    suspend fun softDeleteAssistantSession(sessionId: String): Boolean {
+        val col = userCollection("assistant_chats") ?: return false
+        val now = System.currentTimeMillis()
+        return try {
+            col.document(sessionId)
+                .set(mapOf("deleted" to true, "deletedAt" to now, "updatedAt" to now), SetOptions.merge())
+                .await()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    /** Chats changed after [sinceUpdatedAt] (0 = all). Deleted chats come back as ids. Null on failure. */
+    suspend fun fetchAssistantSessions(sinceUpdatedAt: Long): CollectionPull<AssistantChatSession>? {
+        val col = userCollection("assistant_chats") ?: return null
+        return try {
+            val snap = col.whereGreaterThan("updatedAt", sinceUpdatedAt).get().await()
+            val live = ArrayList<RemoteDoc<AssistantChatSession>>()
+            val deleted = HashSet<String>()
+            val now = System.currentTimeMillis()
+            for (doc in snap.documents) {
+                if (doc.getBoolean("deleted") == true) {
+                    deleted.add(doc.id)
+                    if (CollectionReconciler.isTombstoneExpired(doc.getLong("deletedAt") ?: 0L, now)) {
+                        doc.reference.delete()
+                    }
+                } else {
+                    doc.toObject(AssistantChatSession::class.java)?.let { live.add(RemoteDoc(doc.id, it)) }
+                }
+            }
+            CollectionPull(live, deleted)
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "fetchAssistantSessions failed", e)
+            null
+        }
+    }
+
+    suspend fun fetchAssistantMessages(sessionId: String): List<RemoteDoc<AssistantChatMessage>>? {
+        val col = userCollection("assistant_chats") ?: return null
+        return try {
+            col.document(sessionId).collection("messages").get().await().documents.map { doc ->
+                RemoteDoc(
+                    doc.id,
+                    AssistantChatMessage(
+                        id = 0,
+                        sessionId = sessionId,
+                        text = doc.getString("text") ?: "",
+                        isUser = doc.getBoolean("isUser") ?: false,
+                        timestamp = doc.getLong("timestamp") ?: 0L
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "fetchAssistantMessages failed", e)
+            null
+        }
+    }
+
+    suspend fun syncActivityEvent(event: ActivityEvent): Boolean {
+        val col = userCollection("activity_events") ?: return false
+        return try {
+            col.document(SyncIds.activityEventId(event.timestamp, event.type, event.description))
+                .set(
+                    mapOf(
+                        "type" to event.type,
+                        "description" to event.description,
+                        "timestamp" to event.timestamp,
+                        "source" to event.source
+                    ),
+                    SetOptions.merge()
+                ).await()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun fetchActivityEvents(sinceTimestamp: Long): List<RemoteDoc<ActivityEvent>>? {
+        val col = userCollection("activity_events") ?: return null
+        return try {
+            col.whereGreaterThanOrEqualTo("timestamp", sinceTimestamp).get().await().documents.map { doc ->
+                RemoteDoc(
+                    doc.id,
+                    ActivityEvent(
+                        id = 0,
+                        type = doc.getString("type") ?: "",
+                        description = doc.getString("description") ?: "",
+                        timestamp = doc.getLong("timestamp") ?: 0L,
+                        source = doc.getString("source") ?: "app",
+                        externalId = null
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "fetchActivityEvents failed", e)
             null
         }
     }

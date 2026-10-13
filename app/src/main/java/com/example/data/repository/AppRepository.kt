@@ -10,6 +10,7 @@ import com.example.data.sync.CollectionReconciler
 import com.example.data.sync.MetricMerger
 import com.example.data.sync.MetricReconciler
 import com.example.data.sync.ProfileMerger
+import com.example.data.sync.SyncIds
 import com.example.data.sync.ReconcileResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -62,15 +63,24 @@ class AppRepository(
 ) {
 
     suspend fun logActivityEvent(type: String, description: String, timestamp: Long = System.currentTimeMillis(), source: String = "app", externalId: String? = null) {
-        activityEventDao?.insert(
-            com.example.data.local.ActivityEvent(
-                type = type,
-                description = description,
-                timestamp = timestamp,
-                source = source,
-                externalId = externalId
-            )
+        val event = com.example.data.local.ActivityEvent(
+            type = type,
+            description = description,
+            timestamp = timestamp,
+            source = source,
+            externalId = externalId
         )
+        activityEventDao?.insert(event)
+        // events created in the app follow the user to their other phones; Health Connect ones stay per phone
+        if (source == "app") {
+            syncScope.launch {
+                try {
+                    FirebaseManager.syncActivityEvent(event)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
     }
 
     suspend fun hasActivityEventWithExternalId(externalId: String): Boolean {
@@ -96,9 +106,15 @@ class AppRepository(
     }
 
     suspend fun saveAssistantChatMessage(sessionId: String, text: String, isUser: Boolean) {
-        assistantChatMessageDao?.insert(
-            com.example.data.local.AssistantChatMessage(sessionId = sessionId, text = text, isUser = isUser)
-        )
+        val message = com.example.data.local.AssistantChatMessage(sessionId = sessionId, text = text, isUser = isUser)
+        assistantChatMessageDao?.insert(message)
+        syncScope.launch {
+            try {
+                FirebaseManager.syncAssistantMessage(sessionId, message)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     suspend fun getAssistantChatHistoryOnce(): List<com.example.presentation.viewmodel.ChatMessage> {
@@ -119,16 +135,127 @@ class AppRepository(
 
     suspend fun saveAssistantSession(session: com.example.data.local.AssistantChatSession) {
         assistantChatSessionDao?.insertOrUpdate(session)
+        syncScope.launch {
+            try {
+                FirebaseManager.syncAssistantSession(session)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     suspend fun deleteAssistantSession(sessionId: String) {
         assistantChatSessionDao?.deleteSessionById(sessionId)
         assistantChatMessageDao?.deleteMessagesBySession(sessionId)
+        syncScope.launch {
+            try {
+                FirebaseManager.softDeleteAssistantSession(sessionId)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     suspend fun clearAllAssistantHistory() {
+        val ids = assistantChatSessionDao?.getAllSessions()?.firstOrNull()?.map { it.id } ?: emptyList()
         assistantChatSessionDao?.clearAll()
         assistantChatMessageDao?.clearAll()
+        if (ids.isNotEmpty()) {
+            syncScope.launch {
+                try {
+                    ids.forEach { FirebaseManager.softDeleteAssistantSession(it) }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    /**
+     * Two-way sync of assistant chats changed after [sinceUpdatedAt] (0 = everything, used on a new phone).
+     * Newer chats come in with their messages, deleted chats are removed here, chats this phone has ahead
+     * are uploaded. Returns the number of local changes, or -1 when the cloud could not be read.
+     */
+    suspend fun reconcileAssistantChats(sinceUpdatedAt: Long): Int {
+        val sessionDao = assistantChatSessionDao ?: return 0
+        val messageDao = assistantChatMessageDao ?: return 0
+        val pull = FirebaseManager.fetchAssistantSessions(sinceUpdatedAt) ?: return -1
+        val localSessions = (sessionDao.getAllSessions().firstOrNull() ?: emptyList()).associateBy { it.id }
+        var changes = 0
+
+        for (doc in pull.live) {
+            val remote = doc.item.copy(id = doc.id)
+            val local = localSessions[doc.id]
+            if (local == null || remote.updatedAt > local.updatedAt) {
+                sessionDao.insertOrUpdate(remote)
+                changes++
+                val remoteMessages = FirebaseManager.fetchAssistantMessages(doc.id)
+                if (remoteMessages != null) {
+                    val have = messageDao.getMessagesBySession(doc.id)
+                        .map { SyncIds.messageId(it.timestamp, it.isUser, it.text) }.toHashSet()
+                    for (rm in remoteMessages) {
+                        if (rm.id !in have) messageDao.insert(rm.item.copy(id = 0, sessionId = doc.id))
+                    }
+                }
+            } else if (local.updatedAt > remote.updatedAt) {
+                // this phone is ahead: upload the chat and the messages the cloud lacks
+                FirebaseManager.syncAssistantSession(local)
+                val remoteIds = FirebaseManager.fetchAssistantMessages(doc.id)?.map { it.id }?.toHashSet()
+                if (remoteIds != null) {
+                    for (m in messageDao.getMessagesBySession(doc.id)) {
+                        if (SyncIds.messageId(m.timestamp, m.isUser, m.text) !in remoteIds) {
+                            FirebaseManager.syncAssistantMessage(doc.id, m)
+                        }
+                    }
+                }
+            }
+        }
+
+        for (id in pull.deletedIds) {
+            if (localSessions.containsKey(id)) {
+                sessionDao.deleteSessionById(id)
+                messageDao.deleteMessagesBySession(id)
+                changes++
+            }
+        }
+
+        if (sinceUpdatedAt == 0L) {
+            // first full pass on this phone: upload chats the cloud has never seen
+            val known = pull.live.map { it.id }.toSet() + pull.deletedIds
+            for (local in localSessions.values) {
+                if (local.id !in known) {
+                    FirebaseManager.syncAssistantSession(local)
+                    messageDao.getMessagesBySession(local.id).forEach { FirebaseManager.syncAssistantMessage(local.id, it) }
+                }
+            }
+        }
+        return changes
+    }
+
+    /**
+     * Two-way sync of workout / activity history events created in the app (events imported from Health Connect
+     * stay on their own phone), for events since [sinceTimestamp]. Returns the number of local changes or -1.
+     */
+    suspend fun reconcileActivityEvents(sinceTimestamp: Long): Int {
+        val dao = activityEventDao ?: return 0
+        val remote = FirebaseManager.fetchActivityEvents(sinceTimestamp) ?: return -1
+        val local = (dao.getEventsSince(sinceTimestamp).firstOrNull() ?: emptyList()).filter { it.source == "app" }
+        val localIds = local.map { SyncIds.activityEventId(it.timestamp, it.type, it.description) }.toHashSet()
+        val remoteIds = HashSet<String>()
+        var changes = 0
+        for (doc in remote) {
+            remoteIds.add(doc.id)
+            if (doc.id !in localIds) {
+                dao.insert(doc.item.copy(id = 0, source = "app"))
+                changes++
+            }
+        }
+        for (event in local) {
+            if (SyncIds.activityEventId(event.timestamp, event.type, event.description) !in remoteIds) {
+                FirebaseManager.syncActivityEvent(event)
+            }
+        }
+        return changes
     }
 
     fun getTodayActivityEvents(startOfDay: Long, endOfDay: Long): kotlinx.coroutines.flow.Flow<List<com.example.data.local.ActivityEvent>> {

@@ -190,6 +190,13 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 val profileOk = repository.reconcileProfile()
                 val itemChanges = repository.reconcileCollections(fullHistory = needFull, foodLogDays = if (daily) 60 else 14)
                 val itemsOk = itemChanges >= 0
+                val dayMs = 24L * 60L * 60L * 1000L
+                val chatSince = if (needFull) 0L else (prefs.getLong("last_chats_sync", 0L) - 10L * 60L * 1000L).coerceAtLeast(0L)
+                val chatChanges = repository.reconcileAssistantChats(chatSince)
+                if (chatChanges >= 0) prefs.edit().putLong("last_chats_sync", now).apply()
+                val eventSince = if (needFull) now - 90L * dayMs else (prefs.getLong("last_events_sync", now - 90L * dayMs) - dayMs)
+                val eventChanges = repository.reconcileActivityEvents(eventSince)
+                if (eventChanges >= 0) prefs.edit().putLong("last_events_sync", now).apply()
                 if (result.ok && (itemsOk || !needFull)) {
                     val edit = prefs.edit()
                     if (needFull) edit.putBoolean("metrics_full_restore_done", true)
@@ -197,9 +204,10 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     edit.putLong("last_cloud_sync_at", System.currentTimeMillis())
                     edit.apply()
                     succeeded = true
-                    message = if (result.pulled == 0 && result.pushed == 0 && itemChanges <= 0) "Up to date on this phone and in the cloud."
-                    else "Synced: ${result.pulled} day(s) received, ${result.pushed} uploaded, ${maxOf(itemChanges, 0)} item(s) updated."
+                    message = if (result.pulled == 0 && result.pushed == 0 && itemChanges <= 0 && chatChanges <= 0 && eventChanges <= 0) "Up to date on this phone and in the cloud."
+                    else "Synced: ${result.pulled} day(s) received, ${result.pushed} uploaded, ${maxOf(itemChanges, 0) + maxOf(chatChanges, 0) + maxOf(eventChanges, 0)} item(s) updated."
                     if (!profileOk) message += " Profile will sync later."
+                    if (itemChanges < 0 || chatChanges < 0 || eventChanges < 0) message += " Some data could not be checked and will retry."
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -235,7 +243,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     fun logout(onComplete: () -> Unit) {
         stopCloudListeners()
         getApplication<Application>().getSharedPreferences("ShasthoPrefs", android.content.Context.MODE_PRIVATE)
-            .edit().remove("metrics_full_restore_done").remove("last_full_metrics_sync").remove("last_cloud_sync_at").apply()
+            .edit().remove("metrics_full_restore_done").remove("last_full_metrics_sync").remove("last_cloud_sync_at").remove("last_chats_sync").remove("last_events_sync").apply()
         _cloudSyncStatus.value = CloudSyncStatus()
         viewModelScope.launch(Dispatchers.IO) {
             com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
