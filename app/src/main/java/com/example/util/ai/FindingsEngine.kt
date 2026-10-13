@@ -2,6 +2,7 @@ package com.example.util.ai
 
 import com.example.data.local.DailyMetric
 import com.example.util.formatGlucose
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.util.*
 import java.util.regex.Pattern
@@ -40,6 +41,30 @@ object FindingsEngine {
                 if (avg7 <= pAvg - 0.7f) {
                     findings.add(Finding(FindingTopic.SLEEP, 1, "sleep_wow_drop", "Sleep duration decreased this week", "A drop of %.1f h on average compared to the previous week.".format(Locale.US, pAvg - avg7)))
                 }
+            }
+        }
+
+        // Weekend (Friday and Saturday in Bangladesh) against the other days, over the last 30 days:
+        // reported when the averages differ by 1.5 hours or more, with at least 3 nights on each side.
+        val l30Range = today.minusDays(29)..today
+        val sleep30 = input.metrics.filter {
+            it.sleepHours > 0f && try { LocalDate.parse(it.date) in l30Range } catch (e: Exception) { false }
+        }
+        val weekendNights = sleep30.filter { isWeekendDay(it.date) }
+        val otherNights = sleep30.filter { !isWeekendDay(it.date) }
+        if (weekendNights.size >= 3 && otherNights.size >= 3) {
+            val weekendAvg = weekendNights.map { it.sleepHours }.average().toFloat()
+            val otherAvg = otherNights.map { it.sleepHours }.average().toFloat()
+            val gap = weekendAvg - otherAvg
+            if (abs(gap) >= 1.5f) {
+                findings.add(
+                    Finding(
+                        FindingTopic.SLEEP, 1, "sleep_weekend_gap",
+                        if (gap > 0f) "You sleep much longer on weekends" else "You sleep much less on weekends",
+                        "Weekend (Fri-Sat) nights average %.1f h against %.1f h on other days, a gap of %.1f h over the last 30 days."
+                            .format(Locale.US, weekendAvg, otherAvg, abs(gap))
+                    )
+                )
             }
         }
 
@@ -268,5 +293,12 @@ object FindingsEngine {
         }
 
         return findings.sortedWith(compareByDescending<Finding> { it.severity }.thenBy { it.topic.ordinal }).take(14)
+    }
+
+    private fun isWeekendDay(date: String): Boolean = try {
+        val d = LocalDate.parse(date).dayOfWeek
+        d == DayOfWeek.FRIDAY || d == DayOfWeek.SATURDAY
+    } catch (e: Exception) {
+        false
     }
 }

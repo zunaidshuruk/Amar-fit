@@ -169,17 +169,6 @@ object FirebaseManager {
         }
     }
 
-    fun syncMetric(metric: DailyMetric) {
-        val auth = FirebaseAuth.getInstance()
-        val user = auth.currentUser
-        if (user != null) {
-            val db = FirebaseFirestore.getInstance()
-            db.collection("users").document(user.uid)
-                .collection("health_metrics").document(metric.date)
-                .set(metric, SetOptions.merge())
-        }
-    }
-    
     /**
      * Writes a day's metrics with a read-merge-write transaction, so another phone's data is never
      * overwritten: counters keep the higher value, readings the newest non-empty one.
@@ -276,24 +265,6 @@ object FirebaseManager {
             Log.e("FirebaseManager", "fetchProfile failed", e)
             null
         }
-    }
-
-    suspend fun syncProfile(profile: UserProfile): Boolean {
-        val auth = FirebaseAuth.getInstance()
-        val user = auth.currentUser
-        if (user != null) {
-            val db = FirebaseFirestore.getInstance()
-            return try {
-                db.collection("users").document(user.uid)
-                    .set(profile, SetOptions.merge())
-                    .await()
-                true
-            } catch (e: Exception) {
-                e.printStackTrace()
-                false
-            }
-        }
-        return false
     }
 
     suspend fun claimFriendCode(uid: String): String? {

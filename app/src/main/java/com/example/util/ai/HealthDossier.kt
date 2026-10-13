@@ -7,9 +7,7 @@ import com.example.util.formatGlucose
 import com.example.util.formatWeight
 import java.time.DayOfWeek
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.*
-import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
 

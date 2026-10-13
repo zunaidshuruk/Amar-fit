@@ -136,4 +136,61 @@ class FindingsEngineTest {
         assertTrue(findings.all { it.topic == FindingTopic.DATA })
         assertTrue(findings.any { it.tag == "data_gap_glucose" })
     }
+
+    // ---- weekend (Friday and Saturday) against the other days: the 1.5 h rule
+
+    /** 30 nights ending on [todayDate]; Friday and Saturday get [weekend] hours, every other day [other]. */
+    private fun thirtyNights(weekend: Float, other: Float, skipWeekends: Boolean = false): List<DailyMetric> {
+        val today = LocalDate.parse(todayDate)
+        return (0..29).map { today.minusDays(it.toLong()) }.mapNotNull { d ->
+            val isWeekend = d.dayOfWeek == java.time.DayOfWeek.FRIDAY || d.dayOfWeek == java.time.DayOfWeek.SATURDAY
+            if (isWeekend && skipWeekends) null else createMetric(d.toString(), sleep = if (isWeekend) weekend else other)
+        }
+    }
+
+    private fun weekendFinding(metrics: List<DailyMetric>) =
+        FindingsEngine.compute(DossierInput(createProfile(), metrics, emptyList(), emptyList(), emptyList(), emptyList(), todayDate))
+            .find { it.tag == "sleep_weekend_gap" }
+
+    @Test
+    fun weekendSleepingMuchLongerIsReported() {
+        val f = weekendFinding(thirtyNights(weekend = 9.0f, other = 6.5f))!!
+        assertEquals(FindingTopic.SLEEP, f.topic)
+        assertEquals(1, f.severity)
+        assertEquals("You sleep much longer on weekends", f.title)
+        assertTrue(f.evidence, f.evidence.contains("9.0 h") && f.evidence.contains("6.5 h") && f.evidence.contains("2.5 h"))
+    }
+
+    @Test
+    fun weekendSleepingMuchLessIsReported() {
+        val f = weekendFinding(thirtyNights(weekend = 5.0f, other = 7.0f))!!
+        assertEquals("You sleep much less on weekends", f.title)
+    }
+
+    @Test
+    fun aGapUnderOneAndAHalfHoursIsNotReported() {
+        assertNull(weekendFinding(thirtyNights(weekend = 7.9f, other = 6.6f))) // 1.3 h
+    }
+
+    @Test
+    fun exactlyOneAndAHalfHoursIsReported() {
+        assertNotNull(weekendFinding(thirtyNights(weekend = 8.0f, other = 6.5f)))
+    }
+
+    @Test
+    fun needsThreeWeekendNightsAndThreeOtherNights() {
+        assertNull(weekendFinding(thirtyNights(weekend = 9.0f, other = 6.0f, skipWeekends = true)))
+        // only two weekend nights logged
+        val few = thirtyNights(weekend = 9.0f, other = 6.0f).filter { m ->
+            val d = LocalDate.parse(m.date).dayOfWeek
+            !(d == java.time.DayOfWeek.FRIDAY || d == java.time.DayOfWeek.SATURDAY) || m.date >= "2026-10-08"
+        }
+        assertNull(weekendFinding(few))
+    }
+
+    @Test
+    fun nightsOlderThanThirtyDaysAreIgnored() {
+        val old = (40..60).map { createMetric(LocalDate.parse(todayDate).minusDays(it.toLong()).toString(), sleep = 9.0f) }
+        assertNull(weekendFinding(old))
+    }
 }

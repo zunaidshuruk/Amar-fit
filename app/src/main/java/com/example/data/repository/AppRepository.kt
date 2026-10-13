@@ -94,12 +94,6 @@ class AppRepository(
         )
     }
 
-    suspend fun getFoodChatHistoryOnce(): List<com.example.presentation.viewmodel.ChatMessage> {
-        return foodChatMessageDao?.getAll()?.map {
-            com.example.presentation.viewmodel.ChatMessage(it.text, it.isUser)
-        } ?: emptyList()
-    }
-
     suspend fun saveAssistantChatMessage(text: String, isUser: Boolean) {
         assistantChatMessageDao?.insert(
             com.example.data.local.AssistantChatMessage(text = text, isUser = isUser)
@@ -116,12 +110,6 @@ class AppRepository(
                 e.printStackTrace()
             }
         }
-    }
-
-    suspend fun getAssistantChatHistoryOnce(): List<com.example.presentation.viewmodel.ChatMessage> {
-        return assistantChatMessageDao?.getAll()?.map {
-            com.example.presentation.viewmodel.ChatMessage(it.text, it.isUser)
-        } ?: emptyList()
     }
 
     fun getAssistantSessionsFlow(): kotlinx.coroutines.flow.Flow<List<com.example.data.local.AssistantChatSession>> {
@@ -270,7 +258,6 @@ class AppRepository(
     fun observeHealthExerciseSessions(fromMillis: Long, toMillis: Long): kotlinx.coroutines.flow.Flow<List<com.example.data.local.HealthExerciseSession>> = healthExerciseSessionDao?.observeBetween(fromMillis, toMillis) ?: kotlinx.coroutines.flow.flowOf(emptyList())
     suspend fun upsertHealthExerciseSessions(sessions: List<com.example.data.local.HealthExerciseSession>) { healthExerciseSessionDao?.upsertAll(sessions) }
     suspend fun deleteHealthExerciseSessionsBetween(fromMillis: Long, toMillis: Long) { healthExerciseSessionDao?.deleteBetween(fromMillis, toMillis) }
-    suspend fun earliestHealthExerciseSessionStart(): Long? = healthExerciseSessionDao?.earliestStart()
 
     suspend fun deleteAccount(): DeleteAccountResult {
         return FirebaseManager.deleteAccount()
@@ -429,46 +416,6 @@ class AppRepository(
         }
         if (lastError != null) throw lastError
     }.flowOn(Dispatchers.IO)
-
-    fun getChatResponseStream(chatHistory: List<ChatMessage>, profile: UserProfile?): kotlinx.coroutines.flow.Flow<String> {
-        val contextPrompt = if (profile != null) {
-            "User Context: ${profile.age}yo ${profile.gender}, Goal: ${profile.healthGoals}, Restrictions: ${profile.dietaryRestrictions}. "
-        } else ""
-        
-        val systemInstruction = """
-            You are 'KardIQ AI', a universal health, fitness, and wellness bot powered by a vast knowledge bank.
-            Your goal is to assist the user with ANY health-related query, including general fitness, nutrition, mental wellness, sleep, healthy habits, and medical knowledge.
-            
-            You can act as a nutritionist, a workout coach, a lifestyle advisor, or a general health assistant.
-            You should provide well-rounded, evidence-based advice.
-            
-            Guidelines:
-            - Answer directly and professionally, but maintain a warm and motivating tone.
-            - If they ask for recipes, you can provide them.
-            - Do NOT force a specific conversation flow (e.g., asking for ingredients first). Simply respond naturally and thoughtfully to their questions.
-            - Use markdown (bolding, bullet points) to format your advice for readability.
-            
-            $contextPrompt
-        """.trimIndent() + "\n\n" + aiResponseStyle(150, followUps = true)
-        
-        val nonBlank = chatHistory.filter { it.text.isNotBlank() }
-        val sanitized = if (nonBlank.isNotEmpty() && !nonBlank.first().isUser) nonBlank.drop(1) else nonBlank
-        val finalHistory = sanitized.ifEmpty { nonBlank }.ifEmpty { listOf(ChatMessage("Hello", true)) }
-
-        val apiContents = finalHistory.map { msg ->
-            Content(
-                role = if (msg.isUser) "user" else "model",
-                parts = listOf(Part(text = msg.text))
-            )
-        }
-        
-        val request = GenerateContentRequest(
-            contents = apiContents,
-            systemInstruction = Content(parts = listOf(Part(text = systemInstruction)))
-        )
-        
-        return streamGeminiCall(request)
-    }
 
     fun getFoodChatResponseStream(chatHistory: List<ChatMessage>): kotlinx.coroutines.flow.Flow<String> {
         val systemInstruction = """
@@ -973,61 +920,8 @@ class AppRepository(
         }
     }
 
-    suspend fun getChatResponse(chatHistory: List<ChatMessage>, profile: UserProfile?): String = withContext(Dispatchers.IO) {
-        // API Key logic is handled by executeGeminiCallWithBackoff
-        
-        val contextPrompt = if (profile != null) {
-            "User Context: ${profile.age}yo ${profile.gender}, Goal: ${profile.healthGoals}, Restrictions: ${profile.dietaryRestrictions}. "
-        } else ""
-        
-        val systemInstruction = """
-            You are 'KardIQ AI', a universal health, fitness, and wellness bot powered by a vast knowledge bank.
-            Your goal is to assist the user with ANY health-related query, including general fitness, nutrition, mental wellness, sleep, healthy habits, and medical knowledge.
-            
-            You can act as a nutritionist, a workout coach, a lifestyle advisor, or a general health assistant.
-            You should provide well-rounded, evidence-based advice.
-            
-            Guidelines:
-            - Answer directly and professionally, but maintain a warm and motivating tone.
-            - If they ask for recipes, you can provide them.
-            - Do NOT force a specific conversation flow (e.g., asking for ingredients first). Simply respond naturally and thoughtfully to their questions.
-            - Use markdown (bolding, bullet points) to format your advice for readability.
-            
-            $contextPrompt
-        """.trimIndent() + "\n\n" + aiResponseStyle(150, followUps = true)
-        
-        val nonBlank = chatHistory.filter { it.text.isNotBlank() }
-        val sanitized = if (nonBlank.isNotEmpty() && !nonBlank.first().isUser) nonBlank.drop(1) else nonBlank
-        val finalHistory = sanitized.ifEmpty { nonBlank }.ifEmpty { listOf(ChatMessage("Hello", true)) }
-
-        val apiContents = finalHistory.map { msg ->
-            Content(
-                role = if (msg.isUser) "user" else "model",
-                parts = listOf(Part(text = msg.text))
-            )
-        }
-        
-        val request = GenerateContentRequest(
-            contents = apiContents,
-            systemInstruction = Content(parts = listOf(Part(text = systemInstruction)))
-        )
-        
-        try {
-            val response = executeGeminiCallWithBackoff(request)
-            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: "Could not generate response."
-        } catch (e: HttpException) {
-            if (e.code() == 429) "The AI is currently busy due to high traffic. Retries exhausted. Please try again in a minute."
-            else "Sorry, I couldn't process that. Please try again."
-        } catch (e: Exception) {
-            "Sorry, I couldn't process that. Please try again."
-        }
-    }
-
     fun getFoodLogsForDate(date: String) = metricsDao.getFoodLogsForDate(date)
 
-    suspend fun deleteOldFoodLogs(cutoffDate: String) {
-        metricsDao.deleteOldLogs(cutoffDate)
-    }
     fun getRecentFoodLogs() = metricsDao.getRecentFoodLogs()
 
     suspend fun checkChronicDeficiency(logs: List<com.example.data.local.FoodLog>, profile: com.example.data.local.UserProfile): String? = withContext(Dispatchers.IO) {
@@ -1372,71 +1266,6 @@ class AppRepository(
             resultObj.toString()
         } catch (e: Exception) {
             """{"name": "Error", "category": "Error", "calories": 0, "carbs": 0, "protein": 0, "fat": 0, "sodium": 0, "sugar": 0, "fiber": 0, "description": "Error looking up barcode: ${e.localizedMessage ?: e.message}"}"""
-        }
-    }
-
-    fun generateCoachAdviceStream(topic: String, habit: String, benefits: String): kotlinx.coroutines.flow.Flow<String> {
-        val systemInstruction = """
-            You are 'KardIQ AI', an expert Wellness and Sleep Optimization Coach. 
-            The user wants to learn about the health topic: "$topic".
-            The core habit is: "$habit".
-            The benefit is: "$benefits".
-            
-            Provide a friendly, motivational coaching suggestion directly to the user.
-            IMPORTANT FORMATTING RULES:
-            - Use proper spacing (blank lines between paragraphs).
-            - Use bullet points for actionable steps to make it easily readable.
-            - Explain WHY this habit works biologically or psychologically.
-            - Keep it highly engaging, well-organized, and professional.
-        """.trimIndent() + "\n\n" + aiResponseStyle(250) + "\n\n" + DeshiFoodRules.SHORT + "\n\n" + MedicalNotes.PROMPT_RULE
-        
-        val request = GenerateContentRequest(
-            contents = listOf(
-                Content(
-                    parts = listOf(Part(text = "Please give me my wellness coaching advice on $topic."))
-                )
-            ),
-            systemInstruction = Content(parts = listOf(Part(text = systemInstruction)))
-        )
-        
-        return streamGeminiCall(request)
-    }
-
-    suspend fun generateCoachAdvice(topic: String, habit: String, benefits: String): String = withContext(Dispatchers.IO) {
-        // API Key logic is handled by executeGeminiCallWithBackoff
-        
-        val systemInstruction = """
-            You are 'KardIQ AI', an expert Wellness and Sleep Optimization Coach. 
-            The user wants to learn about the health topic: "$topic".
-            The core habit is: "$habit".
-            The benefit is: "$benefits".
-            
-            Provide a friendly, motivational coaching suggestion directly to the user.
-            IMPORTANT FORMATTING RULES:
-            - Use proper spacing (blank lines between paragraphs).
-            - Use bullet points for actionable steps to make it easily readable.
-            - Explain WHY this habit works biologically or psychologically.
-            - Keep it highly engaging, well-organized, and professional.
-        """.trimIndent() + "\n\n" + aiResponseStyle(250) + "\n\n" + DeshiFoodRules.SHORT + "\n\n" + MedicalNotes.PROMPT_RULE
-        
-        val request = GenerateContentRequest(
-            contents = listOf(
-                Content(
-                    parts = listOf(Part(text = "Please give me my wellness coaching advice on $topic."))
-                )
-            ),
-            systemInstruction = Content(parts = listOf(Part(text = systemInstruction)))
-        )
-        
-        try {
-            val response = executeGeminiCallWithBackoff(request)
-            val text = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: "Could not generate coaching advice."
-            MedicalNotes.appendDoctorNote(text)
-        } catch (e: HttpException) {
-            if (e.code() == 429) "The AI is currently busy due to high traffic. Retries exhausted. Please try again in a minute."
-            else "Error: ${e.message}"
-        } catch (e: Exception) {
-            "Error: ${e.message}"
         }
     }
 
