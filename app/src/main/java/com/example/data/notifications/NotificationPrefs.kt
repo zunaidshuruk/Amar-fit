@@ -16,6 +16,18 @@ object Days {
     fun has(mask: Int, dayOfWeek: Int): Boolean = mask and (1 shl (dayOfWeek - 1)) != 0
 
     fun toggle(mask: Int, dayOfWeek: Int): Int = mask xor (1 shl (dayOfWeek - 1))
+
+    private val names = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+    /** "Every day", "Weekdays" or "Mon, Wed". */
+    fun label(mask: Int): String {
+        val m = mask and ALL
+        return when (m) {
+            ALL, 0 -> "Every day"
+            WEEKDAYS -> "Weekdays"
+            else -> names.filterIndexed { i, _ -> m and (1 shl i) != 0 }.joinToString(", ")
+        }
+    }
 }
 
 /** A reminder at one time of day on the chosen days. Off unless the user turns it on. */
@@ -24,6 +36,56 @@ data class ReminderPref(
     val minuteOfDay: Int = 0,
     val days: Int = Days.ALL
 )
+
+/** One medicine reminder: [name] and an optional [dose] at one time of day on the chosen days. Up to [MedicineReminders.MAX] of them. */
+data class MedicineReminder(
+    val id: String = "",
+    val name: String = "",
+    val dose: String = "",
+    val minuteOfDay: Int = 8 * 60,
+    val days: Int = Days.ALL,
+    val enabled: Boolean = true
+)
+
+/** Rules for the list of medicine reminders (the screen and the scheduler both go through these). */
+object MedicineReminders {
+    const val MAX = 6
+    const val NAME_MAX = 40
+    const val DOSE_MAX = 40
+
+    fun canAdd(list: List<MedicineReminder>): Boolean = list.size < MAX
+
+    /** Trims the text, caps its length and never lets the time or the days be invalid. */
+    fun clean(r: MedicineReminder): MedicineReminder = r.copy(
+        name = r.name.trim().take(NAME_MAX),
+        dose = r.dose.trim().take(DOSE_MAX),
+        minuteOfDay = r.minuteOfDay.coerceIn(0, 24 * 60 - 1),
+        days = if (r.days and Days.ALL == 0) Days.ALL else r.days and Days.ALL
+    )
+
+    fun isValid(r: MedicineReminder): Boolean = r.name.trim().isNotEmpty()
+
+    /** Replaces the reminder with the same id, or appends it when there is room. A full list is returned unchanged. */
+    fun upsert(list: List<MedicineReminder>, reminder: MedicineReminder): List<MedicineReminder> {
+        val cleaned = clean(reminder)
+        if (!isValid(cleaned)) return list
+        val index = list.indexOfFirst { it.id == cleaned.id }
+        return when {
+            index >= 0 -> list.mapIndexed { i, old -> if (i == index) cleaned else old }
+            canAdd(list) -> list + cleaned
+            else -> list
+        }
+    }
+
+    fun remove(list: List<MedicineReminder>, id: String): List<MedicineReminder> = list.filter { it.id != id }
+
+    /** "Take Metformin (500 mg)". */
+    fun describe(r: MedicineReminder): String {
+        val name = r.name.trim()
+        val dose = r.dose.trim()
+        return if (dose.isEmpty()) "Take $name" else "Take $name ($dose)"
+    }
+}
 
 /** Water reminders: every [everyHours] hours between [startMinute] and [endMinute]. */
 data class WaterReminderPref(
@@ -84,6 +146,14 @@ data class NotificationPrefs(
     val cycleLogReminder: ReminderPref = ReminderPref(false, 20 * 60),
     /** Evening before a good day to make up a fast (default Sunday and Wednesday evenings); only while Ramadan tracking is on. */
     val fastingMakeUp: ReminderPref = ReminderPref(false, 20 * 60, Days.SUN or Days.WED),
+
+    // Health Connect: a nudge on the first login and then every 3 days until Health Connect is connected (it stops by itself once connected)
+    val healthConnectNudge: Boolean = true,
+    val healthConnectNudgeMinute: Int = 10 * 60,
+
+    // Medicine reminders (up to 6). Never silenced by quiet hours; the lock screen shows only a generic text unless switched off.
+    val medicines: List<MedicineReminder> = emptyList(),
+    val medicineDiscreet: Boolean = true,
 
     // Social (server pushes)
     val socialMessages: Boolean = true,

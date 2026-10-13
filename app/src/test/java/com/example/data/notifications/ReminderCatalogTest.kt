@@ -20,22 +20,25 @@ class ReminderCatalogTest {
     )
 
     @Test
-    fun defaultsGiveExactlyTheThreeMealReminders() {
-        val specs = ReminderCatalog.build(NotificationPrefs())
+    fun defaultsGiveTheThreeMealRemindersAndTheHealthConnectNudge() {
+        val all = ReminderCatalog.build(NotificationPrefs())
+        val specs = all.filter { it.kind == ReminderKind.MEAL }
         assertEquals(listOf("meal_breakfast", "meal_lunch", "meal_dinner"), specs.map { it.id })
         assertEquals(listOf(8 * 60, 13 * 60 + 30, 20 * 60), specs.map { it.minuteOfDay })
         assertTrue(specs.all { it.route == "scanner" && it.channel == Channels.MEALS })
+        // the only other default is the (switchable) Health Connect nudge
+        assertEquals(listOf("hc_nudge"), all.filter { it.kind != ReminderKind.MEAL }.map { it.id })
     }
 
     @Test
     fun theMealSwitchTurnsAllThreeOff() {
-        assertTrue(ReminderCatalog.build(NotificationPrefs(mealRemindersEnabled = false)).isEmpty())
+        assertTrue(ReminderCatalog.build(NotificationPrefs(mealRemindersEnabled = false)).none { it.kind == ReminderKind.MEAL })
     }
 
     @Test
     fun oneMealCanBeSwitchedOff() {
         val specs = ReminderCatalog.build(NotificationPrefs(lunch = ReminderPref(false, 13 * 60 + 30)))
-        assertEquals(listOf("meal_breakfast", "meal_dinner"), specs.map { it.id })
+        assertEquals(listOf("meal_breakfast", "meal_dinner"), specs.filter { it.kind == ReminderKind.MEAL }.map { it.id })
     }
 
     @Test
@@ -54,7 +57,7 @@ class ReminderCatalogTest {
         assertEquals("request codes must be unique", codes.size, codes.toSet().size)
         assertTrue(ReminderCatalog.allRequestCodes().containsAll(codes))
         assertEquals(ReminderCatalog.allRequestCodes().size, ReminderCatalog.allRequestCodes().toSet().size)
-        assertEquals(3 + 7 + 1 + 1 + 1 + 1 + 6 + 1, specs.size)
+        assertEquals(3 + 7 + 1 + 1 + 1 + 1 + 6 + 1 + 1, specs.size) // the last 1 is the Health Connect nudge
     }
 
     @Test
@@ -71,7 +74,7 @@ class ReminderCatalogTest {
     @Test
     fun routesPointAtExistingScreens() {
         val routes = ReminderCatalog.build(everythingOn).map { it.route }.toSet()
-        assertEquals(setOf("scanner", "today", "fitness", "sleep", "mindfulness_timer", "health", "glucoselog", "weightlog"), routes)
+        assertEquals(setOf("scanner", "today", "fitness", "sleep", "mindfulness_timer", "health", "glucoselog", "weightlog", "settings"), routes)
     }
 
     // ---- next trigger ----

@@ -58,3 +58,4 @@ Other archived snapshots:
 - [Older repo-root tracker (10ab400)](archive/00-legacy-root-tracker-10ab400.md)
 | AV | Privacy policy 2.0 (sync, chats, notifications, account deletion) and one-time re-accept; Firestore rules audit | ⏳ built, PR pending | — | [ACTIVE](ACTIVE.md#privacy-policy-20-and-one-time-re-accept-part-av-built-2026-10-13-branch-claudepolicy-update) |
 | AW | Cycle tracker for Female profiles (bottom-bar tab, Calendar and Details views, reminders, sync, Health Connect, opt-in AI summary, optional Ramadan fasting make-up) | ✅ closed (release 30, PR #8; phone test pending) | PR #8 | [plan](PLAN-AW-cycle-tracker.md), [how it works and phone test](../cycle-tracker.md) |
+| AX | Health Connect connect reminder (first login, then every 3 days) and medicine reminders (up to 6) | ⏳ built on `claude/reminders`, PR pending | — | [how it works and phone test](../reminders-health-connect-medicine.md) |

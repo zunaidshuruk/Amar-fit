@@ -43,4 +43,24 @@ class NotificationPrefsCodecTest {
         val p = NotificationPrefsCodec.decode("""{"masterEnabled":true,"somethingNew":42}""")
         assertTrue(p.masterEnabled)
     }
+
+    @Test
+    fun medicineRemindersSurviveARoundTrip() {
+        val p = NotificationPrefs(
+            medicines = listOf(
+                MedicineReminder("a1", "Metformin", "500 mg", 8 * 60, Days.ALL, true),
+                MedicineReminder("b2", "Vitamin D", "", 13 * 60, Days.MON or Days.WED, false)
+            ),
+            medicineDiscreet = false, healthConnectNudge = false
+        )
+        assertEquals(p, NotificationPrefsCodec.decode(NotificationPrefsCodec.encode(p)))
+    }
+
+    @Test
+    fun settingsSavedBeforeTheseFeaturesStillLoad() {
+        val p = NotificationPrefsCodec.decode("""{"masterEnabled":true,"mealRemindersEnabled":false}""")
+        assertTrue(p.healthConnectNudge)
+        assertTrue(p.medicines.isEmpty())
+        assertTrue(p.medicineDiscreet)
+    }
 }

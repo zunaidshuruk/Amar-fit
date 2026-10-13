@@ -78,4 +78,13 @@ class LegalContentTest {
         assertTrue("never shown to friends or sent to the AI", p.contains("never shown to friends, and are never sent to the AI"))
         assertTrue("storage mention", p.contains("including fasting make-up days"))
     }
+
+    @Test
+    fun theMedicineRemindersAreDisclosed() {
+        val p = LegalContent.PRIVACY_POLICY
+        assertTrue(p.contains("Medicine reminders you set up"))
+        assertTrue("never shown to friends or sent to the AI", p.contains("never shown to friends and are never sent to the AI"))
+        assertTrue("storage mention", p.contains("including any medicine reminders you add"))
+        assertTrue("taken log stays on the phone", p.contains("which doses you marked as taken in the last two weeks is kept on your phone only"))
+    }
 }

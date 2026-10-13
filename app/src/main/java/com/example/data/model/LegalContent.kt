@@ -56,6 +56,7 @@ Depending on which features you use, we may collect:
 - Your workout history: the workouts, programs and exercise sessions you complete or log in the app
 - Your AI Assistant conversations: what you ask and the replies you receive
 - Your notification settings: which reminders and alerts you turned on, and their times
+- Medicine reminders you set up (optional, up to 6): the medicine names, doses and times you type in. They are kept in your private area with your other settings, are never shown to friends and are never sent to the AI. If you tap Taken, which doses you marked as taken in the last two weeks is kept on your phone only
 - Medical records you manually enter (e.g., conditions, medications) — this is entirely optional and under your control
 
 Most of this data comes from **Google Health Connect**, which syncs data from your phone's sensors and any other health apps you've connected on your device. Some of it (food logs, manual entries, medical records) is entered directly by you.
@@ -105,7 +106,7 @@ We use your information to:
 
 ## 3. Where Your Data Is Stored
 
-- Your account data and most app data are stored using **Google Firebase** (Firestore database and Firebase Authentication), operated by Google. This includes your profile, daily health metrics, food logs, diet charts, saved workouts and workout programs, saved chats, AI Assistant conversations, workout history, notification settings, cycle tracker logs including fasting make-up days (if you use them) and any medical records you enter. Each user's data sits in a private area that only that user's account can read.
+- Your account data and most app data are stored using **Google Firebase** (Firestore database and Firebase Authentication), operated by Google. This includes your profile, daily health metrics, food logs, diet charts, saved workouts and workout programs, saved chats, AI Assistant conversations, workout history, notification settings (including any medicine reminders you add), cycle tracker logs including fasting make-up days (if you use them) and any medical records you enter. Each user's data sits in a private area that only that user's account can read.
 - **Sync across your phones:** when you sign in on another phone, your history is restored from your account, and your phones keep each other up to date. If two phones change the same item, the app combines them: counters such as steps keep the higher number, for readings the most recent entry wins, and points never go down.
 - **Deleting items:** when you delete an item (a food log, saved workout or plan, saved chat, AI Assistant conversation or medical record), its content is removed from the cloud. A small marker without the content is kept for about 30 days so that your other phones also remove the item, and is then cleaned up.
 - A local copy of your data is also stored on your device (Room database) for offline access; this local copy is cleared when you log out.
