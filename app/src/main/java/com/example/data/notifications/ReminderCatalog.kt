@@ -12,10 +12,11 @@ object Channels {
     const val HEALTH_CHECKS = "kardiq_health_checks"
     const val GOALS = "kardiq_goals"
     const val CYCLE = "kardiq_cycle"
+    const val MEDICINE = "kardiq_medicine"
     const val SOCIAL = "amarfit_social"
 }
 
-enum class ReminderKind { MEAL, WATER, WORKOUT, BEDTIME, MINDFUL, WEEKLY_CHECKIN, GLUCOSE, WEIGH_IN, CYCLE, CYCLE_LOG, FASTING }
+enum class ReminderKind { MEAL, WATER, WORKOUT, BEDTIME, MINDFUL, WEEKLY_CHECKIN, GLUCOSE, WEIGH_IN, CYCLE, CYCLE_LOG, FASTING, HEALTH_CONNECT, MEDICINE }
 
 /** One alarm the phone must arm: when, on which days, and what to show. */
 data class ReminderSpec(
@@ -45,6 +46,8 @@ object ReminderCatalog {
     private const val CYCLE_CHECK_CODE = 7800
     private const val CYCLE_LOG_CODE = 7801
     private const val FASTING_CODE = 7802
+    private const val HC_NUDGE_CODE = 7803
+    private const val MEDICINE_BASE = 7900
 
     /** Request codes of every alarm the app may ever arm, used to cancel everything before re-arming. */
     fun allRequestCodes(): List<Int> {
@@ -54,7 +57,8 @@ object ReminderCatalog {
         codes.add(WORKOUT_CODE); codes.add(BEDTIME_CODE); codes.add(MINDFUL_CODE); codes.add(WEEKLY_CODE)
         for (i in 0 until 6) codes.add(GLUCOSE_BASE + i)
         codes.add(WEIGH_CODE)
-        codes.add(CYCLE_CHECK_CODE); codes.add(CYCLE_LOG_CODE); codes.add(FASTING_CODE)
+        codes.add(CYCLE_CHECK_CODE); codes.add(CYCLE_LOG_CODE); codes.add(FASTING_CODE); codes.add(HC_NUDGE_CODE)
+        for (i in 0 until MedicineReminders.MAX) codes.add(MEDICINE_BASE + i)
         return codes
     }
 
@@ -204,6 +208,32 @@ object ReminderCatalog {
                 )
             )
         }
+        // Health Connect nudge: one daily check; the runner decides on the day (first login handled when the app opens)
+        if (prefs.healthConnectNudge) {
+            specs.add(
+                ReminderSpec(
+                    id = "hc_nudge", requestCode = HC_NUDGE_CODE, kind = ReminderKind.HEALTH_CONNECT,
+                    minuteOfDay = prefs.healthConnectNudgeMinute, days = Days.ALL,
+                    title = HealthConnectNudgePolicy.TITLE, message = HealthConnectNudgePolicy.MESSAGE,
+                    route = "settings", channel = Channels.HEALTH_CHECKS
+                )
+            )
+        }
+
+        // Medicine reminders: the slot number is the position in the list, so each keeps a fixed alarm code
+        prefs.medicines.take(MedicineReminders.MAX).forEachIndexed { index, m ->
+            if (m.enabled && MedicineReminders.isValid(m)) {
+                specs.add(
+                    ReminderSpec(
+                        id = "medicine_$index", requestCode = MEDICINE_BASE + index, kind = ReminderKind.MEDICINE,
+                        minuteOfDay = m.minuteOfDay, days = m.days,
+                        title = "Time for your medicine", message = MedicineReminders.describe(m),
+                        route = "today", channel = Channels.MEDICINE, detail = index.toString()
+                    )
+                )
+            }
+        }
+
         if (prefs.fastingMakeUp.enabled) {
             specs.add(
                 ReminderSpec(

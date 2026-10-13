@@ -607,6 +607,18 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /** First login: when the app opens and Health Connect is not connected, ask once (the daily check repeats it every 3 days). */
+    fun maybeNudgeHealthConnect(context: android.content.Context) {
+        if (userProfile.value == null) return // not logged in yet
+        val prefs = notificationPrefs.value
+        viewModelScope.launch(Dispatchers.IO) {
+            val now = java.time.LocalDateTime.now()
+            com.example.presentation.notifications.HealthConnectNudge.maybeShow(
+                context.applicationContext, prefs, now.toLocalDate(), now.hour * 60 + now.minute, firstOnly = true
+            )
+        }
+    }
+
     fun sendTestNotification() {
         com.example.presentation.notifications.NotificationHelper.showNotification(
             context = getApplication<Application>(),

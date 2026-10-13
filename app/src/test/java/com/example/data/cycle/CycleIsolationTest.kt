@@ -67,4 +67,20 @@ class CycleIsolationTest {
         assertFalse(code.lowercase().contains("mood"))
         assertFalse("fasting days are never sent to the AI", code.lowercase().contains("fasting"))
     }
+
+    @Test
+    fun medicineRemindersNeverReachFriendsOrTheAi() {
+        val firebase = source("com/example/data/repository/FirebaseManager.kt")
+        for (name in listOf("syncFriendStats", "syncPublicProfile", "postActivityEvent", "createChallenge", "sendKudos")) {
+            if (!firebase.contains("fun $name(")) continue
+            assertFalse("$name must not touch medicine reminders", functionBody(firebase, name).lowercase().contains("medicine"))
+        }
+        val aiDir = listOf("src/main/java/com/example/util/ai", "app/src/main/java/com/example/util/ai").map { File(it) }.firstOrNull { it.exists() }
+        assertTrue("util/ai folder not found", aiDir != null)
+        for (file in aiDir!!.listFiles { f -> f.extension == "kt" }!!) {
+            val code = file.readLines().filterNot { it.trim().startsWith("*") || it.trim().startsWith("/*") || it.trim().startsWith("//") }.joinToString("\n")
+            // the code names only: the prompts may of course use the English word "medicines"
+            assertFalse("${file.name} must not read medicine reminders", code.contains("MedicineReminder") || code.contains(".medicines") || code.contains("NotificationPrefs"))
+        }
+    }
 }

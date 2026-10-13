@@ -66,7 +66,7 @@ import com.example.data.notifications.formatMinuteOfDay
 import com.example.presentation.cycle.StepperRow
 import com.example.presentation.viewmodel.ShasthoViewModel
 
-private fun pickTime(context: Context, minuteOfDay: Int, onPicked: (Int) -> Unit) {
+internal fun pickTime(context: Context, minuteOfDay: Int, onPicked: (Int) -> Unit) {
     TimePickerDialog(
         context,
         { _, hour, minute -> onPicked(hour * 60 + minute) },
@@ -156,6 +156,12 @@ fun NotificationSettingsScreen(
                 update { it.copy(masterEnabled = on) }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            SwitchRow(
+                "Health Connect reminder",
+                "Asks you to connect Health Connect, on your first login and then every 3 days until you do",
+                prefs.healthConnectNudge
+            ) { on -> update { it.copy(healthConnectNudge = on) } }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             val quietOn = prefs.quietStartMinute >= 0 && prefs.quietEndMinute >= 0
             SwitchRow(
                 "Quiet hours",
@@ -185,6 +191,8 @@ fun NotificationSettingsScreen(
                 OutlinedButton(onClick = { viewModel.sendTestNotification() }) { Text("Test") }
             }
         }
+
+        MedicineSection(prefs = prefs, update = { transform -> update(transform) })
 
         SectionCard(title = "Meals and nutrition") {
             SwitchRow("Meal reminders", "Skipped when that meal is already logged", prefs.mealRemindersEnabled) { on ->
@@ -384,7 +392,7 @@ fun NotificationSettingsScreen(
 }
 
 @Composable
-private fun SectionCard(title: String, content: @Composable ColumnScope.() -> Unit) {
+internal fun SectionCard(title: String, content: @Composable ColumnScope.() -> Unit) {
     Text(
         text = title,
         fontSize = 14.sp,
@@ -402,7 +410,7 @@ private fun SectionCard(title: String, content: @Composable ColumnScope.() -> Un
 }
 
 @Composable
-private fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
+internal fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -426,7 +434,7 @@ private fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChan
 }
 
 @Composable
-private fun TimeRow(label: String, minuteOfDay: Int, onPicked: (Int) -> Unit) {
+internal fun TimeRow(label: String, minuteOfDay: Int, onPicked: (Int) -> Unit) {
     val context = LocalContext.current
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 12.dp),
@@ -466,7 +474,7 @@ private fun ReminderTimeRow(label: String, pref: ReminderPref, onChange: (Remind
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DayChips(mask: Int, onChange: (Int) -> Unit) {
+internal fun DayChips(mask: Int, onChange: (Int) -> Unit) {
     val labels = listOf("M", "T", "W", "T", "F", "S", "S")
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 12.dp, top = 4.dp, bottom = 8.dp),

@@ -23,6 +23,7 @@ object NotificationHelper {
         ChannelDef(Channels.SLEEP_MIND, "Sleep & mindfulness", "Bedtime and mindful moment reminders", NotificationManager.IMPORTANCE_DEFAULT),
         ChannelDef(Channels.HEALTH_CHECKS, "Health checks", "Weekly check-in, blood glucose and weigh-in reminders", NotificationManager.IMPORTANCE_DEFAULT),
         ChannelDef(Channels.GOALS, "Goals reached", "Step, water, calorie, sleep and weekly workout goals", NotificationManager.IMPORTANCE_DEFAULT),
+        ChannelDef(Channels.MEDICINE, "Medicine reminders", "Reminders to take your medicine", NotificationManager.IMPORTANCE_HIGH),
         ChannelDef(Channels.CYCLE, "Cycle tracker", "Period and fertile window reminders and the daily cycle log reminder", NotificationManager.IMPORTANCE_DEFAULT),
         ChannelDef(Channels.SOCIAL, "Messages & Challenges", "Direct messages, friend requests and friends' fitness challenges", NotificationManager.IMPORTANCE_HIGH)
     )
@@ -35,7 +36,7 @@ object NotificationHelper {
                 val channel = NotificationChannel(def.id, def.name, def.importance).apply {
                     description = def.description
                     if (def.id == Channels.SOCIAL) enableVibration(true)
-                    if (def.id == Channels.CYCLE) lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
+                    if (def.id == Channels.CYCLE || def.id == Channels.MEDICINE) lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
                 }
                 manager.createNotificationChannel(channel)
             }

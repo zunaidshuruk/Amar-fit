@@ -376,6 +376,7 @@ class MainActivity : ComponentActivity() {
                     viewModel.refreshToday()
                     viewModel.syncFromCloud()
                     viewModel.runDailyNutritionGapCheck(context)
+                    viewModel.maybeNudgeHealthConnect(context)
                     viewModel.syncWithHealthConnect(context, showRefreshIndicator = false)
                   }
                 }

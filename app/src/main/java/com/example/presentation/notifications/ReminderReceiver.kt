@@ -98,6 +98,12 @@ object ReminderRunner {
         )
         if (!ReminderDecider.shouldShow(spec, snapshot, prefs, minuteNow)) return
 
+        // the Health Connect nudge decides for itself (connected? available? 3 days since the last one?) and shows itself
+        if (spec.kind == ReminderKind.HEALTH_CONNECT) {
+            HealthConnectNudge.maybeShow(context, prefs, today, minuteNow, firstOnly = false)
+            return
+        }
+
         var title = spec.title
         var message = spec.message
         if (spec.kind == ReminderKind.WEEKLY_CHECKIN) {
@@ -129,7 +135,7 @@ object ReminderRunner {
             notificationId = spec.requestCode,
             targetRoute = spec.route,
             channelId = spec.channel,
-            discreet = isCycleKind && profile.cycleDiscreetNotifications
+            discreet = (isCycleKind && profile.cycleDiscreetNotifications) || (spec.kind == ReminderKind.MEDICINE && prefs.medicineDiscreet)
         )
     }
 }

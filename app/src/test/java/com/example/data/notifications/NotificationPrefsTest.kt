@@ -81,4 +81,13 @@ class NotificationPrefsTest {
         assertEquals(Days.WEEKDAYS or Days.SAT, Days.toggle(Days.WEEKDAYS, 6))
         assertEquals(Days.WEEKDAYS xor Days.MON, Days.toggle(Days.WEEKDAYS, 1))
     }
+
+    @Test
+    fun daysAreDescribedInPlainWords() {
+        assertEquals("Every day", Days.label(Days.ALL))
+        assertEquals("Every day", Days.label(0))
+        assertEquals("Weekdays", Days.label(Days.WEEKDAYS))
+        assertEquals("Mon, Wed", Days.label(Days.MON or Days.WED))
+        assertEquals("Sat, Sun", Days.label(Days.SAT or Days.SUN))
+    }
 }

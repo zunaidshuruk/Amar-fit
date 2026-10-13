@@ -20,7 +20,8 @@ object ReminderDecider {
     /** Whether a reminder that just fired should actually be shown. */
     fun shouldShow(spec: ReminderSpec, snap: TodaySnapshot, prefs: NotificationPrefs, minuteNow: Int): Boolean {
         if (!prefs.masterEnabled) return false
-        if (QuietHours.isQuiet(prefs, minuteNow)) return false
+        // a medicine reminder is never silenced by quiet hours: a missed dose matters more than a quiet night
+        if (spec.kind != ReminderKind.MEDICINE && QuietHours.isQuiet(prefs, minuteNow)) return false
         return when (spec.kind) {
             ReminderKind.MEAL -> spec.detail.lowercase() !in snap.loggedMealTypes
             ReminderKind.WATER -> !waterOnTrack(snap, prefs.waterReminders, minuteNow)
@@ -33,7 +34,8 @@ object ReminderDecider {
             }
             ReminderKind.CYCLE_LOG -> !snap.cycleLoggedToday
             // the daily cycle check only runs; whether there is anything to say is decided from the predictions by the runner
-            ReminderKind.CYCLE, ReminderKind.FASTING, ReminderKind.BEDTIME, ReminderKind.WEEKLY_CHECKIN -> true
+            ReminderKind.CYCLE, ReminderKind.FASTING, ReminderKind.HEALTH_CONNECT, ReminderKind.MEDICINE,
+            ReminderKind.BEDTIME, ReminderKind.WEEKLY_CHECKIN -> true
         }
     }
 
