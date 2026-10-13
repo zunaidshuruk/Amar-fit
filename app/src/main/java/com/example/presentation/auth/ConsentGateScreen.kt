@@ -57,10 +57,24 @@ fun ConsentGateScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "We have updated our terms to better protect your data and health information. Please review and accept to continue using the app.",
+                    text = "We have updated our Privacy Policy (October 13, 2026). Please review and accept to continue using the app.",
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "What is new:\n" +
+                        "\u2022 Your data stays in sync across your phones, including AI Assistant chats and workout history\n" +
+                        "\u2022 Items you delete are removed on your other phones too\n" +
+                        "\u2022 Every reminder and alert can be switched in Settings > Notifications\n" +
+                        "\u2022 A clear explanation of what deleting your account removes",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Start,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 

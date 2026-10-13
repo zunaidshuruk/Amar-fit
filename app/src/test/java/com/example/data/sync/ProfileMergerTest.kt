@@ -70,4 +70,12 @@ class ProfileMergerTest {
         assertEquals(merged, ProfileMerger.merge(merged, b))
         assertEquals(merged, ProfileMerger.merge(merged, merged))
     }
+
+    @Test
+    fun acceptingThePolicyOnOnePhoneCoversTheOtherToo() {
+        val local = UserProfile(name = "A", hasAcceptedPrivacyPolicy = true, acceptedPolicyVersion = 1, updatedAt = 9)
+        val remote = UserProfile(name = "A", hasAcceptedPrivacyPolicy = true, acceptedPolicyVersion = 2, updatedAt = 3)
+        assertEquals(2, ProfileMerger.merge(local, remote).acceptedPolicyVersion)
+        assertEquals(2, ProfileMerger.merge(remote, local).acceptedPolicyVersion)
+    }
 }

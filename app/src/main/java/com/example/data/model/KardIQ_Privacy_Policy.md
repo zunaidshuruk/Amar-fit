@@ -1,10 +1,18 @@
 # KardIQ Privacy Policy
 
-**Last updated:** September 26, 2026
+**Last updated:** October 13, 2026
 
 This Privacy Policy explains how KardIQ ("the App," "we," "us") collects, uses, stores, and protects your information. KardIQ is developed by Zunaid Hossain Shuruk, provided as a health and fitness tracking application designed for users in Bangladesh.
 
 **Please read this policy carefully. By creating an account or using KardIQ, you agree to the practices described here.**
+
+---
+
+## What is new in this version (October 13, 2026)
+- Your data now stays in sync across every phone you sign in on, including your AI Assistant conversations and your workout history (section 3).
+- Items you delete are removed on your other phones too (section 3).
+- Every reminder and alert can be switched on or off in Settings > Notifications (section 5).
+- Section 5 now explains exactly what deleting your account removes and what can remain.
 
 ---
 
@@ -25,12 +33,15 @@ Depending on which features you use, we may collect:
 - Weight, height, BMI, and body measurements you enter (waist, neck, hip)
 - Food and nutrition logs, including photos or descriptions of meals you submit for AI analysis
 - Water intake, mindfulness/meditation sessions
+- Your workout history: the workouts, programs and exercise sessions you complete or log in the app
+- Your AI Assistant conversations: what you ask and the replies you receive
+- Your notification settings: which reminders and alerts you turned on, and their times
 - Medical records you manually enter (e.g., conditions, medications) — this is entirely optional and under your control
 
 Most of this data comes from **Google Health Connect**, which syncs data from your phone's sensors and any other health apps you've connected on your device. Some of it (food logs, manual entries, medical records) is entered directly by you.
 
 ### 1.3 AI-Processed Content
-When you use food-scanning, food-chat, or AI coaching features, the text, photos, or voice input you provide is sent to **Google's Gemini API** for analysis (e.g., to estimate calories from a food description or photo). This content is processed by Google's AI systems according to Google's own data handling terms for the Gemini API.
+When you use food-scanning, food-chat, AI coaching, the AI Assistant or Health Review features, the text, photos, or voice input you provide is sent to **Google's Gemini API** for analysis (e.g., to estimate calories from a food description or photo). To give answers based on your own data, the Assistant and Health Review also send Gemini, over a secure connection, a summary computed on your device: your profile and goals, daily metrics (such as steps, sleep, blood glucose, blood pressure, heart rate, weight, water and calories), food logs, exercise sessions and, if you have entered them, your medical records (conditions, medications, allergies). This content is processed by Google's AI systems according to Google's own data handling terms for the Gemini API. AI features that run on your phone (Offline AI) process this data on your phone only. Your Assistant conversations are also saved to your account (see section 3) so that they appear on your other phones.
 
 ### 1.4 Social Features
 If you use KardIQ's friend/social features, we collect:
@@ -42,7 +53,7 @@ If you use KardIQ's friend/social features, we collect:
 
 ### 1.5 Technical Information
 - Device information and app version (for support and update purposes)
-- Push notification tokens (Firebase Cloud Messaging), used only to deliver in-app notifications (e.g., a friend request or challenge result)
+- Push notification tokens (Firebase Cloud Messaging), used only to deliver notifications from friends (messages, friend requests and challenge results). Your own reminders and goal alerts are scheduled and checked on your phone and do not use this token
 
 ## 2. How We Use Your Information
 
@@ -51,15 +62,18 @@ We use your information to:
 - Generate AI-powered food analysis, health insights, and coaching responses
 - Sync your data across your own devices via your account
 - Enable social features you choose to use (friends, leaderboard, challenges, messaging)
-- Send you notifications about app activity you've opted into (meal reminders, friend requests, challenge results)
+- Send you the reminders and alerts you switch on (such as meals, water, workouts, sleep, blood glucose checks, weigh-ins, goal alerts and a weekly summary; these run on your phone) and notifications from friends (messages, friend requests, challenge results)
 - Maintain and improve the app
 
 **We do not sell your personal or health data to third parties, and we do not use your health data for advertising.**
 
 ## 3. Where Your Data Is Stored
 
-- Your account data and most app data are stored using **Google Firebase** (Firestore database and Firebase Authentication), operated by Google.
+- Your account data and most app data are stored using **Google Firebase** (Firestore database and Firebase Authentication), operated by Google. This includes your profile, daily health metrics, food logs, diet charts, saved workouts and workout programs, saved chats, AI Assistant conversations, workout history, notification settings and any medical records you enter. Each user's data sits in a private area that only that user's account can read.
+- **Sync across your phones:** when you sign in on another phone, your history is restored from your account, and your phones keep each other up to date. If two phones change the same item, the app combines them: counters such as steps keep the higher number, for readings the most recent entry wins, and points never go down.
+- **Deleting items:** when you delete an item (a food log, saved workout or plan, saved chat, AI Assistant conversation or medical record), its content is removed from the cloud. A small marker without the content is kept for about 30 days so that your other phones also remove the item, and is then cleaned up.
 - A local copy of your data is also stored on your device (Room database) for offline access; this local copy is cleared when you log out.
+- Your reminders and goal alerts are scheduled and checked on your phone. Only your notification settings are saved with your profile, so that they follow you to your other phones.
 - If you use the optional Google Drive backup feature, a backup file is stored in **your own** Google Drive account, not ours.
 - Health data synced from Health Connect stays governed by Android's own Health Connect permissions system — you control exactly which data types the app can read or write at any time via your device's Health Connect settings.
 
@@ -78,10 +92,11 @@ Each of these providers has its own privacy practices governing how they handle 
 ## 5. Your Choices and Rights
 
 - **Access & correction:** You can view and edit most of your logged data directly within the app.
-- **Deletion:** You can delete your account from Settings, which removes your data from our systems. Locally cached data is also cleared on logout.
+- **Deleting items:** You can delete individual items in the app and clear your AI Assistant history. They are removed from your account and from your other phones (see section 3).
+- **Deleting your account:** Deleting your account from Settings removes your profile, health metrics, food logs, diet charts, saved workouts and programs, saved chats, AI Assistant conversations, workout history, medical records, friend code, public profile, friend connections and progress, activity posts and the messages you sent to friends, and then deletes your sign-in account. Some records shared with other people can remain: challenge and kudos records (they contain only user IDs, dates and step counts) and messages in conversations whose friendship had already been removed before you deleted your account. A backup you saved to your own Google Drive is not touched; you can delete it from your Drive. Locally cached data is also cleared on logout.
 - **Health Connect permissions:** You can revoke KardIQ's access to specific health data types at any time via your device's Health Connect settings, without affecting other app functionality.
 - **Social visibility:** Friend-visible data (streak, points, badges, daily progress) is only shared with users you've mutually accepted as friends, or shown on the public leaderboard if you choose to participate. You can remove a friend at any time, which ends their access to your shared data.
-- **Notifications:** You can disable notifications at any time in your device settings.
+- **Notifications:** In Settings > Notifications you can switch every reminder, goal alert and friend notification on or off, choose their times and set quiet hours. You can also disable notifications at any time in your device settings.
 
 ## 6. Data Security
 
