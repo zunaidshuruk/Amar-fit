@@ -67,6 +67,7 @@ fun SettingsScreen(
     onNavigateToCustomizeNav: () -> Unit = {}
 ) {
     val profile by viewModel.userProfile.collectAsState()
+    val cloudSync by viewModel.cloudSyncStatus.collectAsState()
     val isDark = true
 
     var showLogoutDialog by remember { mutableStateOf(false) }
@@ -527,6 +528,40 @@ fun SettingsScreen(
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
+                        }
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
+                ) {
+                    Text("Cloud sync", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
+                    Text(
+                        text = if (cloudSync.lastSyncAt > 0L) {
+                            "Last synced " + android.text.format.DateUtils.getRelativeTimeSpanString(
+                                cloudSync.lastSyncAt, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS
+                            )
+                        } else {
+                            "Not synced yet on this phone"
+                        },
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (cloudSync.message.isNotBlank()) {
+                        Text(cloudSync.message, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text(
+                        "Your data is kept the same on every phone you sign in to. For steps and other counters the higher value wins; for readings the newest entry wins.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(onClick = { viewModel.syncNow() }, enabled = !cloudSync.inProgress) {
+                        if (cloudSync.inProgress) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("Sync now")
                         }
                     }
                 }
@@ -1003,7 +1038,7 @@ fun SettingsScreen(
             title = { Text("Restore Backup?") },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    Text("This will replace your local data with the backup from $backupDate — continue?")
+                    Text("This will merge the backup from $backupDate into your data: higher counters and newer entries win. Continue?")
                 }
             },
             confirmButton = {

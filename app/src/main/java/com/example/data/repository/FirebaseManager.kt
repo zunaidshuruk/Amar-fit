@@ -3,6 +3,8 @@ package com.example.data.repository
 import android.util.Log
 import com.example.data.local.*
 import com.example.data.sync.MetricMerger
+import com.example.data.sync.ProfileMerger
+import kotlinx.coroutines.flow.firstOrNull
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
@@ -224,6 +226,40 @@ object FirebaseManager {
                 trySend(rows)
             }
         awaitClose { registration.remove() }
+    }
+
+    /**
+     * Writes the profile with a read-merge-write transaction: the most recently saved profile wins, points and
+     * badges only grow. Returns the merged profile now in the cloud, or null when signed out / offline / failed.
+     */
+    suspend fun syncProfileMerged(local: UserProfile): UserProfile? {
+        val user = FirebaseAuth.getInstance().currentUser ?: return null
+        val db = FirebaseFirestore.getInstance()
+        val ref = db.collection("users").document(user.uid)
+        return try {
+            db.runTransaction<UserProfile> { tx ->
+                val remote = tx.get(ref).toObject(UserProfile::class.java)
+                val merged = if (remote == null) local else ProfileMerger.merge(local, remote)
+                if (remote == null || merged != remote) {
+                    tx.set(ref, merged, SetOptions.merge())
+                }
+                merged
+            }.await()
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "syncProfileMerged failed", e)
+            null
+        }
+    }
+
+    suspend fun fetchProfile(): UserProfile? {
+        val user = FirebaseAuth.getInstance().currentUser ?: return null
+        return try {
+            FirebaseFirestore.getInstance().collection("users").document(user.uid).get().await()
+                .toObject(UserProfile::class.java)
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "fetchProfile failed", e)
+            null
+        }
     }
 
     suspend fun syncProfile(profile: UserProfile): Boolean {
@@ -990,7 +1026,8 @@ object FirebaseManager {
                 val profileSnap = db.collection("users").document(user.uid).get().await()
                 val profile = profileSnap.toObject(UserProfile::class.java)
                 if (profile != null) {
-                    userDao.insertProfile(profile)
+                    val local = userDao.getUserProfile().firstOrNull()
+                    userDao.insertProfile(if (local == null) profile else ProfileMerger.merge(local, profile))
                 }
             } catch (e: Exception) {
                 Log.e("FirebaseManager", "Error pulling profile on login", e)

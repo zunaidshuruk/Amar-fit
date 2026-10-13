@@ -8,6 +8,7 @@ import com.example.data.local.UserProfile
 import com.example.data.remote.*
 import com.example.data.sync.MetricMerger
 import com.example.data.sync.MetricReconciler
+import com.example.data.sync.ProfileMerger
 import com.example.data.sync.ReconcileResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -395,7 +396,8 @@ class AppRepository(
         }
         userDao.insertProfile(profileToSave)
         try {
-            FirebaseManager.syncProfile(profileToSave)
+            val mergedProfile = FirebaseManager.syncProfileMerged(profileToSave)
+            if (mergedProfile != null && mergedProfile != profileToSave) userDao.insertProfile(mergedProfile)
             FirebaseManager.syncPublicProfile(
                 name = profileToSave.name,
                 currentStreak = profileToSave.currentStreak,
@@ -433,6 +435,36 @@ class AppRepository(
                 }
             }
         }
+    }
+
+    /**
+     * Two-way catch-up of the profile: the most recently saved profile wins (points and badges only grow).
+     * Returns true when the cloud was reachable.
+     */
+    suspend fun reconcileProfile(): Boolean {
+        if (com.google.firebase.auth.FirebaseAuth.getInstance().currentUser == null) return false
+        val remote = FirebaseManager.fetchProfile()
+        val local = userDao.getUserProfile().firstOrNull()
+        if (remote == null) {
+            // nothing in the cloud yet (or offline): push ours if we have one
+            if (local != null) return FirebaseManager.syncProfileMerged(local) != null
+            return false
+        }
+        val merged = if (local == null) remote else ProfileMerger.merge(local, remote)
+        if (local == null || merged != local) userDao.insertProfile(merged)
+        if (local != null && merged != remote) FirebaseManager.syncProfileMerged(merged)
+        return true
+    }
+
+    /** Merges a profile from a Drive backup into the current one instead of overwriting it. */
+    suspend fun mergeBackupProfile(backup: UserProfile) {
+        val local = userDao.getUserProfile().firstOrNull()
+        if (local == null) {
+            saveUserProfile(backup, stampTime = false)
+            return
+        }
+        val merged = ProfileMerger.merge(local, backup)
+        if (merged != local) saveUserProfile(merged, stampTime = false)
     }
 
     /**

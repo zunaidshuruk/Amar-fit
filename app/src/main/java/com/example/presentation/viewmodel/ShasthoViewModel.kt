@@ -148,6 +148,20 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     private var lastQuickSyncAt = 0L
     private var metricsListenerJob: kotlinx.coroutines.Job? = null
 
+    /** What the Settings "Cloud sync" row shows. */
+    data class CloudSyncStatus(val lastSyncAt: Long = 0L, val inProgress: Boolean = false, val message: String = "")
+
+    private val _cloudSyncStatus = MutableStateFlow(
+        CloudSyncStatus(
+            lastSyncAt = getApplication<Application>().getSharedPreferences("ShasthoPrefs", android.content.Context.MODE_PRIVATE)
+                .getLong("last_cloud_sync_at", 0L)
+        )
+    )
+    val cloudSyncStatus: StateFlow<CloudSyncStatus> = _cloudSyncStatus.asStateFlow()
+
+    /** "Sync now" button: runs a catch-up immediately (7 days, or the whole history on a new phone). */
+    fun syncNow() = syncFromCloud(force = true)
+
     /**
      * Catches this phone up with the cloud: the last 7 days on every app resume (at most every 30 seconds),
      * the last 60 days once a day, and a live listener on the last 3 days so a second phone's changes show
@@ -162,6 +176,9 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
         lastQuickSyncAt = now
         viewModelScope.launch {
+            _cloudSyncStatus.value = _cloudSyncStatus.value.copy(inProgress = true)
+            var message = "Couldn't reach the cloud. It will retry when you open the app."
+            var succeeded = false
             try {
                 val prefs = getApplication<Application>().getSharedPreferences("ShasthoPrefs", android.content.Context.MODE_PRIVATE)
                 val lastFull = prefs.getLong("last_full_metrics_sync", 0L)
@@ -170,15 +187,26 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 // phone gets everything back. Afterwards: 60 days once a day, 7 days otherwise.
                 val needFull = !prefs.getBoolean("metrics_full_restore_done", false)
                 val result = repository.reconcileMetrics(daysBack = if (needFull) null else if (daily) 60 else 7)
+                val profileOk = repository.reconcileProfile()
                 if (result.ok) {
                     val edit = prefs.edit()
                     if (needFull) edit.putBoolean("metrics_full_restore_done", true)
                     if (needFull || daily) edit.putLong("last_full_metrics_sync", now)
+                    edit.putLong("last_cloud_sync_at", System.currentTimeMillis())
                     edit.apply()
+                    succeeded = true
+                    message = if (result.pulled == 0 && result.pushed == 0) "Up to date on this phone and in the cloud."
+                    else "Synced: received ${result.pulled} day(s), uploaded ${result.pushed}."
+                    if (!profileOk) message += " Profile will sync later."
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+            _cloudSyncStatus.value = CloudSyncStatus(
+                lastSyncAt = if (succeeded) System.currentTimeMillis() else _cloudSyncStatus.value.lastSyncAt,
+                inProgress = false,
+                message = message
+            )
             ensureMetricsListener()
         }
     }
@@ -205,7 +233,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     fun logout(onComplete: () -> Unit) {
         stopCloudListeners()
         getApplication<Application>().getSharedPreferences("ShasthoPrefs", android.content.Context.MODE_PRIVATE)
-            .edit().remove("metrics_full_restore_done").remove("last_full_metrics_sync").apply()
+            .edit().remove("metrics_full_restore_done").remove("last_full_metrics_sync").remove("last_cloud_sync_at").apply()
+        _cloudSyncStatus.value = CloudSyncStatus()
         viewModelScope.launch(Dispatchers.IO) {
             com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
             database.clearAllTables()
@@ -3761,13 +3790,17 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 if (payload.profile != null) {
-                    repository.saveUserProfile(payload.profile)
+                    // merge, don't overwrite: the newest saved profile wins, points and badges only grow
+                    repository.mergeBackupProfile(payload.profile)
                 }
                 for (metric in payload.dailyMetrics) {
                     metricsWriteLock.withLock {
-                        repository.saveMetrics(metric)
+                        // merge: counters keep the higher value, readings the newest non-empty one
+                        repository.applyRemoteMetric(metric)
                     }
                 }
+                // upload whatever the merge changed so the cloud and the other phones get it too
+                repository.reconcileMetrics(daysBack = null)
                 for (foodLog in payload.foodLogs) {
                     repository.saveFoodLog(foodLog.copy(id = 0))
                 }
