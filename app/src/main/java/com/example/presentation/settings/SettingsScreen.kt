@@ -64,7 +64,8 @@ fun SettingsScreen(
     onNavigateToFriends: () -> Unit = {},
     onNavigateToAbout: () -> Unit = {},
     onOpenProfile: () -> Unit = {},
-    onNavigateToCustomizeNav: () -> Unit = {}
+    onNavigateToCustomizeNav: () -> Unit = {},
+    onNavigateToNotifications: () -> Unit = {}
 ) {
     val profile by viewModel.userProfile.collectAsState()
     val cloudSync by viewModel.cloudSyncStatus.collectAsState()
@@ -85,8 +86,6 @@ fun SettingsScreen(
 
     var isDarkMode by remember { mutableStateOf(false) }
     var useImperialUnits by remember { mutableStateOf(false) }
-    var notificationsEnabled by remember { mutableStateOf(true) }
-    var remindersEnabled by remember { mutableStateOf(true) }
 
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -207,8 +206,6 @@ fun SettingsScreen(
         if (profile != null) {
             isDarkMode = profile!!.isDarkMode
             useImperialUnits = profile!!.useImperialUnits
-            notificationsEnabled = profile!!.notificationsEnabled
-            remindersEnabled = profile!!.remindersEnabled
         }
     }
 
@@ -357,43 +354,18 @@ fun SettingsScreen(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().clickable { onNavigateToNotifications() }.padding(vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Push Notifications", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-                    Switch(
-                        checked = notificationsEnabled,
-                        onCheckedChange = { checked ->
-                            notificationsEnabled = checked
-                            viewModel.userProfile.value?.let { p ->
-                                coroutineScope.launch {
-                                    viewModel.saveProfile(p.copy(notificationsEnabled = checked))
-                                }
-                            }
-                        },
-                        colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary, checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
-                    )
-                }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Daily Reminders", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-                    Switch(
-                        checked = remindersEnabled,
-                        onCheckedChange = { checked ->
-                            remindersEnabled = checked
-                            viewModel.userProfile.value?.let { p ->
-                                coroutineScope.launch {
-                                    viewModel.saveProfile(p.copy(remindersEnabled = checked))
-                                }
-                            }
-                        },
-                        colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary, checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Notifications", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                        Text("Reminders, goal alerts and quiet hours", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

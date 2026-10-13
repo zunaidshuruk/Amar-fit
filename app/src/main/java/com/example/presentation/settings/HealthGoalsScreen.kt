@@ -10,6 +10,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -245,6 +247,38 @@ fun HealthGoalsScreen(
                                 }
                             }
                         )
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 12.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+
+                        // 5. Weekly workout goal (used by the weekly workout goal notification)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Weekly workout goal", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                                Text("Workout days per week", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            IconButton(onClick = {
+                                coroutineScope.launch {
+                                    viewModel.saveProfile(currentProfile.copy(weeklyWorkoutGoal = (currentProfile.weeklyWorkoutGoal - 1).coerceAtLeast(1)))
+                                }
+                            }) {
+                                Icon(Icons.Default.Remove, contentDescription = "Fewer workout days")
+                            }
+                            Text("${currentProfile.weeklyWorkoutGoal} days", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                            IconButton(onClick = {
+                                coroutineScope.launch {
+                                    viewModel.saveProfile(currentProfile.copy(weeklyWorkoutGoal = (currentProfile.weeklyWorkoutGoal + 1).coerceAtMost(7)))
+                                }
+                            }) {
+                                Icon(Icons.Default.Add, contentDescription = "More workout days")
+                            }
+                        }
 
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 12.dp),

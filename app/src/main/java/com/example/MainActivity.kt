@@ -141,16 +141,16 @@ class MainActivity : ComponentActivity() {
             permissionState.launchMultiplePermissionRequest()
         }
         
-        LaunchedEffect(permissionState.allPermissionsGranted, userProfile?.remindersEnabled, userProfile?.notificationsEnabled) {
-             if (permissionState.allPermissionsGranted) {
-                 if (userProfile?.remindersEnabled != false) {
-                     com.example.presentation.notifications.ReminderManager.scheduleMealReminders(this@MainActivity)
-                 } else {
-                     com.example.presentation.notifications.ReminderManager.cancelMealReminders(this@MainActivity)
-                 }
-             }
+        // Arm every reminder from the saved notification settings (and again whenever they change).
+        LaunchedEffect(userProfile?.notificationPrefsJson) {
+            if (userProfile != null) {
+                com.example.presentation.notifications.ReminderScheduler.rescheduleAll(
+                    this@MainActivity,
+                    com.example.data.notifications.NotificationPrefsCodec.decode(userProfile?.notificationPrefsJson)
+                )
+            }
         }
-        
+
         val navController = rememberNavController()
         var sessionChecked by remember { mutableStateOf(false) }
         var initialRoute by remember { mutableStateOf("splash") }
@@ -372,6 +372,7 @@ class MainActivity : ComponentActivity() {
                   if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                     viewModel.refreshToday()
                     viewModel.syncFromCloud()
+                    viewModel.runDailyNutritionGapCheck(context)
                     viewModel.syncWithHealthConnect(context, showRefreshIndicator = false)
                   }
                 }
@@ -429,7 +430,7 @@ class MainActivity : ComponentActivity() {
                   composable("recipe") { RecipeScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("foodlog") { FoodLogScreen(viewModel = viewModel, navController = navController, onNavigateToScanner = { navController.navigate("scanner") }, onNavigateBack = { navController.popBackStack() }) }
                   composable("profile") { com.example.presentation.profile.ProfileScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onOpenSettings = { navController.navigate("settings") }, onOpenHealthGoals = { navController.navigate("health_goals") }) }
-                  composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }, onNavigateToHealthGoals = { navController.navigate("health_goals") }, onNavigateToFriends = { navController.navigate("friends") }, onNavigateToAbout = { navController.navigate("about") }, onOpenProfile = { navController.navigate("profile") }, onNavigateToCustomizeNav = { navController.navigate("customize_nav") }) }
+                  composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }, onNavigateToHealthGoals = { navController.navigate("health_goals") }, onNavigateToFriends = { navController.navigate("friends") }, onNavigateToAbout = { navController.navigate("about") }, onOpenProfile = { navController.navigate("profile") }, onNavigateToCustomizeNav = { navController.navigate("customize_nav") }, onNavigateToNotifications = { navController.navigate("notification_settings") }) }
                   composable("privacy_consent") {
                       com.example.presentation.auth.ConsentGateScreen(
                           onAccept = {
@@ -501,6 +502,13 @@ class MainActivity : ComponentActivity() {
                   composable("exercise_library") { ExerciseLibraryScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("mindfulness_timer") { com.example.presentation.mindfulness.MindfulnessTimerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("edit_focus") { com.example.presentation.today.EditFocusScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
+                  composable("notification_settings") {
+                      com.example.presentation.notifications.NotificationSettingsScreen(
+                          viewModel = viewModel,
+                          onNavigateBack = { navController.popBackStack() },
+                          onOpenHealthGoals = { navController.navigate("health_goals") }
+                      )
+                  }
                   composable("customize_nav") { CustomizeNavScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("offline_ai") { OfflineAiScreen(onNavigateBack = { navController.popBackStack() }) }
                   composable(

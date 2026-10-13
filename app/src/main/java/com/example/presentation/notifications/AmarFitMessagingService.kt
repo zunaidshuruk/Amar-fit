@@ -1,6 +1,13 @@
 package com.example.presentation.notifications
 
 import android.util.Log
+import com.example.data.local.AppDatabase
+import com.example.data.notifications.NotificationPrefsCodec
+import com.example.data.notifications.PushFilter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.runBlocking
+import java.time.LocalTime
 import com.example.data.repository.FirebaseManager
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -21,6 +28,17 @@ class AmarFitMessagingService : FirebaseMessagingService() {
 
         val data = remoteMessage.data
         val notification = remoteMessage.notification
+
+        // Settings > Notifications: master switch, quiet hours and the Messages / Friend requests / Challenges switches.
+        val prefs = runBlocking(Dispatchers.IO) {
+            val profile = AppDatabase.getDatabase(applicationContext).userDao().getUserProfile().firstOrNull()
+            NotificationPrefsCodec.decode(profile?.notificationPrefsJson)
+        }
+        val nowTime = LocalTime.now()
+        if (!PushFilter.allows(PushFilter.classify(data), prefs, nowTime.hour * 60 + nowTime.minute)) {
+            Log.d(TAG, "Push not shown: switched off in Settings > Notifications")
+            return
+        }
 
         val type = data["type"] ?: data["notification_type"] ?: ""
 

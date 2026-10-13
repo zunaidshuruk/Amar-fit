@@ -374,6 +374,113 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         initialValue = emptyList()
     )
 
+    // ------------------------------------------------------------------ notifications
+
+    /** Settings > Notifications, decoded from the profile. */
+    val notificationPrefs: StateFlow<com.example.data.notifications.NotificationPrefs> = userProfile
+        .map { com.example.data.notifications.NotificationPrefsCodec.decode(it?.notificationPrefsJson) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, com.example.data.notifications.NotificationPrefs())
+
+    /** Saves the preferences with the profile (so they follow the user to other phones) and re-arms every reminder. */
+    fun saveNotificationPrefs(prefs: com.example.data.notifications.NotificationPrefs) {
+        viewModelScope.launch {
+            val profile = userProfile.value ?: return@launch
+            saveProfile(profile.copy(notificationPrefsJson = com.example.data.notifications.NotificationPrefsCodec.encode(prefs)))
+            withContext(Dispatchers.Default) {
+                com.example.presentation.notifications.ReminderScheduler.rescheduleAll(getApplication<Application>(), prefs)
+            }
+        }
+    }
+
+    fun sendTestNotification() {
+        com.example.presentation.notifications.NotificationHelper.showNotification(
+            context = getApplication<Application>(),
+            title = "KardIQ test notification",
+            message = "Notifications are working. Tap to open the app.",
+            notificationId = 9001,
+            targetRoute = "today",
+            channelId = com.example.data.notifications.Channels.GOALS
+        )
+    }
+
+    /** Daily nutrition gaps check, only when it is switched on in Settings > Notifications. */
+    fun runDailyNutritionGapCheck(context: android.content.Context) {
+        val prefs = notificationPrefs.value
+        if (!prefs.masterEnabled || !prefs.nutritionGaps) return
+        checkNutritionalDeficiencies(context)
+    }
+
+    /**
+     * Goal notifications (steps, water, calories, sleep, weekly workouts) are event driven: they are checked every time
+     * today's numbers or the profile change, and each one is shown once per day (once per week for workouts).
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private fun startGoalNotifications() {
+        viewModelScope.launch {
+            combine(
+                todayMetrics,
+                userProfile,
+                _todayDate.flatMapLatest { repository.getMetricsHistory(startDateForRange(7)) }
+            ) { today, profile, recent -> Triple(today, profile, recent) }
+                .collect { (today, profile, recent) ->
+                    try {
+                        evaluateGoalNotifications(today, profile, recent)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+        }
+    }
+
+    private fun evaluateGoalNotifications(today: DailyMetric?, profile: UserProfile?, recent: List<DailyMetric>) {
+        if (profile == null) return
+        val prefs = com.example.data.notifications.NotificationPrefsCodec.decode(profile.notificationPrefsJson)
+        if (!prefs.masterEnabled) return
+        if (!(prefs.stepGoalReached || prefs.waterGoalReached || prefs.calorieLimitReached ||
+                prefs.sleepGoalReached || prefs.weeklyWorkoutGoalMet)) return
+        val app = getApplication<Application>()
+        val date = java.time.LocalDate.now()
+        val time = java.time.LocalTime.now()
+        val sp = app.getSharedPreferences("ShasthoPrefs", android.content.Context.MODE_PRIVATE)
+        val dayPrefix = date.toString()
+        val weekPrefix = com.example.data.notifications.GoalNotifier.weekKey(date)
+        val notified = (sp.getStringSet("goal_notified", emptySet()) ?: emptySet())
+            .filter { it.startsWith(dayPrefix) || it.startsWith(weekPrefix) }.toMutableSet()
+        val goals = com.example.data.notifications.GoalSettings(
+            stepGoal = profile.stepGoal,
+            waterGoalLiters = profile.dailyWaterLimitLiters,
+            calorieLimit = profile.dailyCalorieLimit,
+            sleepGoalHours = profile.sleepGoalHours,
+            weeklyWorkoutGoal = profile.weeklyWorkoutGoal
+        )
+        val notices = com.example.data.notifications.GoalNotifier.evaluate(
+            prefs = prefs,
+            goals = goals,
+            today = today?.takeIf { it.date == dayPrefix },
+            workoutDaysThisWeek = com.example.data.notifications.GoalNotifier.workoutDaysInWeek(recent, date),
+            date = date,
+            alreadyNotified = notified,
+            minuteNow = time.hour * 60 + time.minute
+        )
+        if (notices.isEmpty()) return
+        notices.forEach { notice ->
+            com.example.presentation.notifications.NotificationHelper.showNotification(
+                context = app,
+                title = notice.title,
+                message = notice.message,
+                notificationId = 5000 + notice.event.ordinal,
+                targetRoute = "today",
+                channelId = com.example.data.notifications.Channels.GOALS
+            )
+            notified.add(notice.guardKey)
+        }
+        sp.edit().putStringSet("goal_notified", notified).apply()
+    }
+
+    init {
+        startGoalNotifications()
+    }
+
     init {
         viewModelScope.launch {
             while (true) {
