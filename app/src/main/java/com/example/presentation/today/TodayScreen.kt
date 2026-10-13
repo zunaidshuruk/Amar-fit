@@ -83,6 +83,14 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
 
     var showWaterDialog by remember { mutableStateOf(false) }
     var showLogBottomSheet by remember { mutableStateOf(false) }
+    // "Quick log" in the More sheet opens this screen and asks for the log sheet
+    val openLogRequest by viewModel.openLogSheetRequest.collectAsState()
+    LaunchedEffect(openLogRequest) {
+        if (openLogRequest) {
+            showLogBottomSheet = true
+            viewModel.consumeOpenLogSheetRequest()
+        }
+    }
 
     val todayStr by viewModel.todayDate.collectAsState()
     var selectedDate by remember(todayStr) { mutableStateOf(java.time.LocalDate.parse(todayStr)) }
@@ -245,6 +253,42 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                         )
                     }
                 }
+            }
+        }
+
+        // Edit tiles: icon with a tiny caption, right-aligned just below the large tiles (outside them),
+        // so it is always reachable, even when every large tile has been removed.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            Column(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable { navController.navigate("edit_focus") }
+                    .testTag("today_edit_tiles_button")
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .border(1.5.dp, MaterialTheme.colorScheme.primary, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DashboardCustomize,
+                        contentDescription = "Edit tiles",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Text(
+                    text = "Edit tiles",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
             }
         }
 
@@ -476,100 +520,6 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     ) {
                         Text("Get Today's Insight")
                     }
-                }
-            }
-        }
-
-        // Action Row (+ Log / Start / Edit Focus)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Button(
-                onClick = { showLogBottomSheet = true },
-                modifier = Modifier
-                    .weight(1f)
-                    .height(56.dp)
-                    .testTag("today_log_button"),
-                shape = RoundedCornerShape(28.dp),
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isDark) MaterialTheme.colorScheme.primary else Primary,
-                    contentColor = if (isDark) MaterialTheme.colorScheme.onPrimary else Color.White
-                ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Log",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1
-                )
-            }
-
-            Button(
-                onClick = { navigateToTab(navController, "fitness") },
-                modifier = Modifier
-                    .weight(1f)
-                    .height(56.dp)
-                    .testTag("today_start_button"),
-                shape = RoundedCornerShape(28.dp),
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isDark) MaterialTheme.colorScheme.secondary else Emerald600,
-                    contentColor = if (isDark) MaterialTheme.colorScheme.onSecondary else Color.White
-                ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Start",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1
-                )
-            }
-
-            Surface(
-                onClick = { navController.navigate("edit_focus") },
-                modifier = Modifier
-                    .height(56.dp)
-                    .testTag("today_edit_tiles_button"),
-                shape = RoundedCornerShape(28.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
-                shadowElevation = 2.dp
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit Focus",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Edit tiles",
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1
-                    )
                 }
             }
         }
