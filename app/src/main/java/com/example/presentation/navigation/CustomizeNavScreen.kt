@@ -1,6 +1,7 @@
 package com.example.presentation.navigation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,13 +12,17 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
@@ -105,33 +110,27 @@ fun CustomizeNavScreen(
                 .fillMaxWidth()
                 .padding(bottom = 24.dp)
         ) {
+            // A small copy of the real bottom bar: Today, the chosen tabs and More share the width equally,
+            // each with its icon above a one-line label (so a long label can never squeeze the others).
+            val barShape = RoundedCornerShape(32.dp)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                    .padding(horizontal = 12.dp, vertical = 16.dp)
+                    .height(64.dp)
+                    .clip(barShape)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, barShape)
+                    .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                AssistChip(
-                    onClick = {},
-                    label = { Text("Today") },
-                    leadingIcon = { Icon(Icons.Rounded.Home, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                )
+                PreviewBarItem(Icons.Rounded.Home, "Today", selected = true, modifier = Modifier.weight(1f))
                 currentBar.forEach { route ->
                     val tab = tabForRoute(route)
                     if (tab != null) {
-                        AssistChip(
-                            onClick = {},
-                            label = { Text(tab.label) },
-                            leadingIcon = { Icon(tab.icon, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                        )
+                        PreviewBarItem(tab.icon, tab.label, selected = false, modifier = Modifier.weight(1f))
                     }
                 }
-                AssistChip(
-                    onClick = {},
-                    label = { Text("More") },
-                    leadingIcon = { Icon(Icons.Rounded.GridView, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                )
+                PreviewBarItem(Icons.Rounded.MoreHoriz, "More", selected = false, modifier = Modifier.weight(1f))
             }
         }
 
@@ -271,5 +270,36 @@ fun CustomizeNavScreen(
         }
 
         Spacer(modifier = Modifier.height(100.dp))
+    }
+}
+
+/** One slot of the preview bar: icon over a single-line label; the selected slot is highlighted like the real bar. */
+@Composable
+private fun PreviewBarItem(
+    icon: ImageVector,
+    label: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    Column(
+        modifier = modifier
+            .fillMaxHeight()
+            .padding(vertical = 4.dp, horizontal = 2.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color.Transparent),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            color = tint,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
