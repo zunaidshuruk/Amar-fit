@@ -1,4 +1,4 @@
-# Sprint 18: Cycle tracker for women (Part AW), planned 2026-10-13, plan mode, not started
+# Sprint 18: Cycle tracker for women (Part AW), planned 2026-10-13, BUILT 2026-10-13 on `claude/cycle-tracker` (see `docs/cycle-tracker.md`)
 
 Request (Zunaid): "include a cycle tracker for women along with notifications. I have less clue." So this is Claude's proposal with
 recommended defaults; the open decisions are at the bottom. Nothing here is built yet.
@@ -78,3 +78,13 @@ the activity feed (a test will guard this).
 4. Assumed, change if wrong: v1 scope as above; sync like the rest of the data; the policy PR (#6) ships first as 2.9.1 and the cycle
    tracker gets its own consent later, so nobody is asked to re-accept twice.
 5. Open question for Zunaid: is Ramadan fasting relevant for users (tracking missed fasting days to make up)? Not in v1 unless he says so.
+
+## As built (differences from the plan above)
+* Not a bottom-bar tab: reachable from More, the Today card and the Health card (a tab would have to be filtered by gender in Customize navigation).
+* Enabling tracking switches "period expected soon" and "period is late" ON (they can be switched off in Settings > Notifications); the fertile
+  window and the daily log reminder stay off.
+* Cycle notifications use ONE daily check at a fixed time that decides from the predictions, instead of arming alarms on predicted dates.
+* Health Connect permissions are requested only from Cycle settings and are NOT in `REQUIRED_PERMISSIONS` (everyone else would otherwise be prompted);
+  periods are written once when finished, later edits are not sent.
+* Privacy policy: section 1.6 added and the same release re-asks everyone to accept (policy version 2), so nobody is asked twice.
+* Still open for Zunaid: Ramadan fasting make-up days (not built), and a legal review of the policy.

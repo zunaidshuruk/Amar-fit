@@ -3022,6 +3022,24 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * The one-line cycle summary for the AI, or null unless tracking is active AND "Use my cycle in AI answers" is on.
+     * It is computed here from the logged periods; the daily logs, symptoms and mood are never part of it.
+     */
+    private suspend fun cycleSummaryForAi(profile: UserProfile): String? {
+        if (!com.example.data.cycle.CycleAccess.isActive(profile.gender, profile.cycleTrackingEnabled, profile.cycleConsentAt)) return null
+        if (!profile.cycleAiEnabled) return null
+        return try {
+            val today = java.time.LocalDate.parse(todayDateString)
+            val prediction = com.example.data.cycle.CyclePredictor.predict(
+                repository.getLivePeriods().mapNotNull { it.toSpan() }, today, profile.cycleDefaultLength, profile.cyclePeriodDefaultLength
+            )
+            com.example.data.cycle.CycleAiSummary.build(prediction, today)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     private suspend fun buildDossier(profile: UserProfile): com.example.util.ai.Dossier = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
         try {
             val now = System.currentTimeMillis()
@@ -3039,7 +3057,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 exerciseSessions = exSessions,
                 activityEvents = actEvents,
                 medicalRecords = medRecords,
-                todayDate = todayDateString
+                todayDate = todayDateString,
+                cycleSummary = cycleSummaryForAi(profile)
             )
             com.example.util.ai.HealthDossierBuilder.build(input)
         } catch (e: Exception) {

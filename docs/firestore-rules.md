@@ -12,7 +12,7 @@ Firestore path the app uses.
 
 | Path the app uses | Rule |
 |---|---|
-| `users/{uid}/**` (profile, `health_metrics`, `diet_logs`, `saved_diet_charts`, `saved_workouts`, `workout_programs`, `saved_chats`, `medical_records`, **`activity_events`**, **`assistant_chats`** and its `messages`) | `users/{userId}/{document=**}`: owner only. The two new sync collections are under the user's own path, so they are allowed. |
+| `users/{uid}/**` (profile, `health_metrics`, `diet_logs`, `saved_diet_charts`, `saved_workouts`, `workout_programs`, `saved_chats`, `medical_records`, **`activity_events`**, **`assistant_chats`** and its `messages`, and from the cycle tracker **`period_logs`** and **`cycle_days`**) | `users/{userId}/{document=**}`: owner only. The two new sync collections are under the user's own path, so they are allowed. |
 | `public_profiles/{uid}` | any signed-in user reads; the owner writes (no push token fields) |
 | `friend_stats/{uid}` | owner, or an accepted friend, reads; the owner writes |
 | `friendships/{pairId}` | parties only; sorted-uid document id; only the other party can accept |
