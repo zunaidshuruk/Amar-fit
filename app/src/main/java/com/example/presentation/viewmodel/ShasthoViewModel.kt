@@ -89,6 +89,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             } catch (e: Exception) {
                 // Ignore sync timeout or network errors during startup
             }
+            syncFromCloud(force = true)
             val profile = try {
                 withTimeoutOrNull(1000L) {
                     repository.userProfile.firstOrNull()
@@ -119,6 +120,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun deleteAccount(onComplete: (com.example.data.repository.DeleteAccountResult) -> Unit) {
+        stopCloudListeners()
         viewModelScope.launch(Dispatchers.IO) {
             val result = repository.deleteAccount()
             if (result is com.example.data.repository.DeleteAccountResult.Success) {
@@ -143,7 +145,106 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private var lastQuickSyncAt = 0L
+    private var metricsListenerJob: kotlinx.coroutines.Job? = null
+
+    /** What the Settings "Cloud sync" row shows. */
+    data class CloudSyncStatus(val lastSyncAt: Long = 0L, val inProgress: Boolean = false, val message: String = "")
+
+    private val _cloudSyncStatus = MutableStateFlow(
+        CloudSyncStatus(
+            lastSyncAt = getApplication<Application>().getSharedPreferences("ShasthoPrefs", android.content.Context.MODE_PRIVATE)
+                .getLong("last_cloud_sync_at", 0L)
+        )
+    )
+    val cloudSyncStatus: StateFlow<CloudSyncStatus> = _cloudSyncStatus.asStateFlow()
+
+    /** "Sync now" button: runs a catch-up immediately (7 days, or the whole history on a new phone). */
+    fun syncNow() = syncFromCloud(force = true)
+
+    /**
+     * Catches this phone up with the cloud: the last 7 days on every app resume (at most every 30 seconds),
+     * the last 60 days once a day, and a live listener on the last 3 days so a second phone's changes show
+     * up within seconds. Safe to call often; does nothing when signed out.
+     */
+    fun syncFromCloud(force: Boolean = false) {
+        if (com.google.firebase.auth.FirebaseAuth.getInstance().currentUser == null) return
+        val now = System.currentTimeMillis()
+        if (!force && now - lastQuickSyncAt < 30_000L) {
+            ensureMetricsListener()
+            return
+        }
+        lastQuickSyncAt = now
+        viewModelScope.launch {
+            _cloudSyncStatus.value = _cloudSyncStatus.value.copy(inProgress = true)
+            var message = "Couldn't reach the cloud. It will retry when you open the app."
+            var succeeded = false
+            try {
+                val prefs = getApplication<Application>().getSharedPreferences("ShasthoPrefs", android.content.Context.MODE_PRIVATE)
+                val lastFull = prefs.getLong("last_full_metrics_sync", 0L)
+                val daily = now - lastFull > 24L * 60L * 60L * 1000L
+                // First run on this phone (new sign-in or app update): pull the WHOLE history once, so a new
+                // phone gets everything back. Afterwards: 60 days once a day, 7 days otherwise.
+                val needFull = !prefs.getBoolean("metrics_full_restore_done", false)
+                val result = repository.reconcileMetrics(daysBack = if (needFull) null else if (daily) 60 else 7)
+                val profileOk = repository.reconcileProfile()
+                val itemChanges = repository.reconcileCollections(fullHistory = needFull, foodLogDays = if (daily) 60 else 14)
+                val itemsOk = itemChanges >= 0
+                val dayMs = 24L * 60L * 60L * 1000L
+                val chatSince = if (needFull) 0L else (prefs.getLong("last_chats_sync", 0L) - 10L * 60L * 1000L).coerceAtLeast(0L)
+                val chatChanges = repository.reconcileAssistantChats(chatSince)
+                if (chatChanges >= 0) prefs.edit().putLong("last_chats_sync", now).apply()
+                val eventSince = if (needFull) now - 90L * dayMs else (prefs.getLong("last_events_sync", now - 90L * dayMs) - dayMs)
+                val eventChanges = repository.reconcileActivityEvents(eventSince)
+                if (eventChanges >= 0) prefs.edit().putLong("last_events_sync", now).apply()
+                if (result.ok && (itemsOk || !needFull)) {
+                    val edit = prefs.edit()
+                    if (needFull) edit.putBoolean("metrics_full_restore_done", true)
+                    if (needFull || daily) edit.putLong("last_full_metrics_sync", now)
+                    edit.putLong("last_cloud_sync_at", System.currentTimeMillis())
+                    edit.apply()
+                    succeeded = true
+                    message = if (result.pulled == 0 && result.pushed == 0 && itemChanges <= 0 && chatChanges <= 0 && eventChanges <= 0) "Up to date on this phone and in the cloud."
+                    else "Synced: ${result.pulled} day(s) received, ${result.pushed} uploaded, ${maxOf(itemChanges, 0) + maxOf(chatChanges, 0) + maxOf(eventChanges, 0)} item(s) updated."
+                    if (!profileOk) message += " Profile will sync later."
+                    if (itemChanges < 0 || chatChanges < 0 || eventChanges < 0) message += " Some data could not be checked and will retry."
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            _cloudSyncStatus.value = CloudSyncStatus(
+                lastSyncAt = if (succeeded) System.currentTimeMillis() else _cloudSyncStatus.value.lastSyncAt,
+                inProgress = false,
+                message = message
+            )
+            ensureMetricsListener()
+        }
+    }
+
+    private fun ensureMetricsListener() {
+        if (com.google.firebase.auth.FirebaseAuth.getInstance().currentUser == null) return
+        if (metricsListenerJob?.isActive == true) return
+        metricsListenerJob = viewModelScope.launch {
+            try {
+                repository.observeRemoteMetrics(daysBack = 3).collect { rows ->
+                    rows.forEach { repository.applyRemoteMetric(it) }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun stopCloudListeners() {
+        metricsListenerJob?.cancel()
+        metricsListenerJob = null
+    }
+
     fun logout(onComplete: () -> Unit) {
+        stopCloudListeners()
+        getApplication<Application>().getSharedPreferences("ShasthoPrefs", android.content.Context.MODE_PRIVATE)
+            .edit().remove("metrics_full_restore_done").remove("last_full_metrics_sync").remove("last_cloud_sync_at").remove("last_chats_sync").remove("last_events_sync").apply()
+        _cloudSyncStatus.value = CloudSyncStatus()
         viewModelScope.launch(Dispatchers.IO) {
             com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
             database.clearAllTables()
@@ -3699,13 +3800,17 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 if (payload.profile != null) {
-                    repository.saveUserProfile(payload.profile)
+                    // merge, don't overwrite: the newest saved profile wins, points and badges only grow
+                    repository.mergeBackupProfile(payload.profile)
                 }
                 for (metric in payload.dailyMetrics) {
                     metricsWriteLock.withLock {
-                        repository.saveMetrics(metric)
+                        // merge: counters keep the higher value, readings the newest non-empty one
+                        repository.applyRemoteMetric(metric)
                     }
                 }
+                // upload whatever the merge changed so the cloud and the other phones get it too
+                repository.reconcileMetrics(daysBack = null)
                 for (foodLog in payload.foodLogs) {
                     repository.saveFoodLog(foodLog.copy(id = 0))
                 }

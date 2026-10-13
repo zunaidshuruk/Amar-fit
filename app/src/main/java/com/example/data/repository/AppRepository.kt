@@ -6,7 +6,17 @@ import com.example.data.local.MetricsDao
 import com.example.data.local.UserDao
 import com.example.data.local.UserProfile
 import com.example.data.remote.*
+import com.example.data.sync.CollectionReconciler
+import com.example.data.sync.MetricMerger
+import com.example.data.sync.MetricReconciler
+import com.example.data.sync.ProfileMerger
+import com.example.data.sync.SyncIds
+import com.example.data.sync.UploadPolicy
+import com.example.data.sync.ReconcileResult
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -54,15 +64,24 @@ class AppRepository(
 ) {
 
     suspend fun logActivityEvent(type: String, description: String, timestamp: Long = System.currentTimeMillis(), source: String = "app", externalId: String? = null) {
-        activityEventDao?.insert(
-            com.example.data.local.ActivityEvent(
-                type = type,
-                description = description,
-                timestamp = timestamp,
-                source = source,
-                externalId = externalId
-            )
+        val event = com.example.data.local.ActivityEvent(
+            type = type,
+            description = description,
+            timestamp = timestamp,
+            source = source,
+            externalId = externalId
         )
+        activityEventDao?.insert(event)
+        // events created in the app follow the user to their other phones; Health Connect ones stay per phone
+        if (source == "app") {
+            syncScope.launch {
+                try {
+                    FirebaseManager.syncActivityEvent(event)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
     }
 
     suspend fun hasActivityEventWithExternalId(externalId: String): Boolean {
@@ -88,9 +107,15 @@ class AppRepository(
     }
 
     suspend fun saveAssistantChatMessage(sessionId: String, text: String, isUser: Boolean) {
-        assistantChatMessageDao?.insert(
-            com.example.data.local.AssistantChatMessage(sessionId = sessionId, text = text, isUser = isUser)
-        )
+        val message = com.example.data.local.AssistantChatMessage(sessionId = sessionId, text = text, isUser = isUser)
+        assistantChatMessageDao?.insert(message)
+        syncScope.launch {
+            try {
+                FirebaseManager.syncAssistantMessage(sessionId, message)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     suspend fun getAssistantChatHistoryOnce(): List<com.example.presentation.viewmodel.ChatMessage> {
@@ -111,16 +136,127 @@ class AppRepository(
 
     suspend fun saveAssistantSession(session: com.example.data.local.AssistantChatSession) {
         assistantChatSessionDao?.insertOrUpdate(session)
+        syncScope.launch {
+            try {
+                FirebaseManager.syncAssistantSession(session)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     suspend fun deleteAssistantSession(sessionId: String) {
         assistantChatSessionDao?.deleteSessionById(sessionId)
         assistantChatMessageDao?.deleteMessagesBySession(sessionId)
+        syncScope.launch {
+            try {
+                FirebaseManager.softDeleteAssistantSession(sessionId)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     suspend fun clearAllAssistantHistory() {
+        val ids = assistantChatSessionDao?.getAllSessions()?.firstOrNull()?.map { it.id } ?: emptyList()
         assistantChatSessionDao?.clearAll()
         assistantChatMessageDao?.clearAll()
+        if (ids.isNotEmpty()) {
+            syncScope.launch {
+                try {
+                    ids.forEach { FirebaseManager.softDeleteAssistantSession(it) }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    /**
+     * Two-way sync of assistant chats changed after [sinceUpdatedAt] (0 = everything, used on a new phone).
+     * Newer chats come in with their messages, deleted chats are removed here, chats this phone has ahead
+     * are uploaded. Returns the number of local changes, or -1 when the cloud could not be read.
+     */
+    suspend fun reconcileAssistantChats(sinceUpdatedAt: Long): Int {
+        val sessionDao = assistantChatSessionDao ?: return 0
+        val messageDao = assistantChatMessageDao ?: return 0
+        val pull = FirebaseManager.fetchAssistantSessions(sinceUpdatedAt) ?: return -1
+        val localSessions = (sessionDao.getAllSessions().firstOrNull() ?: emptyList()).associateBy { it.id }
+        var changes = 0
+
+        for (doc in pull.live) {
+            val remote = doc.item.copy(id = doc.id)
+            val local = localSessions[doc.id]
+            if (local == null || remote.updatedAt > local.updatedAt) {
+                sessionDao.insertOrUpdate(remote)
+                changes++
+                val remoteMessages = FirebaseManager.fetchAssistantMessages(doc.id)
+                if (remoteMessages != null) {
+                    val have = messageDao.getMessagesBySession(doc.id)
+                        .map { SyncIds.messageId(it.timestamp, it.isUser, it.text) }.toHashSet()
+                    for (rm in remoteMessages) {
+                        if (rm.id !in have) messageDao.insert(rm.item.copy(id = 0, sessionId = doc.id))
+                    }
+                }
+            } else if (local.updatedAt > remote.updatedAt) {
+                // this phone is ahead: upload the chat and the messages the cloud lacks
+                FirebaseManager.syncAssistantSession(local)
+                val remoteIds = FirebaseManager.fetchAssistantMessages(doc.id)?.map { it.id }?.toHashSet()
+                if (remoteIds != null) {
+                    for (m in messageDao.getMessagesBySession(doc.id)) {
+                        if (SyncIds.messageId(m.timestamp, m.isUser, m.text) !in remoteIds) {
+                            FirebaseManager.syncAssistantMessage(doc.id, m)
+                        }
+                    }
+                }
+            }
+        }
+
+        for (id in pull.deletedIds) {
+            if (localSessions.containsKey(id)) {
+                sessionDao.deleteSessionById(id)
+                messageDao.deleteMessagesBySession(id)
+                changes++
+            }
+        }
+
+        if (sinceUpdatedAt == 0L) {
+            // first full pass on this phone: upload chats the cloud has never seen
+            val known = pull.live.map { it.id }.toSet() + pull.deletedIds
+            for (local in localSessions.values) {
+                if (local.id !in known) {
+                    FirebaseManager.syncAssistantSession(local)
+                    messageDao.getMessagesBySession(local.id).forEach { FirebaseManager.syncAssistantMessage(local.id, it) }
+                }
+            }
+        }
+        return changes
+    }
+
+    /**
+     * Two-way sync of workout / activity history events created in the app (events imported from Health Connect
+     * stay on their own phone), for events since [sinceTimestamp]. Returns the number of local changes or -1.
+     */
+    suspend fun reconcileActivityEvents(sinceTimestamp: Long): Int {
+        val dao = activityEventDao ?: return 0
+        val remote = FirebaseManager.fetchActivityEvents(sinceTimestamp) ?: return -1
+        val local = (dao.getEventsSince(sinceTimestamp).firstOrNull() ?: emptyList()).filter { it.source == "app" }
+        val localIds = local.map { SyncIds.activityEventId(it.timestamp, it.type, it.description) }.toHashSet()
+        val remoteIds = HashSet<String>()
+        var changes = 0
+        for (doc in remote) {
+            remoteIds.add(doc.id)
+            if (doc.id !in localIds) {
+                dao.insert(doc.item.copy(id = 0, source = "app"))
+                changes++
+            }
+        }
+        for (event in local) {
+            if (SyncIds.activityEventId(event.timestamp, event.type, event.description) !in remoteIds) {
+                FirebaseManager.syncActivityEvent(event)
+            }
+        }
+        return changes
     }
 
     fun getTodayActivityEvents(startOfDay: Long, endOfDay: Long): kotlinx.coroutines.flow.Flow<List<com.example.data.local.ActivityEvent>> {
@@ -139,6 +275,9 @@ class AppRepository(
     suspend fun deleteAccount(): DeleteAccountResult {
         return FirebaseManager.deleteAccount()
     }
+
+    /** Cloud writes run here so saving a metric never waits for (or fails because of) the network. */
+    private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     suspend fun syncDataOnLogin() {
         FirebaseManager.pullDataOnLogin(userDao, metricsDao, savedDietChartDao, savedWorkoutDao, savedChatDao, medicalRecordDao, workoutProgramDao)
@@ -386,7 +525,8 @@ class AppRepository(
         }
         userDao.insertProfile(profileToSave)
         try {
-            FirebaseManager.syncProfile(profileToSave)
+            val mergedProfile = FirebaseManager.syncProfileMerged(profileToSave)
+            if (mergedProfile != null && mergedProfile != profileToSave) userDao.insertProfile(mergedProfile)
             FirebaseManager.syncPublicProfile(
                 name = profileToSave.name,
                 currentStreak = profileToSave.currentStreak,
@@ -409,16 +549,245 @@ class AppRepository(
         }
         metricsDao.insertMetrics(toSave)
         if (changed || existing == null) {
-            try {
-                FirebaseManager.syncMetric(toSave)
-                val currentProfile = userDao.getUserProfile().firstOrNull()
-                if (currentProfile != null && toSave.date == java.time.LocalDate.now().toString()) {
-                    FirebaseManager.syncFriendStats(toSave, currentProfile)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
+            val passiveOnly = existing != null && UploadPolicy.isPassiveOnlyChange(existing, toSave)
+            scheduleMetricUpload(toSave.date, passiveOnly)
+        }
+    }
+
+    private val lastCloudWriteAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val pendingUploads = java.util.concurrent.ConcurrentHashMap<String, kotlinx.coroutines.Job>()
+
+    /**
+     * Walking updates (steps, distance, active calories, heart rate) are uploaded at most every 30 minutes;
+     * the newest values go out when the wait is over. Anything the user enters is uploaded straight away.
+     * If the app is closed while an upload is waiting, the next app open (or "Sync now") sends it.
+     */
+    private fun scheduleMetricUpload(date: String, passiveOnly: Boolean) {
+        if (!passiveOnly) {
+            pendingUploads.remove(date)?.cancel()
+            syncScope.launch { uploadMetricNow(date) }
+            return
+        }
+        val wait = UploadPolicy.delayUntilNextWrite(System.currentTimeMillis(), lastCloudWriteAt[date] ?: 0L)
+        if (wait == 0L) {
+            pendingUploads.remove(date)?.cancel()
+            syncScope.launch { uploadMetricNow(date) }
+        } else if (pendingUploads[date]?.isActive != true) {
+            pendingUploads[date] = syncScope.launch {
+                kotlinx.coroutines.delay(wait)
+                pendingUploads.remove(date)
+                uploadMetricNow(date)
             }
         }
+    }
+
+    /** Uploads the CURRENT local row of [date] (read-merge-write) and takes back what the cloud added. */
+    private suspend fun uploadMetricNow(date: String) {
+        try {
+            val row = metricsDao.getMetricsForDate(date).firstOrNull() ?: return
+            lastCloudWriteAt[date] = System.currentTimeMillis()
+            // Read-merge-write in the cloud: another phone's higher counters / newer readings are kept,
+            // and whatever it holds that this phone lacks comes straight back into the local row.
+            val merged = FirebaseManager.syncMetricMerged(row)
+            if (merged != null) applyRemoteMetric(merged)
+            val currentProfile = userDao.getUserProfile().firstOrNull()
+            if (currentProfile != null && date == java.time.LocalDate.now().toString()) {
+                FirebaseManager.syncFriendStats(row, currentProfile)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * Two-way catch-up of the profile: the most recently saved profile wins (points and badges only grow).
+     * Returns true when the cloud was reachable.
+     */
+    suspend fun reconcileProfile(): Boolean {
+        if (com.google.firebase.auth.FirebaseAuth.getInstance().currentUser == null) return false
+        val remote = FirebaseManager.fetchProfile()
+        val local = userDao.getUserProfile().firstOrNull()
+        if (remote == null) {
+            // nothing in the cloud yet (or offline): push ours if we have one
+            if (local != null) return FirebaseManager.syncProfileMerged(local) != null
+            return false
+        }
+        val merged = if (local == null) remote else ProfileMerger.merge(local, remote)
+        if (local == null || merged != local) userDao.insertProfile(merged)
+        if (local != null && merged != remote) FirebaseManager.syncProfileMerged(merged)
+        return true
+    }
+
+    /** Merges a profile from a Drive backup into the current one instead of overwriting it. */
+    suspend fun mergeBackupProfile(backup: UserProfile) {
+        val local = userDao.getUserProfile().firstOrNull()
+        if (local == null) {
+            saveUserProfile(backup, stampTime = false)
+            return
+        }
+        val merged = ProfileMerger.merge(local, backup)
+        if (merged != local) saveUserProfile(merged, stampTime = false)
+    }
+
+    /**
+     * Applies one synced collection both ways: items another phone added or changed come in, items another
+     * phone deleted (tombstones) are removed here, items only this phone has are uploaded. Returns the number of
+     * local changes, or -1 when the cloud could not be read.
+     */
+    private suspend fun <T : Any> reconcileOne(
+        collection: String,
+        clazz: Class<T>,
+        windowField: String?,
+        windowStart: String?,
+        locals: List<T>,
+        cloudIdOf: (T) -> String,
+        sameContent: (T, T) -> Boolean,
+        upsertLocal: suspend (String, T) -> Unit,
+        deleteLocal: suspend (T) -> Unit,
+        pushRemote: suspend (T) -> Unit
+    ): Int {
+        val pull = FirebaseManager.fetchCollection(collection, clazz, windowField, windowStart) ?: return -1
+        val localById = locals.filter { cloudIdOf(it).isNotBlank() }.associateBy(cloudIdOf)
+        val plan = CollectionReconciler.plan(localById.keys, pull.live.map { it.id }.toSet(), pull.deletedIds)
+        var changes = 0
+        for (doc in pull.live) {
+            val local = localById[doc.id]
+            if (local == null || !sameContent(local, doc.item)) {
+                upsertLocal(doc.id, doc.item)
+                changes++
+            }
+        }
+        for (id in plan.deleteLocalIds) {
+            localById[id]?.let {
+                deleteLocal(it)
+                changes++
+            }
+        }
+        for (id in plan.pushIds) {
+            localById[id]?.let { pushRemote(it) }
+        }
+        return changes
+    }
+
+    /**
+     * Two-way sync of food logs, saved diet charts, saved workouts, workout programs, saved chats and medical
+     * records. [foodLogDays] limits the food log window unless [fullHistory] is true (new phone).
+     * Returns the number of local changes, or -1 when nothing could be read.
+     */
+    suspend fun reconcileCollections(fullHistory: Boolean, foodLogDays: Int): Int {
+        if (com.google.firebase.auth.FirebaseAuth.getInstance().currentUser == null) return -1
+        val start = if (fullHistory) null else java.time.LocalDate.now().minusDays((foodLogDays - 1).toLong()).toString()
+        var total = 0
+        var anyOk = false
+        fun count(n: Int) {
+            if (n >= 0) {
+                anyOk = true
+                total += n
+            }
+        }
+
+        val foodAll = metricsDao.getAllFoodLogsUnbounded().firstOrNull() ?: emptyList()
+        val foodLocals = if (start == null) foodAll else foodAll.filter { it.date >= start }
+        count(reconcileOne(
+            "diet_logs", com.example.data.local.FoodLog::class.java, if (start == null) null else "date", start,
+            foodLocals, { it.cloudId }, { a, b -> a.copy(id = 0) == b.copy(id = 0) },
+            { id, item -> metricsDao.insertFoodLog(item.copy(id = 0, cloudId = id)) },
+            { metricsDao.deleteFoodLog(it) },
+            { FirebaseManager.syncFoodLog(it) }
+        ))
+
+        count(reconcileOne(
+            "saved_diet_charts", com.example.data.local.SavedDietChart::class.java, null, null,
+            savedDietChartDao.getAllSavedCharts().firstOrNull() ?: emptyList(), { it.cloudId },
+            { a, b -> a.copy(id = 0) == b.copy(id = 0) },
+            { id, item -> savedDietChartDao.insertChart(item.copy(id = 0, cloudId = id)) },
+            { savedDietChartDao.deleteChart(it) },
+            { FirebaseManager.syncSavedDietChart(it) }
+        ))
+
+        count(reconcileOne(
+            "saved_workouts", com.example.data.local.SavedWorkout::class.java, null, null,
+            savedWorkoutDao.getAllSavedWorkouts().firstOrNull() ?: emptyList(), { it.cloudId }, { a, b -> a == b },
+            { id, item -> savedWorkoutDao.insertWorkout(item.copy(cloudId = id)) },
+            { savedWorkoutDao.deleteWorkout(it) },
+            { FirebaseManager.syncSavedWorkout(it) }
+        ))
+
+        count(reconcileOne(
+            "saved_chats", com.example.data.local.SavedChat::class.java, null, null,
+            savedChatDao.getAllSavedChats().firstOrNull() ?: emptyList(), { it.cloudId }, { a, b -> a == b },
+            { id, item -> savedChatDao.insertChat(item.copy(cloudId = id)) },
+            { savedChatDao.deleteChat(it) },
+            { FirebaseManager.syncSavedChat(it) }
+        ))
+
+        medicalRecordDao?.let { dao ->
+            count(reconcileOne(
+                "medical_records", com.example.data.local.MedicalRecord::class.java, null, null,
+                dao.getAllMedicalRecords().firstOrNull() ?: emptyList(), { it.cloudId }, { a, b -> a == b },
+                { id, item -> dao.insertMedicalRecord(item.copy(cloudId = id)) },
+                { dao.deleteMedicalRecord(it) },
+                { FirebaseManager.syncMedicalRecord(it) }
+            ))
+        }
+
+        workoutProgramDao?.let { dao ->
+            count(reconcileOne(
+                "workout_programs", com.example.data.local.WorkoutProgram::class.java, null, null,
+                dao.getAllOnce(), { it.cloudId }, { a, b -> a == b },
+                { id, item -> dao.upsert(item.copy(cloudId = id)) },
+                { dao.delete(it.cloudId) },
+                { FirebaseManager.syncWorkoutProgram(it) }
+            ))
+        }
+        return if (anyOk) total else -1
+    }
+
+    /**
+     * Merges one cloud row into the phone's row (counters keep the higher value, readings the newest
+     * non-empty one). Never writes back to the cloud, so it cannot start a ping-pong. Returns true when
+     * the local row changed.
+     */
+    suspend fun applyRemoteMetric(remote: DailyMetric): Boolean {
+        if (remote.date.isBlank()) return false
+        val local = metricsDao.getMetricsForDate(remote.date).firstOrNull()
+        val merged = if (local == null) remote else MetricMerger.merge(local, remote)
+        if (local != null && merged == local) return false
+        if (local == null && MetricReconciler.isEmpty(remote)) return false
+        metricsDao.insertMetrics(merged)
+        return true
+    }
+
+    /**
+     * Two-way catch-up with the cloud for the last [daysBack] days (all history when null):
+     * pulls rows that are newer or higher in the cloud and pushes what the cloud lacks.
+     */
+    suspend fun reconcileMetrics(daysBack: Int?): ReconcileResult {
+        val start = daysBack?.let { java.time.LocalDate.now().minusDays((it - 1).toLong()).toString() }
+        val remotes = FirebaseManager.fetchMetrics(start) ?: return ReconcileResult(0, 0, false)
+        val locals = (if (start == null) metricsDao.getAllMetrics() else metricsDao.getMetricsHistory(start)).firstOrNull()
+            ?: emptyList()
+        val plan = MetricReconciler.plan(locals, remotes)
+        var pulled = 0
+        for (remote in plan.applyFromRemote) {
+            if (applyRemoteMetric(remote)) pulled++
+        }
+        var pushed = 0
+        for (date in plan.pushDates) {
+            val local = metricsDao.getMetricsForDate(date).firstOrNull() ?: continue
+            val merged = FirebaseManager.syncMetricMerged(local)
+            if (merged != null) {
+                pushed++
+                applyRemoteMetric(merged)
+            }
+        }
+        return ReconcileResult(pulled, pushed, true)
+    }
+
+    /** Live feed of the cloud's rows from the last [daysBack] days (a second phone's changes). */
+    fun observeRemoteMetrics(daysBack: Int): kotlinx.coroutines.flow.Flow<List<DailyMetric>> {
+        val start = java.time.LocalDate.now().minusDays((daysBack - 1).toLong()).toString()
+        return FirebaseManager.observeMetrics(start)
     }
 
     suspend fun awardChallengeBonus(points: Int, badgeId: String) {
