@@ -515,7 +515,15 @@ class AppRepository(
     fun getMetricsHistoryRange(startDate: String, endDate: String) = metricsDao.getMetricsHistoryRange(startDate, endDate)
 
     suspend fun saveUserProfile(profile: UserProfile, stampTime: Boolean = true) {
-        val stamped = if (stampTime) profile.copy(updatedAt = System.currentTimeMillis()) else profile
+        val existing = userDao.getUserProfile().firstOrNull()
+        val changed = existing == null || existing.copy(updatedAt = 0L) != profile.copy(updatedAt = 0L)
+        val stamped = if (stampTime && changed) {
+            profile.copy(updatedAt = System.currentTimeMillis())
+        } else if (stampTime) {
+            profile.copy(updatedAt = existing?.updatedAt ?: profile.updatedAt)
+        } else {
+            profile
+        }
         val profileToSave = if (stamped.friendCode.isBlank()) {
             val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
             val claimedCode = if (user != null) FirebaseManager.claimFriendCode(user.uid) else null
@@ -524,18 +532,20 @@ class AppRepository(
             stamped
         }
         userDao.insertProfile(profileToSave)
-        try {
-            val mergedProfile = FirebaseManager.syncProfileMerged(profileToSave)
-            if (mergedProfile != null && mergedProfile != profileToSave) userDao.insertProfile(mergedProfile)
-            FirebaseManager.syncPublicProfile(
-                name = profileToSave.name,
-                currentStreak = profileToSave.currentStreak,
-                points = profileToSave.points,
-                badges = profileToSave.badges,
-                friendCode = profileToSave.friendCode
-            )
-        } catch (e: Exception) {
-            e.printStackTrace()
+        if (changed || existing == null) {
+            try {
+                val mergedProfile = FirebaseManager.syncProfileMerged(profileToSave)
+                if (mergedProfile != null && mergedProfile != profileToSave) userDao.insertProfile(mergedProfile)
+                FirebaseManager.syncPublicProfile(
+                    name = profileToSave.name,
+                    currentStreak = profileToSave.currentStreak,
+                    points = profileToSave.points,
+                    badges = profileToSave.badges,
+                    friendCode = profileToSave.friendCode
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
     
