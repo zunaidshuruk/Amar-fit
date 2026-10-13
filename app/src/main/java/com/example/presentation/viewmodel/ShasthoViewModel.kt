@@ -460,7 +460,72 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun endPeriodOn(date: java.time.LocalDate) {
-        viewModelScope.launch(Dispatchers.IO) { repository.endPeriod(date.toString()) }
+        viewModelScope.launch(Dispatchers.IO) {
+            val ended = repository.endPeriod(date.toString()) ?: return@launch
+            shareFinishedPeriodWithHealthConnect(ended)
+        }
+    }
+
+    // ---- Health Connect for the cycle tracker (only when "Share with Health Connect" is on and the permissions are granted)
+    private val cycleHcPrefs
+        get() = getApplication<Application>().getSharedPreferences("CycleHealthConnect", android.content.Context.MODE_PRIVATE)
+
+    /** Each finished period is written once (remembered by id), so nothing is duplicated in Health Connect. */
+    private suspend fun shareFinishedPeriodWithHealthConnect(period: com.example.data.local.PeriodLog) {
+        val profile = userProfile.value ?: return
+        if (!profile.cycleHealthConnectSync || period.endDate.isBlank()) return
+        val ctx = getApplication<Application>()
+        if (!com.example.data.health.CycleHealthConnect.hasPermissions(ctx)) return
+        val written = cycleHcPrefs.getStringSet("periods", emptySet())?.toMutableSet() ?: mutableSetOf()
+        if (period.cloudId in written) return
+        val span = period.toSpan() ?: return
+        val end = span.end ?: return
+        if (com.example.data.health.CycleHealthConnect.writePeriod(ctx, span.start, end)) {
+            written.add(period.cloudId)
+            cycleHcPrefs.edit().putStringSet("periods", written).apply()
+        }
+    }
+
+    private suspend fun shareFlowWithHealthConnect(date: java.time.LocalDate, flow: Int) {
+        val profile = userProfile.value ?: return
+        if (!profile.cycleHealthConnectSync) return
+        val ctx = getApplication<Application>()
+        if (!com.example.data.health.CycleHealthConnect.hasPermissions(ctx)) return
+        val key = "$date:$flow"
+        val written = cycleHcPrefs.getStringSet("flow", emptySet())?.toMutableSet() ?: mutableSetOf()
+        if (key in written) return
+        if (com.example.data.health.CycleHealthConnect.writeFlow(ctx, date, flow)) {
+            written.add(key)
+            cycleHcPrefs.edit().putStringSet("flow", written).apply()
+        }
+    }
+
+    fun setCycleHealthConnectSync(on: Boolean) {
+        viewModelScope.launch {
+            val profile = userProfile.value ?: return@launch
+            saveProfile(profile.copy(cycleHealthConnectSync = on))
+        }
+    }
+
+    /** Adds periods that Health Connect has and this app does not. [onResult] gets how many were added (-1 = could not read). */
+    fun importCycleFromHealthConnect(onResult: (Int) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val ctx = getApplication<Application>()
+            var added = -1
+            if (com.example.data.health.CycleHealthConnect.hasPermissions(ctx)) {
+                added = 0
+                val written = cycleHcPrefs.getStringSet("periods", emptySet())?.toMutableSet() ?: mutableSetOf()
+                for (span in com.example.data.health.CycleHealthConnect.readPeriods(ctx)) {
+                    val period = repository.importPeriod(span.start, span.end)
+                    if (period != null) {
+                        written.add(period.cloudId) // came from Health Connect: never write it back
+                        added++
+                    }
+                }
+                cycleHcPrefs.edit().putStringSet("periods", written).apply()
+            }
+            withContext(Dispatchers.Main) { onResult(added) }
+        }
     }
 
     fun removePeriod(cloudId: String) {
@@ -470,6 +535,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     fun saveCycleDay(date: java.time.LocalDate, flow: Int, symptoms: Int, mood: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.saveCycleDay(com.example.data.local.CycleDayLog(date = date.toString(), flow = flow, symptoms = symptoms, mood = mood))
+            if (flow > 0) shareFlowWithHealthConnect(date, flow)
         }
     }
 

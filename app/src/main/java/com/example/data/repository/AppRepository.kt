@@ -2242,6 +2242,23 @@ class AppRepository(
         return period
     }
 
+    /**
+     * Stores a period that Health Connect already has, unless a logged period starts within 3 days of it
+     * (the same period recorded by another app). Returns the new period, or null when nothing was added.
+     */
+    suspend fun importPeriod(start: java.time.LocalDate, end: java.time.LocalDate?): com.example.data.local.PeriodLog? {
+        val dao = cycleDao ?: return null
+        val live = dao.getAllPeriodsIncludingRemoved().filter { !it.removed }
+        val nearExisting = live.any {
+            try { Math.abs(java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.parse(it.startDate), start)) <= 3 } catch (e: Exception) { false }
+        }
+        if (nearExisting) return null
+        val period = com.example.data.local.PeriodLog(startDate = start.toString(), endDate = end?.toString() ?: "")
+        dao.upsertPeriod(period)
+        syncScope.launch { FirebaseManager.syncPeriod(period) }
+        return period
+    }
+
     /** Ends the most recent period that started on or before [date] and has no end yet. */
     suspend fun endPeriod(date: String): com.example.data.local.PeriodLog? {
         val dao = cycleDao ?: return null
