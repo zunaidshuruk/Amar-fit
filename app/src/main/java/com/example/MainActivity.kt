@@ -188,7 +188,7 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(pendingNavigationRoute, sessionChecked) {
                 val route = pendingNavigationRoute
                 if (sessionChecked && route != null) {
-                    if (NavTabs.isTabRoute(route)) navController.navigateToTab(route) else navController.navigate(route)
+                    if (NavTabs.isTabRoute(route)) navigateToTab(navController, route) else navController.navigate(route)
                     pendingNavigationRoute = null
                 }
             }
@@ -311,7 +311,7 @@ class MainActivity : ComponentActivity() {
                               modifier = Modifier
                                   .weight(1f)
                                   .clip(RoundedCornerShape(16.dp))
-                                  .clickable { navController.navigateToTab(tab.route) }
+                                  .clickable { navigateToTab(navController, tab.route) }
                                   .background(pillColor)
                                   .padding(vertical = 8.dp)
                           ) {
@@ -519,7 +519,7 @@ class MainActivity : ComponentActivity() {
                     hiddenTabs = hiddenTabs,
                     onOpenTab = { route ->
                         showMoreSheet = false
-                        navController.navigateToTab(route)
+                        navigateToTab(navController, route)
                     },
                     onOpenShortcut = { route ->
                         showMoreSheet = false
