@@ -20,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,6 +66,20 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
     var workoutTitle by remember { mutableStateOf("") }
     var activeSessionPlan by remember { mutableStateOf<WorkoutPlan?>(null) }
     var activeProgramRef by remember { mutableStateOf<Pair<String, Int>?>(null) }
+
+    // Swipe-to-delete with Undo: a swiped workout is hidden at once, but only really deleted
+    // after the "Workout deleted" snackbar times out (Undo brings it back untouched).
+    val snackbarHostState = remember { SnackbarHostState() }
+    val deleteScope = rememberCoroutineScope()
+    val pendingDeletes = remember { mutableStateListOf<SavedWorkout>() }
+    var workoutToConfirmDelete by remember { mutableStateOf<SavedWorkout?>(null) }
+    DisposableEffect(Unit) {
+        onDispose {
+            // Leaving the screen with a pending swipe: finish the deletion instead of losing it.
+            pendingDeletes.toList().forEach { viewModel.deleteWorkout(it) }
+            pendingDeletes.clear()
+        }
+    }
 
     val bodyTextColor = if (isDark) {
         android.graphics.Color.parseColor("#E2E8F0")
@@ -446,13 +461,6 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                     Spacer(modifier = Modifier.height(24.dp))
                 }
                 
-                Text(
-                    text = "Core Protocol Practices",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
                 OutlinedButton(
                     onClick = { navController?.navigate("exercise_library") },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -463,30 +471,6 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                     Text("Create Custom Workout", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                ProtocolPracticeCard(
-                    title = "Physical Exercise & HIIT",
-                    description = "High-Intensity Interval Training to deplete glycogen stores and boost growth hormone.",
-                    icon = Icons.Default.FitnessCenter,
-                    accent = AccentTokens.caloriesAccent(isDark),
-                    videoQuery = "Keto HIIT workout 20 min"
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                ProtocolPracticeCard(
-                    title = "Hormonal Health & Sun",
-                    description = "Morning sunlight exposure to regulate circadian rhythm and optimize Vitamin D / Cortisol balance.",
-                    icon = Icons.Default.WbSunny,
-                    accent = AccentTokens.pointsAccent(isDark),
-                    videoQuery = "Morning sunlight circadian rhythm optimization"
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                ProtocolPracticeCard(
-                    title = "Breathwork & Meditation",
-                    description = "Diaphragmatic breathing to activate the parasympathetic nervous system and reduce cortisol.",
-                    icon = Icons.Default.SelfImprovement,
-                    accent = AccentTokens.stepsAccent(isDark),
-                    videoQuery = "Wim Hof method breathing tutorial",
-                    onStartSession = { navController?.navigate("mindfulness_timer") }
-                )
             } else if (selectedTab == 1) {
                 // Saved View
                 if (savedWorkouts.isEmpty()) {
@@ -494,7 +478,51 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                         Text("No saved workouts yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 } else {
-                    savedWorkouts.forEach { workout ->
+                    savedWorkouts.filter { w -> pendingDeletes.none { it.cloudId == w.cloudId } }.forEach { workout ->
+                        key(workout.cloudId) {
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { value ->
+                                if (value == SwipeToDismissBoxValue.EndToStart) {
+                                    pendingDeletes.add(workout)
+                                    deleteScope.launch {
+                                        val result = snackbarHostState.showSnackbar(
+                                            message = "Workout deleted",
+                                            actionLabel = "Undo",
+                                            duration = SnackbarDuration.Short
+                                        )
+                                        if (result == SnackbarResult.ActionPerformed) {
+                                            pendingDeletes.remove(workout)
+                                        } else if (pendingDeletes.remove(workout)) {
+                                            viewModel.deleteWorkout(workout)
+                                        }
+                                    }
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                        )
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            enableDismissFromStartToEnd = false,
+                            backgroundContent = {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(bottom = 12.dp)
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(MaterialTheme.colorScheme.error),
+                                    contentAlignment = Alignment.CenterEnd
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Delete",
+                                        tint = MaterialTheme.colorScheme.onError,
+                                        modifier = Modifier.padding(end = 24.dp)
+                                    )
+                                }
+                            }
+                        ) {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -514,10 +542,12 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                                IconButton(onClick = { viewModel.deleteWorkout(workout) }) {
+                                IconButton(onClick = { workoutToConfirmDelete = workout }) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                                 }
                             }
+                        }
+                        }
                         }
                     }
                 }
@@ -552,6 +582,31 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
         
         Spacer(modifier = Modifier.height(100.dp))
     }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp)
+        )
+    }
+
+    workoutToConfirmDelete?.let { w ->
+        AlertDialog(
+            onDismissRequest = { workoutToConfirmDelete = null },
+            title = { Text("Delete workout?") },
+            text = { Text("\"${w.title}\" will be removed from this phone and your other devices.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteWorkout(w)
+                    workoutToConfirmDelete = null
+                }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { workoutToConfirmDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     if (showPlanEditor) {

@@ -71,6 +71,8 @@ import kotlinx.coroutines.launch
 import com.example.presentation.navigation.NavTabs
 import com.example.presentation.navigation.MoreSheet
 import com.example.presentation.navigation.CustomizeNavScreen
+import com.example.presentation.navigation.navigateToTab
+import com.example.presentation.mindbody.MindBodyScreen
 
 val LocalNavController = androidx.compose.runtime.staticCompositionLocalOf<NavHostController?> { null }
 
@@ -80,6 +82,7 @@ sealed class TabScreen(val route: String, val label: String, val icon: ImageVect
     object Nutrition : TabScreen("nutrition", "Nutrition", Icons.Rounded.RestaurantMenu)
     object Sleep : TabScreen("sleep", "Sleep", Icons.Rounded.Bedtime)
     object Health : TabScreen("health", "Health", Icons.Rounded.Favorite)
+    object MindBody : TabScreen("mind_body", "Mind & Body", Icons.Rounded.SelfImprovement)
     object Friends : TabScreen("friends", "Friends", Icons.Rounded.People)
     object Settings : TabScreen("settings", "Settings", Icons.Rounded.Settings)
 }
@@ -97,6 +100,7 @@ val chooseableTabs = listOf(
     TabScreen.Nutrition,
     TabScreen.Sleep,
     TabScreen.Health,
+    TabScreen.MindBody,
     TabScreen.Friends,
     TabScreen.Settings
 )
@@ -177,13 +181,14 @@ class MainActivity : ComponentActivity() {
         } else {
             val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
             val activeTabs = listOf(TabScreen.Today) + NavTabs.parse(userProfile?.navTabs).mapNotNull { tabForRoute(it) }.take(3)
-            val isMainTab = currentRoute == TabScreen.Today.route || chooseableTabs.any { it.route == currentRoute }
+            val showBottomBar = NavTabs.isTabRoute(currentRoute)
+            val showTopBar = NavTabs.showsTopBar(currentRoute)
             var showMoreSheet by remember { mutableStateOf(false) }
 
             LaunchedEffect(pendingNavigationRoute, sessionChecked) {
                 val route = pendingNavigationRoute
                 if (sessionChecked && route != null) {
-                    navController.navigate(route)
+                    if (NavTabs.isTabRoute(route)) navigateToTab(navController, route) else navController.navigate(route)
                     pendingNavigationRoute = null
                 }
             }
@@ -203,7 +208,7 @@ class MainActivity : ComponentActivity() {
                   }
               },
               topBar = {
-                  if (isMainTab) {
+                  if (showTopBar) {
                       TopAppBar(
                           title = { 
                               val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
@@ -228,13 +233,6 @@ class MainActivity : ComponentActivity() {
                               }
                           },
                           actions = {
-                              IconButton(onClick = { navController.navigate("settings") }) {
-                                  Icon(
-                                      imageVector = Icons.Default.Settings,
-                                      contentDescription = "Settings",
-                                      tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                  )
-                              }
                               Box(
                                   modifier = Modifier
                                       .padding(end = 16.dp)
@@ -286,11 +284,10 @@ class MainActivity : ComponentActivity() {
                   }
               },
               bottomBar = {
-                if (isMainTab) {
+                if (showBottomBar) {
                   Box(
                     modifier = Modifier
                       .fillMaxWidth()
-                      .background(MaterialTheme.colorScheme.background)
                       .padding(horizontal = 16.dp, vertical = 12.dp)
                   ) {
                     Row(
@@ -299,6 +296,7 @@ class MainActivity : ComponentActivity() {
                         .shadow(elevation = 16.dp, shape = RoundedCornerShape(28.dp), clip = false)
                         .clip(RoundedCornerShape(28.dp))
                         .background(MaterialTheme.colorScheme.surface)
+                        .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f), RoundedCornerShape(28.dp))
                         .padding(horizontal = 4.dp, vertical = 8.dp),
                       horizontalArrangement = Arrangement.SpaceBetween,
                       verticalAlignment = Alignment.CenterVertically
@@ -313,15 +311,7 @@ class MainActivity : ComponentActivity() {
                               modifier = Modifier
                                   .weight(1f)
                                   .clip(RoundedCornerShape(16.dp))
-                                  .clickable {
-                                      navController.navigate(tab.route) {
-                                          popUpTo(navController.graph.findStartDestination().id) {
-                                              saveState = true
-                                          }
-                                          launchSingleTop = true
-                                          restoreState = true
-                                      }
-                                  }
+                                  .clickable { navigateToTab(navController, tab.route) }
                                   .background(pillColor)
                                   .padding(vertical = 8.dp)
                           ) {
@@ -425,6 +415,7 @@ class MainActivity : ComponentActivity() {
                   composable(TabScreen.Nutrition.route) { NutritionScreen(viewModel, navController) }
                   composable(TabScreen.Sleep.route) { SleepScreen(viewModel, navController) }
                   composable(TabScreen.Health.route) { HealthScreen(viewModel, navController) }
+                  composable(TabScreen.MindBody.route) { MindBodyScreen(viewModel) }
                   
                   // SUB-DESTINATIONS
                   composable("dietplan") { DietChartScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
@@ -437,7 +428,7 @@ class MainActivity : ComponentActivity() {
                   composable("recipe") { RecipeScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("foodlog") { FoodLogScreen(viewModel = viewModel, navController = navController, onNavigateToScanner = { navController.navigate("scanner") }, onNavigateBack = { navController.popBackStack() }) }
                   composable("profile") { com.example.presentation.profile.ProfileScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onOpenSettings = { navController.navigate("settings") }, onOpenHealthGoals = { navController.navigate("health_goals") }) }
-                  composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }, onNavigateToHealthGoals = { navController.navigate("health_goals") }, onNavigateToFriends = { navController.navigate("friends") }, onNavigateToAbout = { navController.navigate("about") }, onOpenProfile = { navController.navigate("profile") }) }
+                  composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }, onNavigateToHealthGoals = { navController.navigate("health_goals") }, onNavigateToFriends = { navController.navigate("friends") }, onNavigateToAbout = { navController.navigate("about") }, onOpenProfile = { navController.navigate("profile") }, onNavigateToCustomizeNav = { navController.navigate("customize_nav") }) }
                   composable("privacy_consent") {
                       com.example.presentation.auth.ConsentGateScreen(
                           onAccept = {
@@ -528,13 +519,7 @@ class MainActivity : ComponentActivity() {
                     hiddenTabs = hiddenTabs,
                     onOpenTab = { route ->
                         showMoreSheet = false
-                        navController.navigate(route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
+                        navigateToTab(navController, route)
                     },
                     onOpenShortcut = { route ->
                         showMoreSheet = false

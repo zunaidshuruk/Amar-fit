@@ -44,6 +44,7 @@ Open work: [ACTIVE.md](ACTIVE.md). Closed Parts link to their verbatim archive. 
 | AQ | UI insets, scrolling and keyboard audit (Add exercise, sign-up, dialogs) | 📤 prompts sent (3) | — | [ACTIVE](ACTIVE.md#bug-batch--insets-scrolling-and-keyboard-audit-part-aq-2026-10-12) |
 | AR | 360 degree Health Analyst: dossier + findings, deep Gemini analysis, offline review | ⏳ scoped (sprint 16) | — | [ACTIVE](ACTIVE.md#sprint-16--360-degree-health-analyst-part-ar-planned-2026-10-12-not-started) |
 | AS | Bug: the view model's "today" frozen at app start (sleep missing on Today) | 📤 prompt sent | — | [ACTIVE](ACTIVE.md#bug--the-view-models-today-is-frozen-when-the-app-starts-part-as-2026-10-12) |
+| AT | Multi-device sync: merge engine, transactional cloud writes, resume and realtime pulls, soft deletes | ⏳ scoped (sprint 17) | — | [ACTIVE](ACTIVE.md#sprint-17--multi-device-sync-part-at-planned-2026-10-12-not-started) |
 | Y | AI response overhaul (renderer, style guide, card, follow-up chips) | ✅ closed (4/4) | `166f38c` | [archive](archive/PART-Y-ai-response-overhaul.md) |
 | AA | Exercise tab powered by Health Connect (sessions, history, calories) | ✅ closed | `bd467ad` | [archive](archive/PART-AA-AB-exercise-sprint.md) |
 | AB | Customizable workouts (sets, reps, time, rest, rounds; edit AI/saved/custom) | ✅ closed (AI generator returning rounds not built) | `2d112dc` | [archive](archive/PART-AA-AB-exercise-sprint.md) |
