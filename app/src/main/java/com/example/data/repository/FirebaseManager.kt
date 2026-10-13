@@ -2,6 +2,7 @@ package com.example.data.repository
 
 import android.util.Log
 import com.example.data.local.*
+import com.example.data.sync.MetricMerger
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
@@ -161,6 +162,70 @@ object FirebaseManager {
         }
     }
     
+    /**
+     * Writes a day's metrics with a read-merge-write transaction, so another phone's data is never
+     * overwritten: counters keep the higher value, readings the newest non-empty one.
+     * Returns the merged row that is now in the cloud, or null when signed out, offline or on failure.
+     */
+    suspend fun syncMetricMerged(local: DailyMetric): DailyMetric? {
+        val user = FirebaseAuth.getInstance().currentUser ?: return null
+        val db = FirebaseFirestore.getInstance()
+        val ref = db.collection("users").document(user.uid)
+            .collection("health_metrics").document(local.date)
+        return try {
+            db.runTransaction<DailyMetric> { tx ->
+                val remote = tx.get(ref).toObject(DailyMetric::class.java)
+                val merged = if (remote == null) local else MetricMerger.merge(local, remote)
+                if (remote == null || merged != remote) {
+                    tx.set(ref, merged)
+                }
+                merged
+            }.await()
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "syncMetricMerged failed for ${local.date}", e)
+            null
+        }
+    }
+
+    /** Reads the cloud's daily rows from [startDate] (inclusive, "yyyy-MM-dd") or all of them; null on failure. */
+    suspend fun fetchMetrics(startDate: String?): List<DailyMetric>? {
+        val user = FirebaseAuth.getInstance().currentUser ?: return null
+        return try {
+            val col = FirebaseFirestore.getInstance().collection("users").document(user.uid)
+                .collection("health_metrics")
+            val snap = (if (startDate == null) col.get() else col.whereGreaterThanOrEqualTo("date", startDate).get()).await()
+            snap.documents.mapNotNull { doc ->
+                doc.toObject(DailyMetric::class.java)?.let { if (it.date.isBlank()) it.copy(date = doc.id) else it }
+            }
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "fetchMetrics failed", e)
+            null
+        }
+    }
+
+    /** Live feed of the cloud's daily rows from [startDate] on, so a second phone's changes arrive within seconds. */
+    fun observeMetrics(startDate: String): Flow<List<DailyMetric>> = callbackFlow {
+        val user = FirebaseAuth.getInstance().currentUser
+        if (user == null) {
+            close()
+            return@callbackFlow
+        }
+        val registration = FirebaseFirestore.getInstance().collection("users").document(user.uid)
+            .collection("health_metrics")
+            .whereGreaterThanOrEqualTo("date", startDate)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("FirebaseManager", "observeMetrics failed", error)
+                    return@addSnapshotListener
+                }
+                val rows = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(DailyMetric::class.java)?.let { if (it.date.isBlank()) it.copy(date = doc.id) else it }
+                } ?: emptyList()
+                trySend(rows)
+            }
+        awaitClose { registration.remove() }
+    }
+
     suspend fun syncProfile(profile: UserProfile): Boolean {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser
@@ -932,19 +997,7 @@ object FirebaseManager {
                 e.printStackTrace()
             }
 
-            // Pull Metrics
-            try {
-                val metricsSnap = db.collection("users").document(user.uid).collection("health_metrics").get().await()
-                for (doc in metricsSnap.documents) {
-                    val metric = doc.toObject(DailyMetric::class.java)
-                    if (metric != null) {
-                        metricsDao.insertMetrics(metric)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("FirebaseManager", "Error pulling metrics on login", e)
-                e.printStackTrace()
-            }
+            // Metrics are merged (not replaced) by AppRepository.reconcileMetrics after login.
 
             // Pull Food Logs
             try {

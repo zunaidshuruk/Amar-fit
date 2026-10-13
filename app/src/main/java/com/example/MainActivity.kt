@@ -371,6 +371,7 @@ class MainActivity : ComponentActivity() {
                 val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
                   if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                     viewModel.refreshToday()
+                    viewModel.syncFromCloud()
                     viewModel.syncWithHealthConnect(context, showRefreshIndicator = false)
                   }
                 }

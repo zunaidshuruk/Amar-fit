@@ -89,6 +89,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             } catch (e: Exception) {
                 // Ignore sync timeout or network errors during startup
             }
+            syncFromCloud(force = true)
             val profile = try {
                 withTimeoutOrNull(1000L) {
                     repository.userProfile.firstOrNull()
@@ -119,6 +120,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun deleteAccount(onComplete: (com.example.data.repository.DeleteAccountResult) -> Unit) {
+        stopCloudListeners()
         viewModelScope.launch(Dispatchers.IO) {
             val result = repository.deleteAccount()
             if (result is com.example.data.repository.DeleteAccountResult.Success) {
@@ -143,7 +145,67 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private var lastQuickSyncAt = 0L
+    private var metricsListenerJob: kotlinx.coroutines.Job? = null
+
+    /**
+     * Catches this phone up with the cloud: the last 7 days on every app resume (at most every 30 seconds),
+     * the last 60 days once a day, and a live listener on the last 3 days so a second phone's changes show
+     * up within seconds. Safe to call often; does nothing when signed out.
+     */
+    fun syncFromCloud(force: Boolean = false) {
+        if (com.google.firebase.auth.FirebaseAuth.getInstance().currentUser == null) return
+        val now = System.currentTimeMillis()
+        if (!force && now - lastQuickSyncAt < 30_000L) {
+            ensureMetricsListener()
+            return
+        }
+        lastQuickSyncAt = now
+        viewModelScope.launch {
+            try {
+                val prefs = getApplication<Application>().getSharedPreferences("ShasthoPrefs", android.content.Context.MODE_PRIVATE)
+                val lastFull = prefs.getLong("last_full_metrics_sync", 0L)
+                val daily = now - lastFull > 24L * 60L * 60L * 1000L
+                // First run on this phone (new sign-in or app update): pull the WHOLE history once, so a new
+                // phone gets everything back. Afterwards: 60 days once a day, 7 days otherwise.
+                val needFull = !prefs.getBoolean("metrics_full_restore_done", false)
+                val result = repository.reconcileMetrics(daysBack = if (needFull) null else if (daily) 60 else 7)
+                if (result.ok) {
+                    val edit = prefs.edit()
+                    if (needFull) edit.putBoolean("metrics_full_restore_done", true)
+                    if (needFull || daily) edit.putLong("last_full_metrics_sync", now)
+                    edit.apply()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            ensureMetricsListener()
+        }
+    }
+
+    private fun ensureMetricsListener() {
+        if (com.google.firebase.auth.FirebaseAuth.getInstance().currentUser == null) return
+        if (metricsListenerJob?.isActive == true) return
+        metricsListenerJob = viewModelScope.launch {
+            try {
+                repository.observeRemoteMetrics(daysBack = 3).collect { rows ->
+                    rows.forEach { repository.applyRemoteMetric(it) }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun stopCloudListeners() {
+        metricsListenerJob?.cancel()
+        metricsListenerJob = null
+    }
+
     fun logout(onComplete: () -> Unit) {
+        stopCloudListeners()
+        getApplication<Application>().getSharedPreferences("ShasthoPrefs", android.content.Context.MODE_PRIVATE)
+            .edit().remove("metrics_full_restore_done").remove("last_full_metrics_sync").apply()
         viewModelScope.launch(Dispatchers.IO) {
             com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
             database.clearAllTables()

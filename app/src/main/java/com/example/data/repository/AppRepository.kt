@@ -6,7 +6,13 @@ import com.example.data.local.MetricsDao
 import com.example.data.local.UserDao
 import com.example.data.local.UserProfile
 import com.example.data.remote.*
+import com.example.data.sync.MetricMerger
+import com.example.data.sync.MetricReconciler
+import com.example.data.sync.ReconcileResult
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -139,6 +145,9 @@ class AppRepository(
     suspend fun deleteAccount(): DeleteAccountResult {
         return FirebaseManager.deleteAccount()
     }
+
+    /** Cloud writes run here so saving a metric never waits for (or fails because of) the network. */
+    private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     suspend fun syncDataOnLogin() {
         FirebaseManager.pullDataOnLogin(userDao, metricsDao, savedDietChartDao, savedWorkoutDao, savedChatDao, medicalRecordDao, workoutProgramDao)
@@ -409,16 +418,68 @@ class AppRepository(
         }
         metricsDao.insertMetrics(toSave)
         if (changed || existing == null) {
-            try {
-                FirebaseManager.syncMetric(toSave)
-                val currentProfile = userDao.getUserProfile().firstOrNull()
-                if (currentProfile != null && toSave.date == java.time.LocalDate.now().toString()) {
-                    FirebaseManager.syncFriendStats(toSave, currentProfile)
+            syncScope.launch {
+                try {
+                    // Read-merge-write in the cloud: another phone's higher counters / newer readings are kept,
+                    // and whatever it holds that this phone lacks comes straight back into the local row.
+                    val merged = FirebaseManager.syncMetricMerged(toSave)
+                    if (merged != null) applyRemoteMetric(merged)
+                    val currentProfile = userDao.getUserProfile().firstOrNull()
+                    if (currentProfile != null && toSave.date == java.time.LocalDate.now().toString()) {
+                        FirebaseManager.syncFriendStats(toSave, currentProfile)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
         }
+    }
+
+    /**
+     * Merges one cloud row into the phone's row (counters keep the higher value, readings the newest
+     * non-empty one). Never writes back to the cloud, so it cannot start a ping-pong. Returns true when
+     * the local row changed.
+     */
+    suspend fun applyRemoteMetric(remote: DailyMetric): Boolean {
+        if (remote.date.isBlank()) return false
+        val local = metricsDao.getMetricsForDate(remote.date).firstOrNull()
+        val merged = if (local == null) remote else MetricMerger.merge(local, remote)
+        if (local != null && merged == local) return false
+        if (local == null && MetricReconciler.isEmpty(remote)) return false
+        metricsDao.insertMetrics(merged)
+        return true
+    }
+
+    /**
+     * Two-way catch-up with the cloud for the last [daysBack] days (all history when null):
+     * pulls rows that are newer or higher in the cloud and pushes what the cloud lacks.
+     */
+    suspend fun reconcileMetrics(daysBack: Int?): ReconcileResult {
+        val start = daysBack?.let { java.time.LocalDate.now().minusDays((it - 1).toLong()).toString() }
+        val remotes = FirebaseManager.fetchMetrics(start) ?: return ReconcileResult(0, 0, false)
+        val locals = (if (start == null) metricsDao.getAllMetrics() else metricsDao.getMetricsHistory(start)).firstOrNull()
+            ?: emptyList()
+        val plan = MetricReconciler.plan(locals, remotes)
+        var pulled = 0
+        for (remote in plan.applyFromRemote) {
+            if (applyRemoteMetric(remote)) pulled++
+        }
+        var pushed = 0
+        for (date in plan.pushDates) {
+            val local = metricsDao.getMetricsForDate(date).firstOrNull() ?: continue
+            val merged = FirebaseManager.syncMetricMerged(local)
+            if (merged != null) {
+                pushed++
+                applyRemoteMetric(merged)
+            }
+        }
+        return ReconcileResult(pulled, pushed, true)
+    }
+
+    /** Live feed of the cloud's rows from the last [daysBack] days (a second phone's changes). */
+    fun observeRemoteMetrics(daysBack: Int): kotlinx.coroutines.flow.Flow<List<DailyMetric>> {
+        val start = java.time.LocalDate.now().minusDays((daysBack - 1).toLong()).toString()
+        return FirebaseManager.observeMetrics(start)
     }
 
     suspend fun awardChallengeBonus(points: Int, badgeId: String) {
