@@ -49,6 +49,9 @@ object ReminderCatalog {
     private const val HC_NUDGE_CODE = 7803
     private const val MEDICINE_BASE = 7900
 
+    /** The notification id (and alarm code) of the medicine reminder in slot [index]. */
+    fun medicineNotificationId(index: Int): Int = MEDICINE_BASE + index
+
     /** Request codes of every alarm the app may ever arm, used to cancel everything before re-arming. */
     fun allRequestCodes(): List<Int> {
         val codes = ArrayList<Int>()
@@ -228,7 +231,7 @@ object ReminderCatalog {
                         id = "medicine_$index", requestCode = MEDICINE_BASE + index, kind = ReminderKind.MEDICINE,
                         minuteOfDay = m.minuteOfDay, days = m.days,
                         title = "Time for your medicine", message = MedicineReminders.describe(m),
-                        route = "today", channel = Channels.MEDICINE, detail = index.toString()
+                        route = "today", channel = Channels.MEDICINE, detail = m.id
                     )
                 )
             }

@@ -69,6 +69,7 @@
         </activity>
         <receiver android:name=".presentation.notifications.MealReminderReceiver" android:exported="false" />
         <receiver android:name=".presentation.notifications.ReminderReceiver" android:exported="false" />
+        <receiver android:name=".presentation.notifications.MedicineActionReceiver" android:exported="false" />
         <receiver
             android:name=".presentation.notifications.BootReceiver"
             android:exported="true">

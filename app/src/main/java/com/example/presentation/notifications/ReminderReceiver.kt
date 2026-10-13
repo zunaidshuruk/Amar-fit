@@ -92,11 +92,18 @@ object ReminderRunner {
                 (metric?.bloodGlucoseBeforeDinner ?: 0f) > 0f,
                 (metric?.bloodGlucoseAfterDinner ?: 0f) > 0f
             ),
+            medicineTakenToday = if (spec.kind == ReminderKind.MEDICINE) MedicineTakenStore(context).takenOn(today) else emptySet(),
             cycleLoggedToday = if (isCycleKind) {
                 db.cycleDao().getDay(date)?.let { it.flow > 0 || it.symptoms != 0 || it.mood != 0 } == true
             } else false
         )
         if (!ReminderDecider.shouldShow(spec, snapshot, prefs, minuteNow)) return
+
+        // medicine reminders carry the Taken and Snooze buttons
+        if (spec.kind == ReminderKind.MEDICINE) {
+            MedicineNotifier.show(context, spec.detail, spec.requestCode, spec.title, spec.message, prefs.medicineDiscreet)
+            return
+        }
 
         // the Health Connect nudge decides for itself (connected? available? 3 days since the last one?) and shows itself
         if (spec.kind == ReminderKind.HEALTH_CONNECT) {

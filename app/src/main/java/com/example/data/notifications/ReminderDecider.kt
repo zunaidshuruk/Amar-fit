@@ -12,7 +12,9 @@ data class TodaySnapshot(
     /** For the six glucose slots, in order: has a reading been logged for that slot today. */
     val glucoseSlotLogged: List<Boolean> = List(6) { false },
     /** Something was logged in the cycle tracker today (flow, symptoms or mood). */
-    val cycleLoggedToday: Boolean = false
+    val cycleLoggedToday: Boolean = false,
+    /** Ids of the medicine reminders already marked "Taken" today. */
+    val medicineTakenToday: Set<String> = emptySet()
 )
 
 object ReminderDecider {
@@ -34,7 +36,9 @@ object ReminderDecider {
             }
             ReminderKind.CYCLE_LOG -> !snap.cycleLoggedToday
             // the daily cycle check only runs; whether there is anything to say is decided from the predictions by the runner
-            ReminderKind.CYCLE, ReminderKind.FASTING, ReminderKind.HEALTH_CONNECT, ReminderKind.MEDICINE,
+            // a dose already marked taken today needs no reminder
+            ReminderKind.MEDICINE -> spec.detail !in snap.medicineTakenToday
+            ReminderKind.CYCLE, ReminderKind.FASTING, ReminderKind.HEALTH_CONNECT,
             ReminderKind.BEDTIME, ReminderKind.WEEKLY_CHECKIN -> true
         }
     }

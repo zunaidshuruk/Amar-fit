@@ -46,6 +46,9 @@ internal fun MedicineSection(
 ) {
     var editing by remember { mutableStateOf<MedicineReminder?>(null) }
     var confirmDelete by remember { mutableStateOf<MedicineReminder?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val store = remember { MedicineTakenStore(context) }
+    var takenToday by remember { mutableStateOf(store.takenOn()) }
 
     SectionCard(title = "Medicine reminders") {
         Text(
@@ -72,6 +75,27 @@ internal fun MedicineSection(
                         Days.label(m.days)
                     ).joinToString(" \u00B7 ")
                     Text(details, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val isTaken = m.id in takenToday
+                    val index = prefs.medicines.indexOfFirst { it.id == m.id }
+                    TextButton(
+                        onClick = {
+                            if (isTaken) {
+                                store.undo(m.id)
+                            } else {
+                                store.markTaken(m.id)
+                                // a dose marked taken also stops a pending snoozed repeat and hides the notification
+                                if (index >= 0) {
+                                    val notificationId = com.example.data.notifications.ReminderCatalog.medicineNotificationId(index)
+                                    MedicineNotifier.cancelSnooze(context, notificationId)
+                                    androidx.core.app.NotificationManagerCompat.from(context).cancel(notificationId)
+                                }
+                            }
+                            takenToday = store.takenOn()
+                        },
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 0.dp, vertical = 0.dp)
+                    ) {
+                        Text(if (isTaken) "Taken today \u2713 (undo)" else "Mark as taken today", fontSize = 12.sp)
+                    }
                 }
                 Switch(
                     checked = m.enabled,

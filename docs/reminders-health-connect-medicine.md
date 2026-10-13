@@ -18,12 +18,17 @@ after reboot, app update and time changes).
 * **Lock screen:** by default only "You have a reminder" shows until the phone is unlocked (switch: "Hide the medicine name on the lock screen").
 * **Stored** in the notification settings JSON of the profile, so it syncs to the user's other phones and is removed with the account. Never shown to friends and
   never sent to the AI (`CycleIsolationTest.medicineRemindersNeverReachFriendsOrTheAi`). Privacy policy 1.2 and 3 mention it.
-* Not built (possible later): a "Taken" or "Snooze" button on the notification, and a log of taken doses.
+* **Taken and Snooze buttons** (Zunaid's request): the notification has **Taken** and **Snooze 10 min**. Taken records the dose as taken today (phone only,
+  never synced, last 14 days kept; `MedicineTaken`, `MedicineTakenStore`), hides the notification and cancels any snoozed repeat. Snooze hides it and shows it
+  again 10 minutes later (`MedicineNotifier`, receiver `MedicineActionReceiver`), unless the dose was marked taken meanwhile; it can be snoozed again. A dose already
+  marked taken today (also with "Mark as taken today" under the reminder in Settings, which can be undone) is not reminded again that day. On a locked phone the
+  buttons appear only after unlocking when the lock-screen switch is on (the generic lock-screen version has no buttons).
+* Not built (possible later): a history screen of taken doses and a missed-dose alert.
 
 ## Phone test plan
 1. New install and first login with Health Connect not connected: the nudge arrives once when the app opens (after allowing notifications). Tap it: Settings opens.
 2. Do not connect: 3 days later at about 10:00 it arrives again; connect Health Connect: no more nudges. Switch it off in Settings > Notifications: none.
-3. Settings > Notifications > Medicine reminders: add a reminder two minutes ahead: a heads-up arrives; on a locked phone only "You have a reminder" shows.
+3. Settings > Notifications > Medicine reminders: add a reminder two minutes ahead: a heads-up arrives with **Taken** and **Snooze 10 min** (on a locked phone only "You have a reminder" shows). Tap Snooze: it returns 10 minutes later. Tap Taken: it disappears and the row in Settings says "Taken today"; no repeat comes.
 4. Add six reminders: the add button changes to "All 6 reminders added"; delete one: it is enabled again. Edit one (time, days): the new time is used.
 5. Set quiet hours around a medicine time: the medicine reminder still arrives, a water reminder does not.
 6. Two phones: add a reminder on one, it appears on the other and rings there too.
