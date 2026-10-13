@@ -64,6 +64,20 @@ object FirebaseManager {
                     db.collection("users").document(uid).collection("medical_records").document(doc.id).delete().await()
                 }
 
+                val activitySnap = db.collection("users").document(uid).collection("activity_events").get().await()
+                for (doc in activitySnap.documents) {
+                    doc.reference.delete().await()
+                }
+
+                val assistantChatsSnap = db.collection("users").document(uid).collection("assistant_chats").get().await()
+                for (doc in assistantChatsSnap.documents) {
+                    val msgs = doc.reference.collection("messages").get().await()
+                    for (m in msgs.documents) {
+                        m.reference.delete().await()
+                    }
+                    doc.reference.delete().await()
+                }
+
                 deleteSocialData(db, uid)
 
                 db.collection("users").document(uid).delete().await()
@@ -824,7 +838,7 @@ object FirebaseManager {
             // soft delete: other phones see the tombstone and remove their copy
             FirebaseFirestore.getInstance().collection("users").document(user.uid)
                 .collection("diet_logs").document(log.cloudId)
-                .set(mapOf("deleted" to true, "deletedAt" to System.currentTimeMillis()), SetOptions.merge())
+                .set(mapOf("deleted" to true, "deletedAt" to System.currentTimeMillis(), "date" to log.date))
         }
     }
 
@@ -934,7 +948,7 @@ object FirebaseManager {
         return try {
             FirebaseFirestore.getInstance().collection("users").document(user.uid)
                 .collection(collection).document(id)
-                .set(mapOf("deleted" to true, "deletedAt" to System.currentTimeMillis()), SetOptions.merge())
+                .set(mapOf("deleted" to true, "deletedAt" to System.currentTimeMillis()))
                 .await()
             true
         } catch (e: Exception) {
@@ -1029,9 +1043,11 @@ object FirebaseManager {
         val col = userCollection("assistant_chats") ?: return false
         val now = System.currentTimeMillis()
         return try {
+            // the tombstone replaces the chat document (no content kept) and its messages are removed
             col.document(sessionId)
-                .set(mapOf("deleted" to true, "deletedAt" to now, "updatedAt" to now), SetOptions.merge())
+                .set(mapOf("deleted" to true, "deletedAt" to now, "updatedAt" to now))
                 .await()
+            col.document(sessionId).collection("messages").get().await().documents.forEach { it.reference.delete() }
             true
         } catch (e: Exception) {
             e.printStackTrace()
