@@ -130,7 +130,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                     ChatMessage("Hi! I'm KardIQ AI. How can I help you?", false)
                 )
                 _scanResult.value = null
-                _coachAdvice.value = null
                 _dietChart.value = null
                 _shoppingList.value = null
                 _premiumRecipe.value = null
@@ -261,7 +260,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             _foodChatHistory.value = emptyList()
             foodChatHistoryLoaded = false
             _scanResult.value = null
-            _coachAdvice.value = null
             _dietChart.value = null
             _shoppingList.value = null
             _premiumRecipe.value = null
@@ -794,9 +792,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     )
     val chatHistory: StateFlow<List<ChatMessage>> = _chatHistory.asStateFlow()
     
-    private val _isLoadingChat = MutableStateFlow(false)
-    val isLoadingChat: StateFlow<Boolean> = _isLoadingChat.asStateFlow()
-    
     private val _scanResult = MutableStateFlow<String?>(null)
     val scanResult: StateFlow<String?> = _scanResult.asStateFlow()
     
@@ -865,19 +860,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         _scanResult.value = null
     }
 
-
-    fun updateSettings(isDarkMode: Boolean, notificationsEnabled: Boolean, remindersEnabled: Boolean, selectedLanguage: String) {
-        viewModelScope.launch {
-            val current = userProfile.value ?: return@launch
-            val updated = current.copy(
-                isDarkMode = isDarkMode,
-                notificationsEnabled = notificationsEnabled,
-                remindersEnabled = remindersEnabled,
-                selectedLanguage = selectedLanguage
-            )
-            repository.saveUserProfile(updated)
-        }
-    }
 
     fun updateTodayTileSlots(slots: List<String>) {
         viewModelScope.launch {
@@ -1258,34 +1240,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
     
-    private fun glucoseText(mmol: Float): String = formatGlucose(mmol, userProfile.value?.glucoseUnitMgdl ?: false)
-
-    fun setBloodGlucoseMorning(value: Float) {
-        viewModelScope.launch {
-            val updated = metricsWriteLock.withLock {
-                val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
-                val u = current.copy(bloodGlucoseMorning = value)
-                repository.saveMetrics(u)
-                u
-            }
-            repository.checkAndAwardBadges(updated)
-            repository.logActivityEvent("glucose", "Logged blood glucose: ${glucoseText(value)}")
-        }
-    }
-
-    fun setBloodGlucoseNight(value: Float) {
-        viewModelScope.launch {
-            val updated = metricsWriteLock.withLock {
-                val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
-                val u = current.copy(bloodGlucoseNight = value)
-                repository.saveMetrics(u)
-                u
-            }
-            repository.checkAndAwardBadges(updated)
-            repository.logActivityEvent("glucose", "Logged blood glucose: ${glucoseText(value)}")
-        }
-    }
-    
     private suspend fun writeWeightToHealthConnect(weightKg: Float) {
         if (weightKg <= 0f) return
         try {
@@ -1318,24 +1272,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             repository.checkAndAwardBadges(updated)
             repository.logActivityEvent("weight", "Logged weight: ${weight}kg")
             writeWeightToHealthConnect(weight)
-        }
-    }
-    
-    fun setWeight(value: Float) {
-        viewModelScope.launch {
-            val currentProfile = userProfile.value ?: return@launch
-            val updatedProfile = currentProfile.copy(weightKg = value)
-            repository.saveUserProfile(updatedProfile)
-            
-            val updated = metricsWriteLock.withLock {
-                val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
-                val u = current.copy(weightKg = value)
-                repository.saveMetrics(u)
-                u
-            }
-            repository.checkAndAwardBadges(updated)
-            repository.logActivityEvent("weight", "Logged weight: ${value}kg")
-            writeWeightToHealthConnect(value)
         }
     }
     
@@ -1432,90 +1368,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             healthConnectClient.insertRecords(listOf(record))
         } catch (e: Exception) {
             // Silently ignore — matches setBloodPressure's existing error-handling convention
-        }
-    }
-
-    fun setBloodGlucoseBeforeBreakfast(value: Float, specimenSource: String = "Not set", date: String = todayDateString) {
-        viewModelScope.launch {
-            val updated = metricsWriteLock.withLock {
-                val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
-                val u = current.copy(bloodGlucoseBeforeBreakfast = value, bloodGlucoseSpecimenSource = specimenSource)
-                repository.saveMetrics(u)
-                u
-            }
-            repository.checkAndAwardBadges(updated)
-            repository.logActivityEvent("glucose", "Logged blood glucose (before breakfast): ${glucoseText(value)}")
-            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_BREAKFAST, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource, date)
-        }
-    }
-
-    fun setBloodGlucoseAfterBreakfast(value: Float, specimenSource: String = "Not set", date: String = todayDateString) {
-        viewModelScope.launch {
-            val updated = metricsWriteLock.withLock {
-                val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
-                val u = current.copy(bloodGlucoseAfterBreakfast = value, bloodGlucoseSpecimenSource = specimenSource)
-                repository.saveMetrics(u)
-                u
-            }
-            repository.checkAndAwardBadges(updated)
-            repository.logActivityEvent("glucose", "Logged blood glucose (after breakfast): ${glucoseText(value)}")
-            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_BREAKFAST, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource, date)
-        }
-    }
-
-    fun setBloodGlucoseBeforeLunch(value: Float, specimenSource: String = "Not set", date: String = todayDateString) {
-        viewModelScope.launch {
-            val updated = metricsWriteLock.withLock {
-                val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
-                val u = current.copy(bloodGlucoseBeforeLunch = value, bloodGlucoseSpecimenSource = specimenSource)
-                repository.saveMetrics(u)
-                u
-            }
-            repository.checkAndAwardBadges(updated)
-            repository.logActivityEvent("glucose", "Logged blood glucose (before lunch): ${glucoseText(value)}")
-            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_LUNCH, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource, date)
-        }
-    }
-
-    fun setBloodGlucoseAfterLunch(value: Float, specimenSource: String = "Not set", date: String = todayDateString) {
-        viewModelScope.launch {
-            val updated = metricsWriteLock.withLock {
-                val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
-                val u = current.copy(bloodGlucoseAfterLunch = value, bloodGlucoseSpecimenSource = specimenSource)
-                repository.saveMetrics(u)
-                u
-            }
-            repository.checkAndAwardBadges(updated)
-            repository.logActivityEvent("glucose", "Logged blood glucose (after lunch): ${glucoseText(value)}")
-            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_LUNCH, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource, date)
-        }
-    }
-
-    fun setBloodGlucoseBeforeDinner(value: Float, specimenSource: String = "Not set", date: String = todayDateString) {
-        viewModelScope.launch {
-            val updated = metricsWriteLock.withLock {
-                val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
-                val u = current.copy(bloodGlucoseBeforeDinner = value, bloodGlucoseSpecimenSource = specimenSource)
-                repository.saveMetrics(u)
-                u
-            }
-            repository.checkAndAwardBadges(updated)
-            repository.logActivityEvent("glucose", "Logged blood glucose (before dinner): ${glucoseText(value)}")
-            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_DINNER, BloodGlucoseRecord.RELATION_TO_MEAL_BEFORE_MEAL, specimenSource, date)
-        }
-    }
-
-    fun setBloodGlucoseAfterDinner(value: Float, specimenSource: String = "Not set", date: String = todayDateString) {
-        viewModelScope.launch {
-            val updated = metricsWriteLock.withLock {
-                val current = repository.getMetricsForDate(date).firstOrNull() ?: DailyMetric(date = date)
-                val u = current.copy(bloodGlucoseAfterDinner = value, bloodGlucoseSpecimenSource = specimenSource)
-                repository.saveMetrics(u)
-                u
-            }
-            repository.checkAndAwardBadges(updated)
-            repository.logActivityEvent("glucose", "Logged blood glucose (after dinner): ${glucoseText(value)}")
-            writeGlucoseToHealthConnect(value, MealType.MEAL_TYPE_DINNER, BloodGlucoseRecord.RELATION_TO_MEAL_AFTER_MEAL, specimenSource, date)
         }
     }
 
@@ -2281,30 +2133,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-        fun setSteps(steps: Int) {
-        viewModelScope.launch {
-            val updated = metricsWriteLock.withLock {
-                val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
-                val u = current.copy(steps = steps)
-                repository.saveMetrics(u)
-                u
-            }
-            repository.checkAndAwardBadges(updated)
-        }
-    }
-
-    fun addSteps(steps: Int) {
-        viewModelScope.launch {
-            val updated = metricsWriteLock.withLock {
-                val current = repository.getMetricsForDate(todayDateString).firstOrNull() ?: DailyMetric(date = todayDateString)
-                val u = current.copy(steps = current.steps + steps)
-                repository.saveMetrics(u)
-                u
-            }
-            repository.checkAndAwardBadges(updated)
-        }
-    }
-    
     fun checkNutritionalDeficiencies(context: android.content.Context) {
         viewModelScope.launch {
             val sharedPrefs = context.getSharedPreferences("ShasthoPrefs", android.content.Context.MODE_PRIVATE)
@@ -2555,32 +2383,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         )
     }
     
-    fun sendChatMessage(message: String) {
-        viewModelScope.launch {
-            val newUserMsg = ChatMessage(message, true)
-            _chatHistory.value = _chatHistory.value + newUserMsg
-            _isLoadingChat.value = true
-
-            val placeholderIndex = _chatHistory.value.size
-            _chatHistory.value = _chatHistory.value + ChatMessage("", false)
-
-            var accumulated = ""
-            try {
-                repository.getChatResponseStream(_chatHistory.value.dropLast(1), userProfile.value).collect { chunk ->
-                    accumulated += chunk
-                    _chatHistory.value = _chatHistory.value.toMutableList().also {
-                        it[placeholderIndex] = ChatMessage(accumulated, false)
-                    }
-                }
-            } catch (e: Exception) {
-                _chatHistory.value = _chatHistory.value.toMutableList().also {
-                    it[placeholderIndex] = ChatMessage("Sorry, I couldn't process that. Please try again.", false)
-                }
-            }
-            _isLoadingChat.value = false
-        }
-    }
-
     private val _foodChatHistory = MutableStateFlow<List<ChatMessage>>(emptyList())
     val foodChatHistory: StateFlow<List<ChatMessage>> = _foodChatHistory.asStateFlow()
 
@@ -2647,14 +2449,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private var foodChatHistoryLoaded = false
-
-    fun loadFoodChatHistory() {
-        if (foodChatHistoryLoaded) return
-        foodChatHistoryLoaded = true
-        viewModelScope.launch {
-            _foodChatHistory.value = repository.getFoodChatHistoryOnce()
-        }
-    }
 
     data class PendingFoodLogEntry(
         val name: String,
@@ -3204,34 +2998,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     }
 
     
-    private val _coachAdvice = MutableStateFlow<String?>(null)
-    val coachAdvice: StateFlow<String?> = _coachAdvice.asStateFlow()
-    
-    private val _isLoadingCoach = MutableStateFlow(false)
-    val isLoadingCoach: StateFlow<Boolean> = _isLoadingCoach.asStateFlow()
-    
-    fun clearCoachAdvice() {
-        _coachAdvice.value = null
-    }
-
-    fun requestCoachAdvice(topic: String, habit: String, benefits: String) {
-        viewModelScope.launch {
-            _isLoadingCoach.value = true
-            _coachAdvice.value = ""
-            var accumulated = ""
-            try {
-                repository.generateCoachAdviceStream(topic, habit, benefits).collect { chunk ->
-                    accumulated += chunk
-                    _coachAdvice.value = accumulated
-                }
-                _coachAdvice.value = MedicalNotes.appendDoctorNote(accumulated, userText = "$topic $habit")
-            } catch (e: Exception) {
-                _coachAdvice.value = "Sorry, I couldn't generate advice right now. Please try again."
-            }
-            _isLoadingCoach.value = false
-        }
-    }
-
     private val _structuredWorkoutPlan = MutableStateFlow<com.example.data.model.WorkoutPlan?>(null)
     val structuredWorkoutPlan: StateFlow<com.example.data.model.WorkoutPlan?> = _structuredWorkoutPlan.asStateFlow()
 
@@ -3244,12 +3010,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     private val _structuredWorkoutError = MutableStateFlow<String?>(null)
     val structuredWorkoutError: StateFlow<String?> = _structuredWorkoutError.asStateFlow()
     
-    fun clearStructuredWorkoutPlan() {
-        _structuredWorkoutPlan.value = null
-        _rawStructuredWorkoutJson.value = ""
-        _structuredWorkoutError.value = null
-    }
-
     fun updateStructuredWorkoutPlan(plan: com.example.data.model.WorkoutPlan) {
         _structuredWorkoutPlan.value = plan
         _rawStructuredWorkoutJson.value = com.example.data.remote.RetrofitClient.moshi
@@ -3258,28 +3018,6 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
 
     suspend fun resolveYoutubeVideoId(searchQuery: String): String? {
         return repository.resolveYoutubeVideoId(searchQuery)
-    }
-
-    fun generateAIStructuredWorkout() {
-        viewModelScope.launch {
-            _isLoadingStructuredWorkout.value = true
-            _structuredWorkoutError.value = null
-            _structuredWorkoutPlan.value = null
-            _rawStructuredWorkoutJson.value = ""
-            val result = repository.generateStructuredWorkout(userProfile.value)
-            result.onSuccess { plan ->
-                _structuredWorkoutPlan.value = plan
-                try {
-                    val adapter = com.example.data.remote.RetrofitClient.moshi.adapter(com.example.data.model.WorkoutPlan::class.java)
-                    _rawStructuredWorkoutJson.value = adapter.toJson(plan)
-                } catch (e: Exception) {
-                    _rawStructuredWorkoutJson.value = ""
-                }
-            }.onFailure { error ->
-                _structuredWorkoutError.value = error.message ?: "Could not generate structured workout. Please try again."
-            }
-            _isLoadingStructuredWorkout.value = false
-        }
     }
 
     private val _isGeneratingProgram = MutableStateFlow(false)
