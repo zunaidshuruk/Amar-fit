@@ -64,6 +64,13 @@ object FirebaseManager {
                     db.collection("users").document(uid).collection("medical_records").document(doc.id).delete().await()
                 }
 
+                for (cycleCollection in listOf("period_logs", "cycle_days")) {
+                    val cycleSnap = db.collection("users").document(uid).collection(cycleCollection).get().await()
+                    for (doc in cycleSnap.documents) {
+                        db.collection("users").document(uid).collection(cycleCollection).document(doc.id).delete().await()
+                    }
+                }
+
                 val activitySnap = db.collection("users").document(uid).collection("activity_events").get().await()
                 for (doc in activitySnap.documents) {
                     doc.reference.delete().await()
@@ -912,6 +919,46 @@ object FirebaseManager {
     }
 
     suspend fun deleteMedicalRecordRemote(cloudId: String): Boolean = softDelete("medical_records", cloudId)
+
+    // ---------------------------------------------------------------- cycle tracker (users/{uid}/period_logs and cycle_days)
+    suspend fun syncPeriod(period: com.example.data.local.PeriodLog): Boolean {
+        val col = userCollection("period_logs") ?: return false
+        return try {
+            col.document(period.cloudId).set(period, SetOptions.merge()).await()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun deletePeriodRemote(cloudId: String): Boolean = softDelete("period_logs", cloudId)
+
+    suspend fun syncCycleDay(day: com.example.data.local.CycleDayLog): Boolean {
+        val col = userCollection("cycle_days") ?: return false
+        return try {
+            col.document(day.date).set(day, SetOptions.merge()).await()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    /** Removes every period and day log of the signed-in user from the cloud. True when nothing is left (or nobody is signed in). */
+    suspend fun deleteAllCycleDataRemote(): Boolean {
+        val user = FirebaseAuth.getInstance().currentUser ?: return true
+        return try {
+            for (name in listOf("period_logs", "cycle_days")) {
+                val snap = FirebaseFirestore.getInstance().collection("users").document(user.uid).collection(name).get().await()
+                for (doc in snap.documents) doc.reference.delete().await()
+            }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
 
     /** Marks a document as deleted instead of removing it, so other phones can apply the delete. */
     private suspend fun softDelete(collection: String, id: String): Boolean {

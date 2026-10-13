@@ -21,6 +21,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import com.example.data.cycle.toSpan
 import kotlinx.coroutines.sync.withLock
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -202,6 +203,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 val eventSince = if (needFull) now - 90L * dayMs else (prefs.getLong("last_events_sync", now - 90L * dayMs) - dayMs)
                 val eventChanges = repository.reconcileActivityEvents(eventSince)
                 if (eventChanges >= 0) prefs.edit().putLong("last_events_sync", now).apply()
+                if (cycleActive.value) repository.reconcileCycleData()
                 if (result.ok && (itemsOk || !needFull)) {
                     val edit = prefs.edit()
                     if (needFull) edit.putBoolean("metrics_full_restore_done", true)
@@ -372,6 +374,115 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
+
+    // ------------------------------------------------------------------ cycle tracker
+
+    /** The Cycle entries (Settings, shortcuts, cards) are offered only to profiles set to Female. */
+    val cycleAvailable: StateFlow<Boolean> = userProfile
+        .map { com.example.data.cycle.CycleAccess.isAvailable(it?.gender) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /** Tracking is switched on, the person agreed on the consent screen, and the profile is Female. */
+    val cycleActive: StateFlow<Boolean> = userProfile
+        .map { it != null && com.example.data.cycle.CycleAccess.isActive(it.gender, it.cycleTrackingEnabled, it.cycleConsentAt) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    val periodLogs: StateFlow<List<com.example.data.local.PeriodLog>> = repository.observePeriods()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val cycleDays: StateFlow<List<com.example.data.local.CycleDayLog>> = repository.observeCycleDays()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val cyclePrediction: StateFlow<com.example.data.cycle.CyclePrediction?> =
+        combine(periodLogs, userProfile, _todayDate) { periods, profile, todayStr ->
+            if (profile == null) {
+                null
+            } else {
+                val today = try { java.time.LocalDate.parse(todayStr) } catch (e: Exception) { java.time.LocalDate.now() }
+                com.example.data.cycle.CyclePredictor.predict(
+                    periods.mapNotNull { it.toSpan() }, today, profile.cycleDefaultLength, profile.cyclePeriodDefaultLength
+                )
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    /**
+     * Switches tracking on after the consent screen. The profile and the notification settings are saved in ONE write
+     * (saving them one after the other could overwrite the first change with an older copy of the profile).
+     */
+    fun enableCycleTracking(aiEnabled: Boolean, discreet: Boolean, defaultCycle: Int, defaultPeriod: Int) {
+        viewModelScope.launch {
+            val profile = userProfile.value ?: return@launch
+            if (!com.example.data.cycle.CycleAccess.isAvailable(profile.gender)) return@launch
+            // the tracker's useful reminders start on; they can be switched off in Settings > Notifications
+            val prefs = notificationPrefs.value.copy(cyclePeriodSoon = true, cyclePeriodLate = true)
+            saveProfile(
+                profile.copy(
+                    cycleTrackingEnabled = true,
+                    cycleConsentAt = System.currentTimeMillis(),
+                    cycleAiEnabled = aiEnabled,
+                    cycleDiscreetNotifications = discreet,
+                    cycleDefaultLength = defaultCycle.coerceIn(21, 45),
+                    cyclePeriodDefaultLength = defaultPeriod.coerceIn(2, 10),
+                    notificationPrefsJson = com.example.data.notifications.NotificationPrefsCodec.encode(prefs)
+                )
+            )
+            withContext(Dispatchers.Default) {
+                com.example.presentation.notifications.ReminderScheduler.rescheduleAll(getApplication<Application>(), prefs)
+            }
+            repository.reconcileCycleData()
+        }
+    }
+
+    /** Hides the tracker and stops its reminders; the logged data is kept (use deleteAllCycleData to remove it). */
+    fun disableCycleTracking() {
+        viewModelScope.launch {
+            val profile = userProfile.value ?: return@launch
+            saveProfile(profile.copy(cycleTrackingEnabled = false))
+        }
+    }
+
+    fun updateCycleSettings(aiEnabled: Boolean, discreet: Boolean, defaultCycle: Int, defaultPeriod: Int) {
+        viewModelScope.launch {
+            val profile = userProfile.value ?: return@launch
+            saveProfile(
+                profile.copy(
+                    cycleAiEnabled = aiEnabled,
+                    cycleDiscreetNotifications = discreet,
+                    cycleDefaultLength = defaultCycle.coerceIn(21, 45),
+                    cyclePeriodDefaultLength = defaultPeriod.coerceIn(2, 10)
+                )
+            )
+        }
+    }
+
+    fun startPeriodOn(date: java.time.LocalDate) {
+        viewModelScope.launch(Dispatchers.IO) { repository.startPeriod(date.toString()) }
+    }
+
+    fun endPeriodOn(date: java.time.LocalDate) {
+        viewModelScope.launch(Dispatchers.IO) { repository.endPeriod(date.toString()) }
+    }
+
+    fun removePeriod(cloudId: String) {
+        viewModelScope.launch(Dispatchers.IO) { repository.removePeriod(cloudId) }
+    }
+
+    fun saveCycleDay(date: java.time.LocalDate, flow: Int, symptoms: Int, mood: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.saveCycleDay(com.example.data.local.CycleDayLog(date = date.toString(), flow = flow, symptoms = symptoms, mood = mood))
+        }
+    }
+
+    suspend fun getCycleDay(date: java.time.LocalDate): com.example.data.local.CycleDayLog? =
+        withContext(Dispatchers.IO) { repository.getCycleDay(date.toString()) }
+
+    /** Removes all period and day logs from the cloud and this phone. [onResult] gets false if the cloud could not be reached. */
+    fun deleteAllCycleData(onResult: (Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val ok = repository.deleteAllCycleData()
+            withContext(Dispatchers.Main) { onResult(ok) }
+        }
+    }
 
     // ------------------------------------------------------------------ notifications
 
@@ -3533,6 +3644,10 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         val savedChats = repository.getAllSavedChats().firstOrNull() ?: emptyList()
         val medicalRecords = repository.getMedicalRecords().firstOrNull() ?: emptyList()
         val workoutPrograms = repository.getWorkoutProgramsOnce()
+        // cycle data is part of the user's own backup only while tracking is on
+        val cycleOn = cycleActive.value
+        val periodLogs = if (cycleOn) repository.getLivePeriods() else emptyList()
+        val cycleDayLogs = if (cycleOn) (database.cycleDao().getAllDays()) else emptyList()
 
         return com.example.data.repository.DriveBackupPayload(
             backupDate = java.time.Instant.now().toString(),
@@ -3543,7 +3658,9 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             savedWorkouts = savedWorkouts,
             savedChats = savedChats,
             medicalRecords = medicalRecords,
-            workoutPrograms = workoutPrograms
+            workoutPrograms = workoutPrograms,
+            periodLogs = periodLogs,
+            cycleDays = cycleDayLogs
         )
     }
 
@@ -3680,6 +3797,9 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 }
                 for (record in payload.medicalRecords) {
                     repository.addMedicalRecord(record)
+                }
+                if (payload.periodLogs.isNotEmpty() || payload.cycleDays.isNotEmpty()) {
+                    repository.mergeCycleBackup(payload.periodLogs, payload.cycleDays)
                 }
                 withContext(Dispatchers.Main) {
                     onResult(true, "Restore complete")

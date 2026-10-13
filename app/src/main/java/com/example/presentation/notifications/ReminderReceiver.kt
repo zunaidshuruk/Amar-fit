@@ -3,6 +3,10 @@ package com.example.presentation.notifications
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import com.example.data.cycle.CycleAccess
+import com.example.data.cycle.CycleNotices
+import com.example.data.cycle.CyclePredictor
+import com.example.data.cycle.toSpan
 import com.example.data.local.AppDatabase
 import com.example.data.notifications.NotificationPrefsCodec
 import com.example.data.notifications.ReminderCatalog
@@ -53,6 +57,10 @@ object ReminderRunner {
         ReminderScheduler.armNext(context, spec)
         if (!prefs.masterEnabled) return
 
+        // Cycle reminders are shown only while tracking is on for a Female profile (settings can be stale after a gender change).
+        val isCycleKind = spec.kind == ReminderKind.CYCLE || spec.kind == ReminderKind.CYCLE_LOG
+        if (isCycleKind && !CycleAccess.isActive(profile.gender, profile.cycleTrackingEnabled, profile.cycleConsentAt)) return
+
         val now = LocalDateTime.now()
         val minuteNow = now.hour * 60 + now.minute
         val today = LocalDate.now()
@@ -79,7 +87,10 @@ object ReminderRunner {
                 (metric?.bloodGlucoseAfterLunch ?: 0f) > 0f,
                 (metric?.bloodGlucoseBeforeDinner ?: 0f) > 0f,
                 (metric?.bloodGlucoseAfterDinner ?: 0f) > 0f
-            )
+            ),
+            cycleLoggedToday = if (isCycleKind) {
+                db.cycleDao().getDay(date)?.let { it.flow > 0 || it.symptoms != 0 || it.mood != 0 } == true
+            } else false
         )
         if (!ReminderDecider.shouldShow(spec, snapshot, prefs, minuteNow)) return
 
@@ -92,13 +103,21 @@ object ReminderRunner {
             title = summary.title
             message = summary.body
         }
+        if (spec.kind == ReminderKind.CYCLE) {
+            val periods = db.cycleDao().getAllPeriodsIncludingRemoved().filter { !it.removed }.mapNotNull { it.toSpan() }
+            val prediction = CyclePredictor.predict(periods, today, profile.cycleDefaultLength, profile.cyclePeriodDefaultLength)
+            val notice = CycleNotices.forToday(prediction, prefs, today) ?: return
+            title = notice.title
+            message = notice.message
+        }
         NotificationHelper.showNotification(
             context = context,
             title = title,
             message = message,
             notificationId = spec.requestCode,
             targetRoute = spec.route,
-            channelId = spec.channel
+            channelId = spec.channel,
+            discreet = isCycleKind && profile.cycleDiscreetNotifications
         )
     }
 }

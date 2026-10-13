@@ -23,6 +23,7 @@ object NotificationHelper {
         ChannelDef(Channels.SLEEP_MIND, "Sleep & mindfulness", "Bedtime and mindful moment reminders", NotificationManager.IMPORTANCE_DEFAULT),
         ChannelDef(Channels.HEALTH_CHECKS, "Health checks", "Weekly check-in, blood glucose and weigh-in reminders", NotificationManager.IMPORTANCE_DEFAULT),
         ChannelDef(Channels.GOALS, "Goals reached", "Step, water, calorie, sleep and weekly workout goals", NotificationManager.IMPORTANCE_DEFAULT),
+        ChannelDef(Channels.CYCLE, "Cycle tracker", "Period and fertile window reminders and the daily cycle log reminder", NotificationManager.IMPORTANCE_DEFAULT),
         ChannelDef(Channels.SOCIAL, "Messages & Challenges", "Direct messages, friend requests and friends' fitness challenges", NotificationManager.IMPORTANCE_HIGH)
     )
 
@@ -34,6 +35,7 @@ object NotificationHelper {
                 val channel = NotificationChannel(def.id, def.name, def.importance).apply {
                     description = def.description
                     if (def.id == Channels.SOCIAL) enableVibration(true)
+                    if (def.id == Channels.CYCLE) lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
                 }
                 manager.createNotificationChannel(channel)
             }
@@ -50,7 +52,9 @@ object NotificationHelper {
         message: String,
         notificationId: Int,
         targetRoute: String? = null,
-        channelId: String = Channels.MEALS
+        channelId: String = Channels.MEALS,
+        /** On the lock screen only a generic text shows; the details appear after the phone is unlocked. */
+        discreet: Boolean = false
     ) {
         createNotificationChannel(context)
         val intent = Intent(context, MainActivity::class.java).apply {
@@ -72,6 +76,15 @@ object NotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
+
+        if (discreet) {
+            val generic = NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(R.mipmap.ic_launcher_round)
+                .setContentTitle("KardIQ")
+                .setContentText("You have a reminder")
+                .build()
+            builder.setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setPublicVersion(generic)
+        }
 
         with(NotificationManagerCompat.from(context)) {
             try {
