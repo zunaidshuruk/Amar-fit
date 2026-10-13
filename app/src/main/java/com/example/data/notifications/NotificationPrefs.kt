@@ -73,6 +73,16 @@ data class NotificationPrefs(
     val glucose: List<ReminderPref> = defaultGlucoseSlots(),
     val weighIn: ReminderPref = ReminderPref(false, 8 * 60, Days.MON),
 
+    // Cycle tracker: only used while tracking is on for a Female profile (the reminder runner checks that), all off until switched on
+    val cyclePeriodSoon: Boolean = false,
+    val cyclePeriodSoonDays: Int = 2,
+    val cyclePeriodLate: Boolean = false,
+    val cyclePeriodLateDays: Int = 3,
+    val cycleFertileWindow: Boolean = false,
+    /** When the daily cycle check runs (it decides whether any of the cycle notices above applies today). */
+    val cycleCheckMinute: Int = 9 * 60,
+    val cycleLogReminder: ReminderPref = ReminderPref(false, 20 * 60),
+
     // Social (server pushes)
     val socialMessages: Boolean = true,
     val socialFriendRequests: Boolean = true,

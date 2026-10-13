@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [UserProfile::class, DailyMetric::class, FoodLog::class, SavedDietChart::class, SavedWorkout::class, SavedChat::class, ActivityEvent::class, YoutubeVideoCache::class, MedicalRecord::class, FoodChatMessage::class, AssistantChatMessage::class, AssistantChatSession::class, HealthExerciseSession::class, WorkoutProgram::class], version = 51, exportSchema = true)
+@Database(entities = [UserProfile::class, DailyMetric::class, FoodLog::class, SavedDietChart::class, SavedWorkout::class, SavedChat::class, ActivityEvent::class, YoutubeVideoCache::class, MedicalRecord::class, FoodChatMessage::class, AssistantChatMessage::class, AssistantChatSession::class, HealthExerciseSession::class, WorkoutProgram::class, PeriodLog::class, CycleDayLog::class], version = 52, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun metricsDao(): MetricsDao
@@ -22,6 +22,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun assistantChatSessionDao(): AssistantChatSessionDao
     abstract fun healthExerciseSessionDao(): HealthExerciseSessionDao
     abstract fun workoutProgramDao(): WorkoutProgramDao
+    abstract fun cycleDao(): CycleDao
 
     companion object {
         val MIGRATION_11_12 = object : Migration(11, 12) {
@@ -270,6 +271,20 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_51_52 = object : Migration(51, 52) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `period_logs` (`cloudId` TEXT NOT NULL, `startDate` TEXT NOT NULL, `endDate` TEXT NOT NULL, `removed` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`cloudId`))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `cycle_days` (`date` TEXT NOT NULL, `flow` INTEGER NOT NULL, `symptoms` INTEGER NOT NULL, `mood` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`date`))")
+                db.execSQL("ALTER TABLE user_profile ADD COLUMN cycleTrackingEnabled INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE user_profile ADD COLUMN cycleConsentAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE user_profile ADD COLUMN cycleAiEnabled INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE user_profile ADD COLUMN cycleDiscreetNotifications INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE user_profile ADD COLUMN cycleHealthConnectSync INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE user_profile ADD COLUMN cycleDefaultLength INTEGER NOT NULL DEFAULT 28")
+                db.execSQL("ALTER TABLE user_profile ADD COLUMN cyclePeriodDefaultLength INTEGER NOT NULL DEFAULT 5")
+            }
+        }
+
         val MIGRATION_50_51 = object : Migration(50, 51) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // 0 = accepted before policy versions existed, so every existing user is asked to accept the new policy once
@@ -336,7 +351,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "shastho_database"
                 )
-                .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37, MIGRATION_37_38, MIGRATION_38_39, MIGRATION_39_40, MIGRATION_40_41, MIGRATION_41_42, MIGRATION_42_43, MIGRATION_43_44, MIGRATION_44_45, MIGRATION_45_46, MIGRATION_46_47, MIGRATION_47_48, MIGRATION_48_49, MIGRATION_49_50, MIGRATION_50_51)
+                .addMigrations(MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36, MIGRATION_36_37, MIGRATION_37_38, MIGRATION_38_39, MIGRATION_39_40, MIGRATION_40_41, MIGRATION_41_42, MIGRATION_42_43, MIGRATION_43_44, MIGRATION_44_45, MIGRATION_45_46, MIGRATION_46_47, MIGRATION_47_48, MIGRATION_48_49, MIGRATION_49_50, MIGRATION_50_51, MIGRATION_51_52)
                 .build()
                 INSTANCE = instance
                 instance

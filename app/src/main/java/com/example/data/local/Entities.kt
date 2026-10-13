@@ -36,6 +36,17 @@ data class UserProfile(
     val hasAcceptedPrivacyPolicy: Boolean = false,
     /** Which version of the privacy policy was accepted (LegalContent.POLICY_VERSION); 0 = before versions existed. */
     val acceptedPolicyVersion: Int = 0,
+    /** Cycle tracker: offered only to Female profiles, off until the person switches it on and agrees (cycleConsentAt > 0). */
+    val cycleTrackingEnabled: Boolean = false,
+    val cycleConsentAt: Long = 0L,
+    /** The AI Assistant may use a short cycle summary. On by default (shown as ON on the consent screen so the person can turn it off). */
+    val cycleAiEnabled: Boolean = true,
+    /** Cycle notifications show only a generic text on the lock screen until the phone is unlocked. */
+    val cycleDiscreetNotifications: Boolean = true,
+    val cycleHealthConnectSync: Boolean = false,
+    /** Typical values used for predictions until there is history. */
+    val cycleDefaultLength: Int = 28,
+    val cyclePeriodDefaultLength: Int = 5,
     val friendCode: String = "",
     val lastActiveDate: String = "",
     val profilePictureUri: String? = null,

@@ -60,7 +60,8 @@ class AppRepository(
     private val assistantChatMessageDao: com.example.data.local.AssistantChatMessageDao? = null,
     private val assistantChatSessionDao: com.example.data.local.AssistantChatSessionDao? = null,
     private val healthExerciseSessionDao: com.example.data.local.HealthExerciseSessionDao? = null,
-    private val workoutProgramDao: com.example.data.local.WorkoutProgramDao? = null
+    private val workoutProgramDao: com.example.data.local.WorkoutProgramDao? = null,
+    private val cycleDao: com.example.data.local.CycleDao? = null
 ) {
 
     suspend fun logActivityEvent(type: String, description: String, timestamp: Long = System.currentTimeMillis(), source: String = "app", externalId: String? = null) {

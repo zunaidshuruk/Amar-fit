@@ -282,7 +282,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         database.assistantChatMessageDao(),
         database.assistantChatSessionDao(),
         database.healthExerciseSessionDao(),
-        database.workoutProgramDao()
+        database.workoutProgramDao(),
+        database.cycleDao()
     )
 
     private val startOfDayMillis: Long
