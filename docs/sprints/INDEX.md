@@ -56,3 +56,4 @@ Other archived snapshots:
 - ["Next step" snapshot at 8037b30](archive/00-next-step-snapshot-8037b30.md)
 - [Handover snapshot at 089358b](archive/00-handover-snapshot-089358b.md)
 - [Older repo-root tracker (10ab400)](archive/00-legacy-root-tracker-10ab400.md)
+| AV | Privacy policy 2.0 (sync, chats, notifications, account deletion) and one-time re-accept; Firestore rules audit | ⏳ built, PR pending | — | [ACTIVE](ACTIVE.md#privacy-policy-20-and-one-time-re-accept-part-av-built-2026-10-13-branch-claudepolicy-update) |

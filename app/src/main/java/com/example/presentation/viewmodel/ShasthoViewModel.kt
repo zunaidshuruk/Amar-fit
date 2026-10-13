@@ -882,7 +882,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
     fun acceptPrivacyPolicy() {
         viewModelScope.launch(Dispatchers.IO) {
             val current = userProfile.value ?: return@launch
-            saveProfile(current.copy(hasAcceptedPrivacyPolicy = true))
+            saveProfile(current.copy(hasAcceptedPrivacyPolicy = true, acceptedPolicyVersion = com.example.data.model.LegalContent.POLICY_VERSION))
         }
     }
 

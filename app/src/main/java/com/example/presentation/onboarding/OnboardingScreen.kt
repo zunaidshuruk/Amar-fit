@@ -396,6 +396,7 @@ fun OnboardingScreen(viewModel: ShasthoViewModel, onComplete: () -> Unit) {
                         dailyCalorieLimit = 2000,
                         dailyWaterLimitLiters = 3.0f,
                         hasAcceptedPrivacyPolicy = true,
+                        acceptedPolicyVersion = com.example.data.model.LegalContent.POLICY_VERSION,
                         currentStreak = 1
                     )
                     

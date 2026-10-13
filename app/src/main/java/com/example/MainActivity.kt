@@ -167,7 +167,7 @@ class MainActivity : ComponentActivity() {
                         "onboarding"
                     } else {
                         val profile = viewModel.userProfile.value
-                        if (profile != null && !profile.hasAcceptedPrivacyPolicy) "privacy_consent" else TabScreen.Today.route
+                        if (profile != null && com.example.data.model.LegalContent.needsConsent(profile.hasAcceptedPrivacyPolicy, profile.acceptedPolicyVersion)) "privacy_consent" else TabScreen.Today.route
                     }
                     sessionChecked = true
                 }

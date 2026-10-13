@@ -34,6 +34,8 @@ data class UserProfile(
     val points: Int = 0,
     val badges: String = "", 
     val hasAcceptedPrivacyPolicy: Boolean = false,
+    /** Which version of the privacy policy was accepted (LegalContent.POLICY_VERSION); 0 = before versions existed. */
+    val acceptedPolicyVersion: Int = 0,
     val friendCode: String = "",
     val lastActiveDate: String = "",
     val profilePictureUri: String? = null,

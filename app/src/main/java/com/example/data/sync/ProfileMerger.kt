@@ -31,6 +31,7 @@ object ProfileMerger {
             lastActiveDate = lastActive,
             onboardingCompleted = local.onboardingCompleted || remote.onboardingCompleted,
             hasAcceptedPrivacyPolicy = local.hasAcceptedPrivacyPolicy || remote.hasAcceptedPrivacyPolicy,
+            acceptedPolicyVersion = maxOf(local.acceptedPolicyVersion, remote.acceptedPolicyVersion),
             friendCode = base.friendCode.ifBlank { other.friendCode },
             profilePictureUri = base.profilePictureUri ?: other.profilePictureUri,
             updatedAt = maxOf(local.updatedAt, remote.updatedAt)
