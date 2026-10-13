@@ -1,7 +1,11 @@
 package com.example.presentation.navigation
 
 object NavTabs {
-    val CHOOSABLE_ROUTES = listOf("fitness", "nutrition", "sleep", "health", "mind_body", "friends", "settings")
+    val CHOOSABLE_ROUTES = listOf("fitness", "nutrition", "sleep", "health", "mind_body", "cycle", "friends", "settings")
+
+    /** The Cycle tab exists only for profiles that can use the cycle tracker (Female); everyone else never sees or keeps it. */
+    fun chooseable(cycleAllowed: Boolean): List<String> =
+        if (cycleAllowed) CHOOSABLE_ROUTES else CHOOSABLE_ROUTES.filter { it != "cycle" }
     val DEFAULT_BAR = listOf("fitness", "nutrition", "health")
     const val MAX_BAR = 3
 
@@ -17,11 +21,12 @@ object NavTabs {
         return route != null && route in TOP_BAR_ROUTES
     }
 
-    fun parse(csv: String?): List<String> {
+    fun parse(csv: String?, cycleAllowed: Boolean = false): List<String> {
         if (csv.isNullOrBlank()) return DEFAULT_BAR
+        val allowed = chooseable(cycleAllowed)
         val routes = csv.split(",")
             .map { it.trim().lowercase() }
-            .filter { it in CHOOSABLE_ROUTES }
+            .filter { it in allowed }
             .distinct()
             .take(MAX_BAR)
         return if (routes.isEmpty()) DEFAULT_BAR else routes
@@ -31,8 +36,8 @@ object NavTabs {
         return routes.joinToString(",")
     }
 
-    fun hidden(bar: List<String>): List<String> {
-        return CHOOSABLE_ROUTES.filter { it !in bar }
+    fun hidden(bar: List<String>, cycleAllowed: Boolean = false): List<String> {
+        return chooseable(cycleAllowed).filter { it !in bar }
     }
 
     fun toggle(bar: List<String>, route: String): List<String> {

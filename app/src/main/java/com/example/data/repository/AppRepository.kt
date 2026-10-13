@@ -60,7 +60,8 @@ class AppRepository(
     private val assistantChatMessageDao: com.example.data.local.AssistantChatMessageDao? = null,
     private val assistantChatSessionDao: com.example.data.local.AssistantChatSessionDao? = null,
     private val healthExerciseSessionDao: com.example.data.local.HealthExerciseSessionDao? = null,
-    private val workoutProgramDao: com.example.data.local.WorkoutProgramDao? = null
+    private val workoutProgramDao: com.example.data.local.WorkoutProgramDao? = null,
+    private val cycleDao: com.example.data.local.CycleDao? = null
 ) {
 
     suspend fun logActivityEvent(type: String, description: String, timestamp: Long = System.currentTimeMillis(), source: String = "app", externalId: String? = null) {
@@ -2215,6 +2216,165 @@ class AppRepository(
     suspend fun deleteChat(chat: com.example.data.local.SavedChat): Boolean {
         savedChatDao.deleteChat(chat)
         return FirebaseManager.deleteSavedChat(chat)
+    }
+
+    // ------------------------------------------------------------------ cycle tracker
+
+    fun observePeriods(): kotlinx.coroutines.flow.Flow<List<com.example.data.local.PeriodLog>> =
+        cycleDao?.observePeriods() ?: kotlinx.coroutines.flow.flowOf(emptyList())
+
+    fun observeCycleDays(): kotlinx.coroutines.flow.Flow<List<com.example.data.local.CycleDayLog>> =
+        cycleDao?.observeDays() ?: kotlinx.coroutines.flow.flowOf(emptyList())
+
+    suspend fun getCycleDay(date: String): com.example.data.local.CycleDayLog? = cycleDao?.getDay(date)
+
+    fun observeFasting(): kotlinx.coroutines.flow.Flow<List<com.example.data.local.FastingLog>> =
+        cycleDao?.observeFasting() ?: kotlinx.coroutines.flow.flowOf(emptyList())
+
+    suspend fun getFasting(date: String): com.example.data.local.FastingLog? = cycleDao?.getFasting(date)
+
+    /** Sets what happened on a fasting day (a FastingType code; 0 clears it). */
+    suspend fun setFasting(date: String, typeCode: Int) {
+        val dao = cycleDao ?: return
+        val entry = com.example.data.local.FastingLog(date = date, type = typeCode, updatedAt = System.currentTimeMillis())
+        dao.upsertFasting(entry)
+        syncScope.launch { FirebaseManager.syncFasting(entry) }
+    }
+
+    suspend fun getLivePeriods(): List<com.example.data.local.PeriodLog> =
+        cycleDao?.getAllPeriodsIncludingRemoved()?.filter { !it.removed } ?: emptyList()
+
+    /** Starts a period on [date] unless a logged period already covers that day. Returns the period that covers it. */
+    suspend fun startPeriod(date: String): com.example.data.local.PeriodLog? {
+        val dao = cycleDao ?: return null
+        val live = dao.getAllPeriodsIncludingRemoved().filter { !it.removed }
+        live.firstOrNull { it.startDate <= date && (if (it.endDate.isBlank()) date == it.startDate else date <= it.endDate) }?.let { return it }
+        val period = com.example.data.local.PeriodLog(startDate = date)
+        dao.upsertPeriod(period)
+        syncScope.launch { FirebaseManager.syncPeriod(period) }
+        return period
+    }
+
+    /**
+     * Stores a period that Health Connect already has, unless a logged period starts within 3 days of it
+     * (the same period recorded by another app). Returns the new period, or null when nothing was added.
+     */
+    suspend fun importPeriod(start: java.time.LocalDate, end: java.time.LocalDate?): com.example.data.local.PeriodLog? {
+        val dao = cycleDao ?: return null
+        val live = dao.getAllPeriodsIncludingRemoved().filter { !it.removed }
+        val nearExisting = live.any {
+            try { Math.abs(java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.parse(it.startDate), start)) <= 3 } catch (e: Exception) { false }
+        }
+        if (nearExisting) return null
+        val period = com.example.data.local.PeriodLog(startDate = start.toString(), endDate = end?.toString() ?: "")
+        dao.upsertPeriod(period)
+        syncScope.launch { FirebaseManager.syncPeriod(period) }
+        return period
+    }
+
+    /** Ends the most recent period that started on or before [date] and has no end yet. */
+    suspend fun endPeriod(date: String): com.example.data.local.PeriodLog? {
+        val dao = cycleDao ?: return null
+        val open = dao.getAllPeriodsIncludingRemoved()
+            .filter { !it.removed && it.startDate <= date && it.endDate.isBlank() }
+            .maxByOrNull { it.startDate } ?: return null
+        val updated = open.copy(endDate = date, updatedAt = System.currentTimeMillis())
+        dao.upsertPeriod(updated)
+        syncScope.launch { FirebaseManager.syncPeriod(updated) }
+        return updated
+    }
+
+    suspend fun removePeriod(cloudId: String) {
+        val dao = cycleDao ?: return
+        val period = dao.getPeriod(cloudId) ?: return
+        dao.upsertPeriod(period.copy(removed = true, updatedAt = System.currentTimeMillis()))
+        syncScope.launch { FirebaseManager.deletePeriodRemote(cloudId) }
+    }
+
+    suspend fun saveCycleDay(day: com.example.data.local.CycleDayLog) {
+        val dao = cycleDao ?: return
+        val stamped = day.copy(updatedAt = System.currentTimeMillis())
+        dao.upsertDay(stamped)
+        syncScope.launch { FirebaseManager.syncCycleDay(stamped) }
+    }
+
+    /** Deletes all cycle data in the cloud first; only when that worked is the phone's copy cleared too (otherwise it would come back). */
+    suspend fun deleteAllCycleData(): Boolean {
+        val dao = cycleDao ?: return true
+        if (!FirebaseManager.deleteAllCycleDataRemote()) return false
+        dao.clearPeriods()
+        dao.clearDays()
+        dao.clearFasting()
+        return true
+    }
+
+    /** Backup restore: a backed-up item is stored only when it is missing here or newer than the copy here. */
+    suspend fun mergeCycleBackup(
+        periods: List<com.example.data.local.PeriodLog>,
+        days: List<com.example.data.local.CycleDayLog>,
+        fasting: List<com.example.data.local.FastingLog> = emptyList()
+    ) {
+        val dao = cycleDao ?: return
+        for (p in periods) {
+            val local = dao.getPeriod(p.cloudId)
+            if (local == null || p.updatedAt > local.updatedAt) dao.upsertPeriod(p)
+        }
+        for (d in days) {
+            val local = dao.getDay(d.date)
+            if (local == null || d.updatedAt > local.updatedAt) dao.upsertDay(d)
+        }
+        for (f in fasting) {
+            val local = dao.getFasting(f.date)
+            if (local == null || f.updatedAt > local.updatedAt) dao.upsertFasting(f)
+        }
+        reconcileCycleData()
+    }
+
+    /** Two-way catch-up with the cloud (newest wins; a deletion marker beats a live copy). Returns the number of local changes, or -1. */
+    suspend fun reconcileCycleData(): Int {
+        val dao = cycleDao ?: return -1
+        if (com.google.firebase.auth.FirebaseAuth.getInstance().currentUser == null) return -1
+        var changes = 0
+        var anyOk = false
+
+        val periodPull = FirebaseManager.fetchCollection("period_logs", com.example.data.local.PeriodLog::class.java)
+        if (periodPull != null) {
+            anyOk = true
+            val remoteLive = periodPull.live.map { it.item.copy(cloudId = it.id) }
+            val plan = com.example.data.cycle.LwwSyncPlanner.plan(
+                dao.getAllPeriodsIncludingRemoved(), remoteLive, periodPull.deletedIds,
+                { it.cloudId }, { it.updatedAt }, { it.removed }
+            )
+            plan.pull.forEach { dao.upsertPeriod(it); changes++ }
+            plan.push.forEach { if (it.removed) FirebaseManager.deletePeriodRemote(it.cloudId) else FirebaseManager.syncPeriod(it) }
+            plan.removeLocal.forEach { id ->
+                dao.getPeriod(id)?.let { dao.upsertPeriod(it.copy(removed = true, updatedAt = System.currentTimeMillis())); changes++ }
+            }
+            dao.purgeRemovedBefore(System.currentTimeMillis() - 30L * 24L * 60L * 60L * 1000L)
+        }
+
+        val dayPull = FirebaseManager.fetchCollection("cycle_days", com.example.data.local.CycleDayLog::class.java)
+        if (dayPull != null) {
+            anyOk = true
+            val remoteLive = dayPull.live.map { it.item.copy(date = it.id) }
+            val plan = com.example.data.cycle.LwwSyncPlanner.plan(
+                dao.getAllDays(), remoteLive, emptySet(), { it.date }, { it.updatedAt }
+            )
+            plan.pull.forEach { dao.upsertDay(it); changes++ }
+            plan.push.forEach { FirebaseManager.syncCycleDay(it) }
+        }
+
+        val fastPull = FirebaseManager.fetchCollection("fasting_days", com.example.data.local.FastingLog::class.java)
+        if (fastPull != null) {
+            anyOk = true
+            val remoteLive = fastPull.live.map { it.item.copy(date = it.id) }
+            val plan = com.example.data.cycle.LwwSyncPlanner.plan(
+                dao.getAllFasting(), remoteLive, emptySet(), { it.date }, { it.updatedAt }
+            )
+            plan.pull.forEach { dao.upsertFasting(it); changes++ }
+            plan.push.forEach { FirebaseManager.syncFasting(it) }
+        }
+        return if (anyOk) changes else -1
     }
 
     fun getMedicalRecords(): kotlinx.coroutines.flow.Flow<List<com.example.data.local.MedicalRecord>> =

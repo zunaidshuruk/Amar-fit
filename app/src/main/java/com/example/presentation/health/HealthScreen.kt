@@ -100,6 +100,8 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val bmi = if (heightM > 0) weight / (heightM * heightM) else 0f
     val bmiFillFraction = if (bmi > 0f) ((bmi - 15f) / (35f - 15f)).coerceIn(0f, 1f) else 0f
     val bodyFatPercent = profile?.let { HealthGoalCalculator.calculateBodyFatPercent(it) }
+    val cycleActive by viewModel.cycleActive.collectAsState()
+    val cyclePrediction by viewModel.cyclePrediction.collectAsState()
     
     var showBpDialog by remember { mutableStateOf(false) }
     var showBmiDialog by remember { mutableStateOf(false) }
@@ -246,6 +248,14 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     Text(text = "Add waist & neck measurements in Settings", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = weightAccent.onBg)
                 }
             }
+        }
+
+        // Cycle tracker summary: only for Female profiles that switched tracking on
+        if (cycleActive) {
+            com.example.presentation.cycle.CycleSummaryCard(
+                prediction = cyclePrediction,
+                onClick = { com.example.presentation.navigation.navigateToTab(navController, "cycle") }
+            )
         }
 
         // Resilience Card

@@ -26,5 +26,7 @@
         <item>android.permission.health.WRITE_MINDFULNESS</item>
         <item>android.permission.health.WRITE_TOTAL_CALORIES_BURNED</item>
         <item>android.permission.health.WRITE_BASAL_METABOLIC_RATE</item>
+        <item>android.permission.health.READ_MENSTRUATION</item>
+        <item>android.permission.health.WRITE_MENSTRUATION</item>
     </array>
 </resources>

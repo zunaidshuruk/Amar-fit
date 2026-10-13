@@ -63,6 +63,7 @@ import com.example.data.notifications.Days
 import com.example.data.notifications.NotificationPrefs
 import com.example.data.notifications.ReminderPref
 import com.example.data.notifications.formatMinuteOfDay
+import com.example.presentation.cycle.StepperRow
 import com.example.presentation.viewmodel.ShasthoViewModel
 
 private fun pickTime(context: Context, minuteOfDay: Int, onPicked: (Int) -> Unit) {
@@ -306,6 +307,69 @@ fun NotificationSettingsScreen(
             if (prefs.weighIn.enabled) {
                 TimeRow("Time", prefs.weighIn.minuteOfDay) { m -> update { it.copy(weighIn = it.weighIn.copy(minuteOfDay = m)) } }
                 DayChips(prefs.weighIn.days) { d -> update { it.copy(weighIn = it.weighIn.copy(days = d)) } }
+            }
+        }
+
+        val cycleActive by viewModel.cycleActive.collectAsState()
+        if (cycleActive) {
+            SectionCard(title = "Cycle tracker") {
+                SwitchRow("Period expected soon", "A heads-up before your next estimated period", prefs.cyclePeriodSoon) { on ->
+                    update { it.copy(cyclePeriodSoon = on) }
+                }
+                if (prefs.cyclePeriodSoon) {
+                    StepperRow(
+                        label = "Days before",
+                        valueText = "${prefs.cyclePeriodSoonDays}",
+                        onMinus = { update { it.copy(cyclePeriodSoonDays = (it.cyclePeriodSoonDays - 1).coerceAtLeast(0)) } },
+                        onPlus = { update { it.copy(cyclePeriodSoonDays = (it.cyclePeriodSoonDays + 1).coerceAtMost(7)) } },
+                        canMinus = prefs.cyclePeriodSoonDays > 0,
+                        canPlus = prefs.cyclePeriodSoonDays < 7
+                    )
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                SwitchRow("Period is late", "A gentle note when your period is later than expected", prefs.cyclePeriodLate) { on ->
+                    update { it.copy(cyclePeriodLate = on) }
+                }
+                if (prefs.cyclePeriodLate) {
+                    StepperRow(
+                        label = "Days late",
+                        valueText = "${prefs.cyclePeriodLateDays}",
+                        onMinus = { update { it.copy(cyclePeriodLateDays = (it.cyclePeriodLateDays - 1).coerceAtLeast(1)) } },
+                        onPlus = { update { it.copy(cyclePeriodLateDays = (it.cyclePeriodLateDays + 1).coerceAtMost(10)) } },
+                        canMinus = prefs.cyclePeriodLateDays > 1,
+                        canPlus = prefs.cyclePeriodLateDays < 10
+                    )
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                SwitchRow("Fertile window starts", "An estimate, not a medical test and not contraception", prefs.cycleFertileWindow) { on ->
+                    update { it.copy(cycleFertileWindow = on) }
+                }
+                if (prefs.cyclePeriodSoon || prefs.cyclePeriodLate || prefs.cycleFertileWindow) {
+                    TimeRow("Daily cycle check at", prefs.cycleCheckMinute) { m -> update { it.copy(cycleCheckMinute = m) } }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                SwitchRow("Daily log reminder", "Skipped when you already logged today", prefs.cycleLogReminder.enabled) { on ->
+                    update { it.copy(cycleLogReminder = it.cycleLogReminder.copy(enabled = on)) }
+                }
+                if (prefs.cycleLogReminder.enabled) {
+                    TimeRow("Time", prefs.cycleLogReminder.minuteOfDay) { m -> update { it.copy(cycleLogReminder = it.cycleLogReminder.copy(minuteOfDay = m)) } }
+                }
+                if (profile?.ramadanTrackingEnabled == true) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    SwitchRow("Fasting make-up reminder", "In the evening on the days you choose, while you still have fasts to make up", prefs.fastingMakeUp.enabled) { on ->
+                        update { it.copy(fastingMakeUp = it.fastingMakeUp.copy(enabled = on)) }
+                    }
+                    if (prefs.fastingMakeUp.enabled) {
+                        TimeRow("Time", prefs.fastingMakeUp.minuteOfDay) { m -> update { it.copy(fastingMakeUp = it.fastingMakeUp.copy(minuteOfDay = m)) } }
+                        DayChips(prefs.fastingMakeUp.days) { d -> update { it.copy(fastingMakeUp = it.fastingMakeUp.copy(days = d)) } }
+                    }
+                }
+                Text(
+                    "Details are hidden on the lock screen unless you change that in Cycle settings.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
             }
         }
 

@@ -10,7 +10,9 @@ data class TodaySnapshot(
     val mindfulnessMinutes: Int = 0,
     val weightLoggedToday: Boolean = false,
     /** For the six glucose slots, in order: has a reading been logged for that slot today. */
-    val glucoseSlotLogged: List<Boolean> = List(6) { false }
+    val glucoseSlotLogged: List<Boolean> = List(6) { false },
+    /** Something was logged in the cycle tracker today (flow, symptoms or mood). */
+    val cycleLoggedToday: Boolean = false
 )
 
 object ReminderDecider {
@@ -29,7 +31,9 @@ object ReminderDecider {
                 val slot = spec.detail.toIntOrNull() ?: -1
                 !(slot in snap.glucoseSlotLogged.indices && snap.glucoseSlotLogged[slot])
             }
-            ReminderKind.BEDTIME, ReminderKind.WEEKLY_CHECKIN -> true
+            ReminderKind.CYCLE_LOG -> !snap.cycleLoggedToday
+            // the daily cycle check only runs; whether there is anything to say is decided from the predictions by the runner
+            ReminderKind.CYCLE, ReminderKind.FASTING, ReminderKind.BEDTIME, ReminderKind.WEEKLY_CHECKIN -> true
         }
     }
 

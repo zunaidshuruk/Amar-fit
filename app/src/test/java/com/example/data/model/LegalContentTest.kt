@@ -55,4 +55,27 @@ class LegalContentTest {
         assertFalse("must not claim encryption", p.contains("encrypt"))
         assertFalse("old over-claim about deletion", p.contains("removes your data from our systems"))
     }
+
+    @Test
+    fun theCycleSectionExistsBecauseTheConsentScreenPointsToIt() {
+        val p = LegalContent.PRIVACY_POLICY
+        assertTrue(p.contains("### 1.6 Cycle Tracker (Optional)"))
+        assertTrue("only Female profiles", p.contains("offered only to profiles set to Female"))
+        assertTrue("never shown to friends", p.contains("**never** shown to friends"))
+        assertTrue("ai summary is disclosed", p.contains("AI Assistant may use a short cycle summary"))
+        assertTrue("daily logs are not sent to the ai", p.contains("never sent to the AI"))
+        assertTrue("lock screen", p.contains("You have a reminder"))
+        assertTrue("not contraception", p.contains("cannot be used as contraception"))
+        assertTrue("deletion covers it", p.contains("cycle tracker logs, friend code"))
+    }
+
+    @Test
+    fun theRamadanFastingTrackingIsDisclosedAsPartOfTheCycleData() {
+        val p = LegalContent.PRIVACY_POLICY
+        assertTrue(p.contains("Ramadan fasting make-up"))
+        assertTrue("optional and off by default", p.contains("off by default"))
+        assertTrue("it can reveal religious practice", p.contains("can reveal religious practice"))
+        assertTrue("never shown to friends or sent to the AI", p.contains("never shown to friends, and are never sent to the AI"))
+        assertTrue("storage mention", p.contains("including fasting make-up days"))
+    }
 }

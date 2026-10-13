@@ -40,7 +40,9 @@ data class DossierInput(
     val exerciseSessions: List<HealthExerciseSession>,
     val activityEvents: List<ActivityEvent>,
     val medicalRecords: List<MedicalRecord>,
-    val todayDate: String
+    val todayDate: String,
+    /** One short line about the cycle (CycleAiSummary), or null. Present only while tracking is on AND "Use my cycle in AI answers" is on. */
+    val cycleSummary: String? = null
 )
 
 data class DossierSection(val title: String, val lines: List<String>)
@@ -52,7 +54,8 @@ data class Dossier(
     val findings: List<Finding>,
     val patterns: List<String>,
     val medicalLines: List<String>,
-    val flags: Set<String>
+    val flags: Set<String>,
+    val cycleLine: String? = null
 ) {
     fun topFindings(max: Int): List<Finding> {
         return findings.sortedWith(compareByDescending<Finding> { it.severity }.thenBy { it.topic.ordinal })
@@ -65,6 +68,7 @@ data class Dossier(
             sb.append("HEALTH DOSSIER (computed by the app on $todayDate from the user's own records; numbers are exact, patterns are not proof of cause)\n")
             sb.append("PROFILE: $profileLine\n")
             sb.append("FLAGS: ${if (flags.isEmpty()) "none" else flags.joinToString(", ")}\n")
+            cycleLine?.let { sb.append("CYCLE: $it\n") }
             sb.append("MEDICAL RECORDS:\n${if (medicalLines.isEmpty()) "none entered" else medicalLines.joinToString("\n")}\n")
             sb.append("FINDINGS (most important first):\n")
             topFindings(14).forEachIndexed { index, finding ->
@@ -93,6 +97,7 @@ data class Dossier(
             sb.append("HEALTH DOSSIER ($todayDate)\n")
             sb.append("PROFILE: $profileLine\n")
             sb.append("FLAGS: ${if (flags.isEmpty()) "none" else flags.joinToString(", ")}\n")
+            cycleLine?.let { sb.append("CYCLE: $it\n") }
             
             val medSubset = medicalLines.take(6)
             if (medSubset.isNotEmpty()) {
@@ -188,7 +193,8 @@ object HealthDossierBuilder {
             findings = findings,
             patterns = patterns,
             medicalLines = medicalLines,
-            flags = flags
+            flags = flags,
+            cycleLine = input.cycleSummary
         )
     }
 

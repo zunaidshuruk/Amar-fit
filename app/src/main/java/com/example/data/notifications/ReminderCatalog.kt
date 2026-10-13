@@ -11,10 +11,11 @@ object Channels {
     const val SLEEP_MIND = "kardiq_sleep_mind"
     const val HEALTH_CHECKS = "kardiq_health_checks"
     const val GOALS = "kardiq_goals"
+    const val CYCLE = "kardiq_cycle"
     const val SOCIAL = "amarfit_social"
 }
 
-enum class ReminderKind { MEAL, WATER, WORKOUT, BEDTIME, MINDFUL, WEEKLY_CHECKIN, GLUCOSE, WEIGH_IN }
+enum class ReminderKind { MEAL, WATER, WORKOUT, BEDTIME, MINDFUL, WEEKLY_CHECKIN, GLUCOSE, WEIGH_IN, CYCLE, CYCLE_LOG, FASTING }
 
 /** One alarm the phone must arm: when, on which days, and what to show. */
 data class ReminderSpec(
@@ -41,6 +42,9 @@ object ReminderCatalog {
     private const val WEEKLY_CODE = 7500
     private const val GLUCOSE_BASE = 7600
     private const val WEIGH_CODE = 7700
+    private const val CYCLE_CHECK_CODE = 7800
+    private const val CYCLE_LOG_CODE = 7801
+    private const val FASTING_CODE = 7802
 
     /** Request codes of every alarm the app may ever arm, used to cancel everything before re-arming. */
     fun allRequestCodes(): List<Int> {
@@ -50,6 +54,7 @@ object ReminderCatalog {
         codes.add(WORKOUT_CODE); codes.add(BEDTIME_CODE); codes.add(MINDFUL_CODE); codes.add(WEEKLY_CODE)
         for (i in 0 until 6) codes.add(GLUCOSE_BASE + i)
         codes.add(WEIGH_CODE)
+        codes.add(CYCLE_CHECK_CODE); codes.add(CYCLE_LOG_CODE); codes.add(FASTING_CODE)
         return codes
     }
 
@@ -172,6 +177,40 @@ object ReminderCatalog {
                     minuteOfDay = prefs.weighIn.minuteOfDay, days = prefs.weighIn.days,
                     title = "Weekly weigh-in", message = "Step on the scale and log your weight.",
                     route = "weightlog", channel = Channels.HEALTH_CHECKS
+                )
+            )
+        }
+
+        // Cycle tracker: one daily check at a fixed time decides on the day whether any cycle notice applies (period soon, late, fertile
+        // window), because those depend on the logs; the log reminder is a plain daily reminder. The runner only shows either of them
+        // while tracking is active for a Female profile, so stale settings are harmless.
+        if (prefs.cyclePeriodSoon || prefs.cyclePeriodLate || prefs.cycleFertileWindow) {
+            specs.add(
+                ReminderSpec(
+                    id = "cycle_check", requestCode = CYCLE_CHECK_CODE, kind = ReminderKind.CYCLE,
+                    minuteOfDay = prefs.cycleCheckMinute, days = Days.ALL,
+                    title = "Cycle tracker", message = "Open KardIQ to see your cycle.",
+                    route = "cycle", channel = Channels.CYCLE
+                )
+            )
+        }
+        if (prefs.cycleLogReminder.enabled) {
+            specs.add(
+                ReminderSpec(
+                    id = "cycle_log", requestCode = CYCLE_LOG_CODE, kind = ReminderKind.CYCLE_LOG,
+                    minuteOfDay = prefs.cycleLogReminder.minuteOfDay, days = prefs.cycleLogReminder.days,
+                    title = "How are you feeling today?", message = "Log your day in the cycle tracker.",
+                    route = "cycle", channel = Channels.CYCLE
+                )
+            )
+        }
+        if (prefs.fastingMakeUp.enabled) {
+            specs.add(
+                ReminderSpec(
+                    id = "fasting_makeup", requestCode = FASTING_CODE, kind = ReminderKind.FASTING,
+                    minuteOfDay = prefs.fastingMakeUp.minuteOfDay, days = prefs.fastingMakeUp.days,
+                    title = "Fasting make-up", message = "Open KardIQ to see your make-up fasts.",
+                    route = "cycle", channel = Channels.CYCLE
                 )
             )
         }
