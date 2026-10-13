@@ -129,6 +129,7 @@ class MainActivity : ComponentActivity() {
     enableEdgeToEdge()
     setContent {
       val userProfile by viewModel.userProfile.collectAsState()
+      val cycleAvailable by viewModel.cycleAvailable.collectAsState()
       val isDark = true
       MyApplicationTheme(darkTheme = true) {
         val permissionState = rememberMultiplePermissionsState(
@@ -197,7 +198,7 @@ class MainActivity : ComponentActivity() {
               modifier = Modifier.fillMaxSize(),
               containerColor = MaterialTheme.colorScheme.background,
               floatingActionButton = {
-                  if (currentRoute !in setOf("universal_assistant?starter={starter}&fresh={fresh}", "foodlog", "scanner")) {
+                  if (currentRoute !in setOf("universal_assistant?starter={starter}&fresh={fresh}", "foodlog", "scanner", "cycle", "cycle_settings")) {
                       SmallFloatingActionButton(
                           onClick = { navController.navigate("universal_assistant") },
                           containerColor = MaterialTheme.colorScheme.primary,
@@ -509,6 +510,21 @@ class MainActivity : ComponentActivity() {
                           onOpenHealthGoals = { navController.navigate("health_goals") }
                       )
                   }
+                  composable("cycle") {
+                      com.example.presentation.cycle.CycleScreen(
+                          viewModel = viewModel,
+                          onNavigateBack = { navController.popBackStack() },
+                          onOpenSettings = { navController.navigate("cycle_settings") }
+                      )
+                  }
+                  composable("cycle_settings") {
+                      com.example.presentation.cycle.CycleSettingsScreen(
+                          viewModel = viewModel,
+                          onNavigateBack = { navController.popBackStack() },
+                          onOpenNotifications = { navController.navigate("notification_settings") },
+                          onTurnedOff = { navController.popBackStack() }
+                      )
+                  }
                   composable("customize_nav") { CustomizeNavScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("offline_ai") { OfflineAiScreen(onNavigateBack = { navController.popBackStack() }) }
                   composable(
@@ -525,6 +541,7 @@ class MainActivity : ComponentActivity() {
             if (showMoreSheet) {
                 val hiddenTabs = chooseableTabs.filter { it.route !in activeTabs.map { t -> t.route } }
                 MoreSheet(
+                    showCycle = cycleAvailable,
                     hiddenTabs = hiddenTabs,
                     onOpenTab = { route ->
                         showMoreSheet = false

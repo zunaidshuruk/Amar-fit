@@ -20,6 +20,7 @@ import com.example.TabScreen
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MoreSheet(
+    showCycle: Boolean = false,
     hiddenTabs: List<TabScreen>,
     onOpenTab: (String) -> Unit,
     onOpenShortcut: (String) -> Unit,
@@ -137,6 +138,36 @@ fun MoreSheet(
                         )
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    if (showCycle) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onOpenShortcut("cycle") }
+                                .padding(vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Cycle tracker",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Period, fertile window and daily log",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

@@ -99,6 +99,8 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val metrics by viewModel.getMetricsForDateFlow(selectedDateString).collectAsState(initial = null)
     val last7Metrics by remember(todayStr) { viewModel.getMetricsHistoryFlow(7) }.collectAsState(initial = emptyList())
     val healthInsight by viewModel.healthInsight.collectAsState()
+    val cycleActive by viewModel.cycleActive.collectAsState()
+    val cyclePrediction by viewModel.cyclePrediction.collectAsState()
     val isLoadingHealthInsight by viewModel.isLoadingHealthInsight.collectAsState()
     val todayFoodLogs by viewModel.getFoodLogsForDateFlow(selectedDateString).collectAsState(initial = emptyList())
     val todayActivityEvents by viewModel.getActivityEventsForDateFlow(selectedDateString).collectAsState(initial = emptyList())
@@ -522,6 +524,14 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     }
                 }
             }
+        }
+
+        // Cycle tracker summary: only for Female profiles that switched tracking on
+        if (cycleActive) {
+            com.example.presentation.cycle.CycleSummaryCard(
+                prediction = cyclePrediction,
+                onClick = { navController.navigate("cycle") }
+            )
         }
 
         // Today's Activity Timeline Feed
