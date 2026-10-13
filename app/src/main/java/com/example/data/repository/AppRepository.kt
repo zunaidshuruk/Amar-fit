@@ -6,6 +6,7 @@ import com.example.data.local.MetricsDao
 import com.example.data.local.UserDao
 import com.example.data.local.UserProfile
 import com.example.data.remote.*
+import com.example.data.sync.CollectionReconciler
 import com.example.data.sync.MetricMerger
 import com.example.data.sync.MetricReconciler
 import com.example.data.sync.ProfileMerger
@@ -465,6 +466,120 @@ class AppRepository(
         }
         val merged = ProfileMerger.merge(local, backup)
         if (merged != local) saveUserProfile(merged, stampTime = false)
+    }
+
+    /**
+     * Applies one synced collection both ways: items another phone added or changed come in, items another
+     * phone deleted (tombstones) are removed here, items only this phone has are uploaded. Returns the number of
+     * local changes, or -1 when the cloud could not be read.
+     */
+    private suspend fun <T : Any> reconcileOne(
+        collection: String,
+        clazz: Class<T>,
+        windowField: String?,
+        windowStart: String?,
+        locals: List<T>,
+        cloudIdOf: (T) -> String,
+        sameContent: (T, T) -> Boolean,
+        upsertLocal: suspend (String, T) -> Unit,
+        deleteLocal: suspend (T) -> Unit,
+        pushRemote: suspend (T) -> Unit
+    ): Int {
+        val pull = FirebaseManager.fetchCollection(collection, clazz, windowField, windowStart) ?: return -1
+        val localById = locals.filter { cloudIdOf(it).isNotBlank() }.associateBy(cloudIdOf)
+        val plan = CollectionReconciler.plan(localById.keys, pull.live.map { it.id }.toSet(), pull.deletedIds)
+        var changes = 0
+        for (doc in pull.live) {
+            val local = localById[doc.id]
+            if (local == null || !sameContent(local, doc.item)) {
+                upsertLocal(doc.id, doc.item)
+                changes++
+            }
+        }
+        for (id in plan.deleteLocalIds) {
+            localById[id]?.let {
+                deleteLocal(it)
+                changes++
+            }
+        }
+        for (id in plan.pushIds) {
+            localById[id]?.let { pushRemote(it) }
+        }
+        return changes
+    }
+
+    /**
+     * Two-way sync of food logs, saved diet charts, saved workouts, workout programs, saved chats and medical
+     * records. [foodLogDays] limits the food log window unless [fullHistory] is true (new phone).
+     * Returns the number of local changes, or -1 when nothing could be read.
+     */
+    suspend fun reconcileCollections(fullHistory: Boolean, foodLogDays: Int): Int {
+        if (com.google.firebase.auth.FirebaseAuth.getInstance().currentUser == null) return -1
+        val start = if (fullHistory) null else java.time.LocalDate.now().minusDays((foodLogDays - 1).toLong()).toString()
+        var total = 0
+        var anyOk = false
+        fun count(n: Int) {
+            if (n >= 0) {
+                anyOk = true
+                total += n
+            }
+        }
+
+        val foodAll = metricsDao.getAllFoodLogsUnbounded().firstOrNull() ?: emptyList()
+        val foodLocals = if (start == null) foodAll else foodAll.filter { it.date >= start }
+        count(reconcileOne(
+            "diet_logs", com.example.data.local.FoodLog::class.java, if (start == null) null else "date", start,
+            foodLocals, { it.cloudId }, { a, b -> a.copy(id = 0) == b.copy(id = 0) },
+            { id, item -> metricsDao.insertFoodLog(item.copy(id = 0, cloudId = id)) },
+            { metricsDao.deleteFoodLog(it) },
+            { FirebaseManager.syncFoodLog(it) }
+        ))
+
+        count(reconcileOne(
+            "saved_diet_charts", com.example.data.local.SavedDietChart::class.java, null, null,
+            savedDietChartDao.getAllSavedCharts().firstOrNull() ?: emptyList(), { it.cloudId },
+            { a, b -> a.copy(id = 0) == b.copy(id = 0) },
+            { id, item -> savedDietChartDao.insertChart(item.copy(id = 0, cloudId = id)) },
+            { savedDietChartDao.deleteChart(it) },
+            { FirebaseManager.syncSavedDietChart(it) }
+        ))
+
+        count(reconcileOne(
+            "saved_workouts", com.example.data.local.SavedWorkout::class.java, null, null,
+            savedWorkoutDao.getAllSavedWorkouts().firstOrNull() ?: emptyList(), { it.cloudId }, { a, b -> a == b },
+            { id, item -> savedWorkoutDao.insertWorkout(item.copy(cloudId = id)) },
+            { savedWorkoutDao.deleteWorkout(it) },
+            { FirebaseManager.syncSavedWorkout(it) }
+        ))
+
+        count(reconcileOne(
+            "saved_chats", com.example.data.local.SavedChat::class.java, null, null,
+            savedChatDao.getAllSavedChats().firstOrNull() ?: emptyList(), { it.cloudId }, { a, b -> a == b },
+            { id, item -> savedChatDao.insertChat(item.copy(cloudId = id)) },
+            { savedChatDao.deleteChat(it) },
+            { FirebaseManager.syncSavedChat(it) }
+        ))
+
+        medicalRecordDao?.let { dao ->
+            count(reconcileOne(
+                "medical_records", com.example.data.local.MedicalRecord::class.java, null, null,
+                dao.getAllMedicalRecords().firstOrNull() ?: emptyList(), { it.cloudId }, { a, b -> a == b },
+                { id, item -> dao.insertMedicalRecord(item.copy(cloudId = id)) },
+                { dao.deleteMedicalRecord(it) },
+                { FirebaseManager.syncMedicalRecord(it) }
+            ))
+        }
+
+        workoutProgramDao?.let { dao ->
+            count(reconcileOne(
+                "workout_programs", com.example.data.local.WorkoutProgram::class.java, null, null,
+                dao.getAllOnce(), { it.cloudId }, { a, b -> a == b },
+                { id, item -> dao.upsert(item.copy(cloudId = id)) },
+                { dao.delete(it.cloudId) },
+                { FirebaseManager.syncWorkoutProgram(it) }
+            ))
+        }
+        return if (anyOk) total else -1
     }
 
     /**

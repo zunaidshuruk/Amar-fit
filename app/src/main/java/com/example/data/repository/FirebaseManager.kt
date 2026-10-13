@@ -2,6 +2,7 @@ package com.example.data.repository
 
 import android.util.Log
 import com.example.data.local.*
+import com.example.data.sync.CollectionReconciler
 import com.example.data.sync.MetricMerger
 import com.example.data.sync.ProfileMerger
 import kotlinx.coroutines.flow.firstOrNull
@@ -817,13 +818,12 @@ object FirebaseManager {
     }
 
     fun deleteFoodLog(log: FoodLog) {
-        val auth = FirebaseAuth.getInstance()
-        val user = auth.currentUser
+        val user = FirebaseAuth.getInstance().currentUser
         if (user != null) {
-            val db = FirebaseFirestore.getInstance()
-            db.collection("users").document(user.uid)
+            // soft delete: other phones see the tombstone and remove their copy
+            FirebaseFirestore.getInstance().collection("users").document(user.uid)
                 .collection("diet_logs").document(log.cloudId)
-                .delete()
+                .set(mapOf("deleted" to true, "deletedAt" to System.currentTimeMillis()), SetOptions.merge())
         }
     }
 
@@ -845,23 +845,7 @@ object FirebaseManager {
         return false
     }
 
-    suspend fun deleteSavedDietChart(chart: SavedDietChart): Boolean {
-        val auth = FirebaseAuth.getInstance()
-        val user = auth.currentUser
-        if (user != null) {
-            val db = FirebaseFirestore.getInstance()
-            return try {
-                db.collection("users").document(user.uid)
-                    .collection("saved_diet_charts").document(chart.cloudId)
-                    .delete().await()
-                true
-            } catch (e: Exception) {
-                e.printStackTrace()
-                false
-            }
-        }
-        return false
-    }
+    suspend fun deleteSavedDietChart(chart: SavedDietChart): Boolean = softDelete("saved_diet_charts", chart.cloudId)
 
     suspend fun syncSavedWorkout(workout: SavedWorkout): Boolean {
         val auth = FirebaseAuth.getInstance()
@@ -881,23 +865,7 @@ object FirebaseManager {
         return false
     }
 
-    suspend fun deleteSavedWorkout(workout: SavedWorkout): Boolean {
-        val auth = FirebaseAuth.getInstance()
-        val user = auth.currentUser
-        if (user != null) {
-            val db = FirebaseFirestore.getInstance()
-            return try {
-                db.collection("users").document(user.uid)
-                    .collection("saved_workouts").document(workout.cloudId)
-                    .delete().await()
-                true
-            } catch (e: Exception) {
-                e.printStackTrace()
-                false
-            }
-        }
-        return false
-    }
+    suspend fun deleteSavedWorkout(workout: SavedWorkout): Boolean = softDelete("saved_workouts", workout.cloudId)
 
     suspend fun syncWorkoutProgram(program: com.example.data.local.WorkoutProgram): Boolean {
         val auth = FirebaseAuth.getInstance()
@@ -917,23 +885,7 @@ object FirebaseManager {
         return false
     }
 
-    suspend fun deleteWorkoutProgram(cloudId: String): Boolean {
-        val auth = FirebaseAuth.getInstance()
-        val user = auth.currentUser
-        if (user != null) {
-            val db = FirebaseFirestore.getInstance()
-            return try {
-                db.collection("users").document(user.uid)
-                    .collection("workout_programs").document(cloudId)
-                    .delete().await()
-                true
-            } catch (e: Exception) {
-                e.printStackTrace()
-                false
-            }
-        }
-        return false
-    }
+    suspend fun deleteWorkoutProgram(cloudId: String): Boolean = softDelete("workout_programs", cloudId)
 
     suspend fun syncSavedChat(chat: SavedChat): Boolean {
         val auth = FirebaseAuth.getInstance()
@@ -953,23 +905,7 @@ object FirebaseManager {
         return false
     }
 
-    suspend fun deleteSavedChat(chat: SavedChat): Boolean {
-        val auth = FirebaseAuth.getInstance()
-        val user = auth.currentUser
-        if (user != null) {
-            val db = FirebaseFirestore.getInstance()
-            return try {
-                db.collection("users").document(user.uid)
-                    .collection("saved_chats").document(chat.cloudId)
-                    .delete().await()
-                true
-            } catch (e: Exception) {
-                e.printStackTrace()
-                false
-            }
-        }
-        return false
-    }
+    suspend fun deleteSavedChat(chat: SavedChat): Boolean = softDelete("saved_chats", chat.cloudId)
 
     suspend fun syncMedicalRecord(record: com.example.data.local.MedicalRecord): Boolean {
         val auth = FirebaseAuth.getInstance()
@@ -989,22 +925,63 @@ object FirebaseManager {
         return false
     }
 
-    suspend fun deleteMedicalRecordRemote(cloudId: String): Boolean {
-        val auth = FirebaseAuth.getInstance()
-        val user = auth.currentUser
-        if (user != null) {
-            val db = FirebaseFirestore.getInstance()
-            return try {
-                db.collection("users").document(user.uid)
-                    .collection("medical_records").document(cloudId)
-                    .delete().await()
-                true
-            } catch (e: Exception) {
-                e.printStackTrace()
-                false
-            }
+    suspend fun deleteMedicalRecordRemote(cloudId: String): Boolean = softDelete("medical_records", cloudId)
+
+    /** Marks a document as deleted instead of removing it, so other phones can apply the delete. */
+    private suspend fun softDelete(collection: String, id: String): Boolean {
+        val user = FirebaseAuth.getInstance().currentUser ?: return false
+        return try {
+            FirebaseFirestore.getInstance().collection("users").document(user.uid)
+                .collection(collection).document(id)
+                .set(mapOf("deleted" to true, "deletedAt" to System.currentTimeMillis()), SetOptions.merge())
+                .await()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
-        return false
+    }
+
+    data class RemoteDoc<T>(val id: String, val item: T)
+    data class CollectionPull<T>(val live: List<RemoteDoc<T>>, val deletedIds: Set<String>)
+
+    /**
+     * Reads one synced collection. Documents marked deleted are returned as ids (and removed from the cloud
+     * once their tombstone is older than 30 days). [windowField] / [windowStart] limit the read to recent items.
+     * Returns null when signed out, offline or on failure.
+     */
+    suspend fun <T : Any> fetchCollection(
+        name: String,
+        clazz: Class<T>,
+        windowField: String? = null,
+        windowStart: String? = null
+    ): CollectionPull<T>? {
+        val user = FirebaseAuth.getInstance().currentUser ?: return null
+        return try {
+            val col = FirebaseFirestore.getInstance().collection("users").document(user.uid).collection(name)
+            val snap = (if (windowField != null && windowStart != null) {
+                col.whereGreaterThanOrEqualTo(windowField, windowStart).get()
+            } else {
+                col.get()
+            }).await()
+            val live = ArrayList<RemoteDoc<T>>()
+            val deleted = HashSet<String>()
+            val now = System.currentTimeMillis()
+            for (doc in snap.documents) {
+                if (doc.getBoolean("deleted") == true) {
+                    deleted.add(doc.id)
+                    if (CollectionReconciler.isTombstoneExpired(doc.getLong("deletedAt") ?: 0L, now)) {
+                        doc.reference.delete()
+                    }
+                } else {
+                    doc.toObject(clazz)?.let { live.add(RemoteDoc(doc.id, it)) }
+                }
+            }
+            CollectionPull(live, deleted)
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "fetchCollection($name) failed", e)
+            null
+        }
     }
 
     suspend fun pullDataOnLogin(
@@ -1036,100 +1013,8 @@ object FirebaseManager {
 
             // Metrics are merged (not replaced) by AppRepository.reconcileMetrics after login.
 
-            // Pull Food Logs
-            try {
-                val foodLogsSnap = db.collection("users").document(user.uid).collection("diet_logs").get().await()
-                for (doc in foodLogsSnap.documents) {
-                    val log = doc.toObject(FoodLog::class.java)
-                    if (log != null) {
-                        val resolvedLog = if (log.cloudId.isEmpty()) log.copy(cloudId = doc.id) else log
-                        metricsDao.insertFoodLog(resolvedLog)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("FirebaseManager", "Error pulling food logs on login", e)
-                e.printStackTrace()
-            }
-
-            // Pull Saved Diet Charts
-            if (savedDietChartDao != null) {
-                try {
-                    val chartsSnap = db.collection("users").document(user.uid).collection("saved_diet_charts").get().await()
-                    for (doc in chartsSnap.documents) {
-                        val chart = doc.toObject(SavedDietChart::class.java)
-                        if (chart != null) {
-                            savedDietChartDao.insertChart(chart)
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("FirebaseManager", "Error pulling saved diet charts on login", e)
-                    e.printStackTrace()
-                }
-            }
-
-            // Pull Saved Workouts
-            if (savedWorkoutDao != null) {
-                try {
-                    val workoutsSnap = db.collection("users").document(user.uid).collection("saved_workouts").get().await()
-                    for (doc in workoutsSnap.documents) {
-                        val workout = doc.toObject(SavedWorkout::class.java)
-                        if (workout != null) {
-                            savedWorkoutDao.insertWorkout(workout)
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("FirebaseManager", "Error pulling saved workouts on login", e)
-                    e.printStackTrace()
-                }
-            }
-
-            // Pull Workout Programs
-            if (workoutProgramDao != null) {
-                try {
-                    val programsSnap = db.collection("users").document(user.uid).collection("workout_programs").get().await()
-                    for (doc in programsSnap.documents) {
-                        val program = doc.toObject(com.example.data.local.WorkoutProgram::class.java)
-                        if (program != null) {
-                            workoutProgramDao.upsert(program)
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("FirebaseManager", "Error pulling workout programs on login", e)
-                    e.printStackTrace()
-                }
-            }
-
-            // Pull Saved Chats
-            if (savedChatDao != null) {
-                try {
-                    val chatsSnap = db.collection("users").document(user.uid).collection("saved_chats").get().await()
-                    for (doc in chatsSnap.documents) {
-                        val chat = doc.toObject(SavedChat::class.java)
-                        if (chat != null) {
-                            savedChatDao.insertChat(chat)
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("FirebaseManager", "Error pulling saved chats on login", e)
-                    e.printStackTrace()
-                }
-            }
-
-            // Pull Medical Records
-            if (medicalRecordDao != null) {
-                try {
-                    val recordsSnap = db.collection("users").document(user.uid).collection("medical_records").get().await()
-                    for (doc in recordsSnap.documents) {
-                        val record = doc.toObject(com.example.data.local.MedicalRecord::class.java)
-                        if (record != null) {
-                            medicalRecordDao.insertMedicalRecord(record)
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("FirebaseManager", "Error pulling medical records on login", e)
-                    e.printStackTrace()
-                }
-            }
+            // Food logs, saved charts, workouts, programs, chats and medical records are merged
+            // (with deletes) by AppRepository.reconcileCollections after login.
         }
     }
 }

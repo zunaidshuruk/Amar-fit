@@ -188,15 +188,17 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 val needFull = !prefs.getBoolean("metrics_full_restore_done", false)
                 val result = repository.reconcileMetrics(daysBack = if (needFull) null else if (daily) 60 else 7)
                 val profileOk = repository.reconcileProfile()
-                if (result.ok) {
+                val itemChanges = repository.reconcileCollections(fullHistory = needFull, foodLogDays = if (daily) 60 else 14)
+                val itemsOk = itemChanges >= 0
+                if (result.ok && (itemsOk || !needFull)) {
                     val edit = prefs.edit()
                     if (needFull) edit.putBoolean("metrics_full_restore_done", true)
                     if (needFull || daily) edit.putLong("last_full_metrics_sync", now)
                     edit.putLong("last_cloud_sync_at", System.currentTimeMillis())
                     edit.apply()
                     succeeded = true
-                    message = if (result.pulled == 0 && result.pushed == 0) "Up to date on this phone and in the cloud."
-                    else "Synced: received ${result.pulled} day(s), uploaded ${result.pushed}."
+                    message = if (result.pulled == 0 && result.pushed == 0 && itemChanges <= 0) "Up to date on this phone and in the cloud."
+                    else "Synced: ${result.pulled} day(s) received, ${result.pushed} uploaded, ${maxOf(itemChanges, 0)} item(s) updated."
                     if (!profileOk) message += " Profile will sync later."
                 }
             } catch (e: Exception) {
