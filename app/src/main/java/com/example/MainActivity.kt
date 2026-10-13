@@ -524,7 +524,13 @@ class MainActivity : ComponentActivity() {
                     },
                     onOpenShortcut = { route ->
                         showMoreSheet = false
-                        navController.navigate(route)
+                        if (route == "quick_log") {
+                            // the log sheet lives on the Today screen: go there and ask it to open
+                            viewModel.requestOpenLogSheet()
+                            navigateToTab(navController, TabScreen.Today.route)
+                        } else {
+                            navController.navigate(route)
+                        }
                     },
                     onCustomize = {
                         showMoreSheet = false

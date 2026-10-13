@@ -145,6 +145,12 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    private val _openLogSheetRequest = MutableStateFlow(false)
+    /** Set by the More sheet's "Quick log"; the Today screen shows its log sheet and clears it. */
+    val openLogSheetRequest: StateFlow<Boolean> = _openLogSheetRequest.asStateFlow()
+    fun requestOpenLogSheet() { _openLogSheetRequest.value = true }
+    fun consumeOpenLogSheetRequest() { _openLogSheetRequest.value = false }
+
     private var lastQuickSyncAt = 0L
     private var metricsListenerJob: kotlinx.coroutines.Job? = null
 
