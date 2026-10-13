@@ -10,10 +10,13 @@ Built in Sprint 18 (Part AW), branch `claude/cycle-tracker`. Plan and decisions:
   "Hide details on the lock screen" ON, and needs "I understand and agree". It points to Privacy Policy section 1.6.
 
 ## What it does
-* **Cycle screen** (route `cycle`; from More, the Today card and the Health card): summary (day, phase, next period, fertile window), "Period
-  started / ended today", "Log today", a month calendar (logged period, expected period, fertile window, ovulation estimate, a dot on days with a
-  log), history of the last 6 cycles, how many cycles the numbers rest on, a gentle note for irregular cycles, and the estimate disclaimer.
-  Tapping a day logs flow (none, spotting, light, medium, heavy), symptoms and mood, and can start or end a period on that day or remove one.
+* **Cycle tab** (route `cycle`): a bottom-bar tab you can choose in More > Customize navigation bar (only offered to Female profiles; if the
+  gender changes the tab disappears from the bar), listed in More while it is not in the bar, and opened from the Today and Health cards. Two views:
+  * **Calendar** (the easy view): cycle day and phase, next period, estimated fertile window, "Period started / ended today", "Log today", and a month
+    calendar (logged period, expected period, fertile window, ovulation estimate, a dot on days with a log). Tapping a day logs flow (none, spotting, light,
+    medium, heavy), symptoms and mood, can start or end a period on that day or remove one, and (with Ramadan tracking on) marks a missed or made-up fast.
+  * **Details**: predictions in plain words (cycle day, phase, next period range, the two after it, ovulation, fertile window), averages (cycle and period
+    length, shortest/longest, cycles logged, confidence), the Ramadan make-up card (below), every cycle in the history, the recent logged days, the disclaimer.
 * **Cycle settings** (route `cycle_settings`): AI switch, lock-screen switch, typical cycle and period length (used until there is history),
   link to cycle notifications, Share with Health Connect, Turn off tracking, Delete all cycle data (cloud first; nothing is deleted if the cloud
   cannot be reached).
@@ -32,10 +35,17 @@ Built in Sprint 18 (Part AW), branch `claude/cycle-tracker`. Plan and decisions:
   `HealthConnectManager.REQUIRED_PERMISSIONS`). Import reads periods of the last 400 days (skips any starting within 3 days of a logged one). A
   finished period is written once (remembered by id in `CycleHealthConnect` preferences); light, medium and heavy flow days are written once; later
   edits are not sent. Spotting is not written (Health Connect has no such value).
+* **Ramadan fasting make-up** (optional, OFF by default, Cycle settings > Ramadan, because it can reveal religious practice and is treated exactly like
+  cycle data: same consent, cloud, backup, deletion, never shown to friends, never sent to the AI). Ramadan dates come from the built-in Umm al-Qura
+  calendar (`java.time.chrono.HijrahDate`; Ramadan 1447 = Feb 18 to Mar 19, 2026, 1448 = Feb 8 to Mar 8, 2027) with a moon-sighting adjustment of -2 to +2
+  days (Bangladesh often starts a day later). `FastingLedgerBuilder`: missed fasts (period or other reason) minus made-up fasts, the oldest Ramadan made up
+  first; period days that fall inside a Ramadan are only SUGGESTED until the person taps "Count them as missed fasts". The Details card shows the next
+  Ramadan with a countdown, what is left, a row per Ramadan, "I made up a fast today". Optional evening reminder (Settings > Notifications, off by default,
+  default Sunday and Wednesday 8 PM, only while fasts are left). Stored in `users/{uid}/fasting_days` (newest change wins).
 * **Never shared socially**: `CycleIsolationTest` fails if a friend, leaderboard, challenge or activity-feed writer mentions the cycle.
 
 ## Phone test plan
-1. Profile gender Female: More shows "Cycle tracker". Change gender to Male: the entry, the cards and the reminders disappear; back to Female: they return.
+1. Profile gender Female: More lists "Cycle" (or the bottom bar if you chose it in Customize navigation bar). Change gender to Male: the entry, the cards and the reminders disappear; back to Female: they return.
 2. Open the tracker, turn on tracking: the consent dialog shows the AI switch ON and the lock-screen switch ON; "Turn on" works only after the checkbox.
 3. Tap "Period started today", log flow and a symptom on today, end the period the next day: the calendar paints the days, history shows a row.
 4. Log a period 28 days ago and one 56 days ago: the next-period date and the fertile window appear; the basis line says "Based on 2 logged cycles".
@@ -46,3 +56,6 @@ Built in Sprint 18 (Part AW), branch `claude/cycle-tracker`. Plan and decisions:
 8. Share with Health Connect: grant, then "Import periods now"; finish a period here and check it in Health Connect.
 9. Ask the Assistant a health question with the AI switch ON (the answer may mention the phase) and again with it OFF (it cannot).
 10. Delete the account on a spare test account: the cycle collections are gone in the console.
+11. Cycle settings > Ramadan: switch on, set the moon-sighting adjustment (+1): the estimated dates shift by a day. Log a period that overlaps Ramadan: Details
+    shows "N period days ... not counted yet"; tap "Count them as missed fasts": the total shows N left. Tap "I made up a fast today": the total drops by one.
+12. Settings > Notifications > Cycle tracker: switch on "Fasting make-up reminder" for today two minutes ahead: with fasts left, a (discreet) notification arrives.

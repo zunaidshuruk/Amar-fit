@@ -36,8 +36,9 @@ fun CustomizeNavScreen(
     onNavigateBack: () -> Unit
 ) {
     val profile by viewModel.userProfile.collectAsState()
-    val currentBar = remember(profile?.navTabs) { NavTabs.parse(profile?.navTabs) }
-    val hiddenRoutes = remember(currentBar) { NavTabs.hidden(currentBar) }
+    val cycleAllowed by viewModel.cycleAvailable.collectAsState()
+    val currentBar = remember(profile?.navTabs, cycleAllowed) { NavTabs.parse(profile?.navTabs, cycleAllowed) }
+    val hiddenRoutes = remember(currentBar, cycleAllowed) { NavTabs.hidden(currentBar, cycleAllowed) }
     val coroutineScope = rememberCoroutineScope()
 
     fun updateBar(newBar: List<String>) {

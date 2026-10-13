@@ -31,3 +31,16 @@ data class CycleDayLog(
 ) {
     constructor() : this("", 0, 0, 0, System.currentTimeMillis())
 }
+
+/**
+ * One day of the optional Ramadan fasting make-up log: type is a FastingType code (1 missed because of a period, 2 missed for
+ * another reason, 3 made up a fast; 0 = cleared). One row per date. Handled exactly like the rest of the cycle data.
+ */
+@Entity(tableName = "fasting_days")
+data class FastingLog(
+    @PrimaryKey val date: String = "",
+    val type: Int = 0,
+    val updatedAt: Long = System.currentTimeMillis()
+) {
+    constructor() : this("", 0, System.currentTimeMillis())
+}

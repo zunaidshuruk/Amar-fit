@@ -70,4 +70,42 @@ class CycleTextsTest {
         assertEquals("Oct 1 \u2013 Oct 5", CycleTexts.period(d("2026-10-01"), d("2026-10-05")))
         assertTrue(CycleTexts.period(d("2026-10-01"), null).contains("ongoing"))
     }
+
+    @Test
+    fun theDetailsViewListsThePredictionsInPlainWords() {
+        val lines = CycleTexts.predictionLines(on("2026-10-13")).toMap()
+        assertEquals("13", lines["Cycle day"])
+        assertEquals("Fertile window", lines["Phase"])
+        assertEquals("Oct 29 \u2013 Nov 2 (estimate)", lines["Next period"])
+        assertEquals("Nov 26, Dec 24", lines["After that"])
+        assertEquals("Oct 15", lines["Estimated ovulation"])
+        assertEquals("Oct 10 \u2013 Oct 16", lines["Estimated fertile window"])
+        assertTrue(CycleTexts.predictionLines(CyclePredictor.predict(emptyList(), d("2026-10-13"))).isEmpty())
+    }
+
+    @Test
+    fun aStalePredictionOnlyShowsWhereYouAre() {
+        val lines = CycleTexts.predictionLines(on("2027-02-01")).map { it.first }
+        assertTrue("Cycle day" in lines)
+        assertFalse("Next period" in lines)
+    }
+
+    @Test
+    fun theAveragesCardShowsWhatTheNumbersRestOn() {
+        val stats = CyclePredictor.stats(listOf("2026-05-01", "2026-05-29", "2026-06-26", "2026-07-24").map { PeriodSpan(d(it)) })
+        val lines = CycleTexts.statsLines(stats).toMap()
+        assertEquals("28 days", lines["Average cycle"])
+        assertEquals("28 / 28 days", lines["Shortest / longest cycle"])
+        assertEquals("3", lines["Cycles logged"])
+        assertEquals("High", lines["Prediction confidence"])
+        assertFalse("Shortest / longest cycle" in CycleTexts.statsLines(CyclePredictor.stats(emptyList())).map { it.first })
+    }
+
+    @Test
+    fun aLoggedDayReadsAsOneLine() {
+        val line = CycleTexts.dayLine(d("2026-10-12"), FlowLevel.MEDIUM.code, 1 or 128, Mood.CALM.code)
+        assertEquals("Oct 12 \u00B7 Medium flow \u00B7 Cramps, Fatigue \u00B7 Calm", line)
+        assertEquals("Oct 12 \u00B7 Spotting", CycleTexts.dayLine(d("2026-10-12"), FlowLevel.SPOTTING.code, 0, 0))
+        assertNull(CycleTexts.dayLine(d("2026-10-12"), 0, 0, 0))
+    }
 }

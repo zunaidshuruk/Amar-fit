@@ -354,6 +354,16 @@ fun NotificationSettingsScreen(
                 if (prefs.cycleLogReminder.enabled) {
                     TimeRow("Time", prefs.cycleLogReminder.minuteOfDay) { m -> update { it.copy(cycleLogReminder = it.cycleLogReminder.copy(minuteOfDay = m)) } }
                 }
+                if (profile?.ramadanTrackingEnabled == true) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    SwitchRow("Fasting make-up reminder", "In the evening on the days you choose, while you still have fasts to make up", prefs.fastingMakeUp.enabled) { on ->
+                        update { it.copy(fastingMakeUp = it.fastingMakeUp.copy(enabled = on)) }
+                    }
+                    if (prefs.fastingMakeUp.enabled) {
+                        TimeRow("Time", prefs.fastingMakeUp.minuteOfDay) { m -> update { it.copy(fastingMakeUp = it.fastingMakeUp.copy(minuteOfDay = m)) } }
+                        DayChips(prefs.fastingMakeUp.days) { d -> update { it.copy(fastingMakeUp = it.fastingMakeUp.copy(days = d)) } }
+                    }
+                }
                 Text(
                     "Details are hidden on the lock screen unless you change that in Cycle settings.",
                     fontSize = 12.sp,

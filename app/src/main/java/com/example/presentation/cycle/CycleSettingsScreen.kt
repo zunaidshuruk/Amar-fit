@@ -118,6 +118,32 @@ fun CycleSettingsScreen(
                 )
             }
 
+            SettingsCard("Ramadan") {
+                SettingSwitch(
+                    "Track Ramadan fasting make-up",
+                    "Counts the fasts you missed (for example on period days) and the ones you made up. Optional. It is stored with your cycle data and handled the same way.",
+                    p.ramadanTrackingEnabled
+                ) { viewModel.setRamadanTracking(it, p.ramadanOffsetDays) }
+                if (p.ramadanTrackingEnabled) {
+                    val offset = p.ramadanOffsetDays
+                    StepperRow(
+                        label = "Moon sighting adjustment",
+                        valueText = if (offset == 0) "none" else "${if (offset > 0) "+" else ""}$offset day${if (offset == 1 || offset == -1) "" else "s"}",
+                        onMinus = { viewModel.setRamadanTracking(true, offset - 1) },
+                        onPlus = { viewModel.setRamadanTracking(true, offset + 1) },
+                        canMinus = offset > -2,
+                        canPlus = offset < 2
+                    )
+                    val (hijriYear, range) = com.example.data.cycle.Ramadan.currentOrNext(java.time.LocalDate.now(), offset)
+                    val fmt = java.time.format.DateTimeFormatter.ofPattern("MMM d", java.util.Locale.US)
+                    Text(
+                        "Ramadan $hijriYear is estimated as ${range.start.format(fmt)} \u2013 ${range.end.format(fmt)}, ${range.end.year}. If your country starts a day later than the built-in calendar (as Bangladesh often does), add 1 day.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
             SettingsCard("Reminders") {
                 Row(
                     modifier = Modifier.fillMaxWidth().clickable { onOpenNotifications() }.padding(vertical = 8.dp),
@@ -126,10 +152,16 @@ fun CycleSettingsScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Cycle notifications", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-                        Text("Period soon, period late, fertile window, daily log", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Period soon, period late, fertile window, daily log, fasting make-up", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                Text(
+                    "Tip: to keep the cycle tracker in the bottom bar, choose it in More > Customize navigation bar.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
             }
 
             CycleHealthConnectSection(viewModel = viewModel, enabled = p.cycleHealthConnectSync)

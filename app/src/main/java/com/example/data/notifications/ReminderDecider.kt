@@ -33,7 +33,7 @@ object ReminderDecider {
             }
             ReminderKind.CYCLE_LOG -> !snap.cycleLoggedToday
             // the daily cycle check only runs; whether there is anything to say is decided from the predictions by the runner
-            ReminderKind.CYCLE, ReminderKind.BEDTIME, ReminderKind.WEEKLY_CHECKIN -> true
+            ReminderKind.CYCLE, ReminderKind.FASTING, ReminderKind.BEDTIME, ReminderKind.WEEKLY_CHECKIN -> true
         }
     }
 

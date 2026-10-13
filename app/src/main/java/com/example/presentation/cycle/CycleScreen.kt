@@ -25,7 +25,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Settings
@@ -50,6 +49,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.cycle.DayMarks
 import com.example.data.cycle.CyclePredictor
 import com.example.data.cycle.CycleTexts
+import com.example.data.cycle.FastingType
 import com.example.data.cycle.FlowLevel
 import com.example.data.cycle.Mood
 import com.example.data.cycle.Symptoms
@@ -80,7 +81,6 @@ import java.util.Locale
 @Composable
 fun CycleScreen(
     viewModel: ShasthoViewModel,
-    onNavigateBack: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
     val available by viewModel.cycleAvailable.collectAsState()
@@ -88,9 +88,11 @@ fun CycleScreen(
     val prediction by viewModel.cyclePrediction.collectAsState()
     val periods by viewModel.periodLogs.collectAsState()
     val loggedDays by viewModel.cycleDays.collectAsState()
+    val ledger by viewModel.fastingLedger.collectAsState()
     val todayStr by viewModel.todayDate.collectAsState()
     val today = remember(todayStr) { try { LocalDate.parse(todayStr) } catch (e: Exception) { LocalDate.now() } }
 
+    var view by rememberSaveable { mutableStateOf(0) } // 0 = Calendar (easy view), 1 = Details
     var month by remember { mutableStateOf(YearMonth.from(today)) }
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
     var showConsent by remember { mutableStateOf(false) }
@@ -99,23 +101,19 @@ fun CycleScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .windowInsetsPadding(WindowInsets.safeDrawing)
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState())
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onNavigateBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
-            }
             Text(
                 "Cycle tracker",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f).padding(start = 4.dp)
             )
             if (active) {
                 IconButton(onClick = onOpenSettings) {
@@ -146,167 +144,44 @@ fun CycleScreen(
                 }
             }
         } else {
-            // ---- summary
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text(CycleTexts.headline(prediction), fontSize = 28.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Text(
-                        CycleTexts.subline(prediction),
-                        fontSize = 15.sp,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                    val p = prediction
-                    if (p != null && p.lastPeriodStart != null && !p.isStale && p.fertileStart != null && p.fertileEnd != null) {
-                        Text(
-                            "Estimated fertile window: ${p.fertileStart.month.getDisplayName(TextStyle.SHORT, Locale.US)} ${p.fertileStart.dayOfMonth} to ${p.fertileEnd.month.getDisplayName(TextStyle.SHORT, Locale.US)} ${p.fertileEnd.dayOfMonth}",
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
-                    }
-                }
+            // the two views: Calendar for an easy look, Details for the numbers and history
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                FilterChip(
+                    selected = view == 0,
+                    onClick = { view = 0 },
+                    label = { Text("Calendar", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                    modifier = Modifier.weight(1f)
+                )
+                FilterChip(
+                    selected = view == 1,
+                    onClick = { view = 1 },
+                    label = { Text("Details", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                    modifier = Modifier.weight(1f)
+                )
             }
-
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                if (prediction?.inPeriodNow == true) {
-                    Button(onClick = { viewModel.endPeriodOn(today) }, modifier = Modifier.weight(1f)) { Text("Period ended today") }
-                } else {
-                    Button(onClick = { viewModel.startPeriodOn(today) }, modifier = Modifier.weight(1f)) { Text("Period started today") }
-                }
-                OutlinedButton(onClick = { selectedDate = today }, modifier = Modifier.weight(1f)) { Text("Log today") }
+            if (view == 0) {
+                CalendarView(
+                    viewModel = viewModel,
+                    prediction = prediction,
+                    periods = periods,
+                    loggedDays = loggedDays,
+                    ledger = ledger,
+                    today = today,
+                    month = month,
+                    onMonthChange = { month = it },
+                    onSelectDate = { selectedDate = it },
+                    onOpenDetails = { view = 1 }
+                )
+            } else {
+                DetailsView(
+                    viewModel = viewModel,
+                    prediction = prediction,
+                    periods = periods,
+                    loggedDays = loggedDays,
+                    ledger = ledger,
+                    today = today
+                )
             }
-
-            Spacer(Modifier.height(16.dp))
-
-            // ---- calendar
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        IconButton(onClick = { month = month.minusMonths(1) }) {
-                            Icon(Icons.Default.ChevronLeft, contentDescription = "Previous month")
-                        }
-                        Text(
-                            "${month.month.getDisplayName(TextStyle.FULL, Locale.US)} ${month.year}",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(onClick = { month = month.plusMonths(1) }) {
-                            Icon(Icons.Default.ChevronRight, contentDescription = "Next month")
-                        }
-                    }
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        listOf("M", "T", "W", "T", "F", "S", "S").forEach {
-                            Text(
-                                it,
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-                    val spans = remember(periods) { periods.mapNotNull { it.toSpan() } }
-                    val marks: Map<LocalDate, DayMarks> = remember(spans, prediction, month, today) {
-                        val p = prediction
-                        if (p == null) emptyMap() else CyclePredictor.marksForRange(spans, p, today, month.atDay(1), month.atEndOfMonth())
-                    }
-                    val loggedDates = remember(loggedDays) {
-                        loggedDays.filter { it.flow > 0 || it.symptoms != 0 || it.mood != 0 }.map { it.date }.toSet()
-                    }
-                    val offset = month.atDay(1).dayOfWeek.value - 1
-                    val rows = (offset + month.lengthOfMonth() + 6) / 7
-                    for (r in 0 until rows) {
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            for (c in 0..6) {
-                                val index = r * 7 + c
-                                val dayNumber = index - offset + 1
-                                if (dayNumber < 1 || dayNumber > month.lengthOfMonth()) {
-                                    Spacer(Modifier.weight(1f).aspectRatio(1f))
-                                } else {
-                                    val date = month.atDay(dayNumber)
-                                    DayCell(
-                                        date = date,
-                                        marks = marks[date],
-                                        hasLog = date.toString() in loggedDates,
-                                        isToday = date == today,
-                                        onClick = { selectedDate = date },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        LegendDot(MaterialTheme.colorScheme.error, filled = true, label = "Period")
-                        LegendDot(MaterialTheme.colorScheme.error, filled = false, label = "Expected period")
-                        LegendDot(MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), filled = true, label = "Fertile window")
-                        LegendDot(MaterialTheme.colorScheme.primary, filled = false, label = "Ovulation (estimate)")
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // ---- basis, regularity and disclaimer
-            val stats = prediction?.stats
-            if (stats != null) {
-                InfoCard(CycleTexts.basis(stats))
-                CycleTexts.regularityNote(stats)?.let {
-                    Spacer(Modifier.height(8.dp))
-                    InfoCard(it)
-                }
-                Spacer(Modifier.height(8.dp))
-            }
-
-            // ---- history
-            val sorted = remember(periods) { periods.mapNotNull { p -> p.toSpan()?.let { p to it } }.sortedBy { it.second.start } }
-            if (sorted.isNotEmpty()) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("History", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                        val recent = sorted.reversed().take(6)
-                        recent.forEachIndexed { index, (_, span) ->
-                            val next = sorted.getOrNull(sorted.indexOfFirst { it.second.start == span.start } + 1)?.second?.start
-                            val cycleLength = next?.let { java.time.temporal.ChronoUnit.DAYS.between(span.start, it).toInt() }
-                            if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                            Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                                Text(CycleTexts.period(span.start, span.end), fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-                                val lengthText = span.end?.let { "${java.time.temporal.ChronoUnit.DAYS.between(span.start, it).toInt() + 1}-day period" }
-                                val parts = listOfNotNull(lengthText, cycleLength?.let { "cycle $it days" })
-                                if (parts.isNotEmpty()) {
-                                    Text(parts.joinToString(" \u00B7 "), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-            }
-
-            Text(
-                CycleTexts.DISCLAIMER,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 4.dp)
-            )
         }
         Spacer(Modifier.height(80.dp))
     }
@@ -316,6 +191,7 @@ fun CycleScreen(
             viewModel = viewModel,
             date = date,
             periods = periods,
+            ramadanEnabled = ledger != null,
             onDismiss = { selectedDate = null }
         )
     }
@@ -330,8 +206,159 @@ fun CycleScreen(
     }
 }
 
+/** The easy view: where you are in the cycle, quick actions and the month calendar. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun InfoCard(text: String) {
+private fun CalendarView(
+    viewModel: ShasthoViewModel,
+    prediction: com.example.data.cycle.CyclePrediction?,
+    periods: List<PeriodLog>,
+    loggedDays: List<CycleDayLog>,
+    ledger: com.example.data.cycle.FastingLedger?,
+    today: LocalDate,
+    month: YearMonth,
+    onMonthChange: (YearMonth) -> Unit,
+    onSelectDate: (LocalDate) -> Unit,
+    onOpenDetails: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(CycleTexts.headline(prediction), fontSize = 28.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            Text(
+                CycleTexts.subline(prediction),
+                fontSize = 15.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+            val p = prediction
+            if (p != null && p.lastPeriodStart != null && !p.isStale && p.fertileStart != null && p.fertileEnd != null) {
+                Text(
+                    "Estimated fertile window: ${p.fertileStart.month.getDisplayName(TextStyle.SHORT, Locale.US)} ${p.fertileStart.dayOfMonth} to ${p.fertileEnd.month.getDisplayName(TextStyle.SHORT, Locale.US)} ${p.fertileEnd.dayOfMonth}",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+        }
+    }
+
+    Spacer(Modifier.height(12.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        if (prediction?.inPeriodNow == true) {
+            Button(onClick = { viewModel.endPeriodOn(today) }, modifier = Modifier.weight(1f)) { Text("Period ended today") }
+        } else {
+            Button(onClick = { viewModel.startPeriodOn(today) }, modifier = Modifier.weight(1f)) { Text("Period started today") }
+        }
+        OutlinedButton(onClick = { onSelectDate(today) }, modifier = Modifier.weight(1f)) { Text("Log today") }
+    }
+
+    Spacer(Modifier.height(16.dp))
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                IconButton(onClick = { onMonthChange(month.minusMonths(1)) }) {
+                    Icon(Icons.Default.ChevronLeft, contentDescription = "Previous month")
+                }
+                Text(
+                    "${month.month.getDisplayName(TextStyle.FULL, Locale.US)} ${month.year}",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = { onMonthChange(month.plusMonths(1)) }) {
+                    Icon(Icons.Default.ChevronRight, contentDescription = "Next month")
+                }
+            }
+            Row(modifier = Modifier.fillMaxWidth()) {
+                listOf("M", "T", "W", "T", "F", "S", "S").forEach {
+                    Text(
+                        it,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            val spans = remember(periods) { periods.mapNotNull { it.toSpan() } }
+            val marks: Map<LocalDate, DayMarks> = remember(spans, prediction, month, today) {
+                val p = prediction
+                if (p == null) emptyMap() else CyclePredictor.marksForRange(spans, p, today, month.atDay(1), month.atEndOfMonth())
+            }
+            val loggedDates = remember(loggedDays) {
+                loggedDays.filter { it.flow > 0 || it.symptoms != 0 || it.mood != 0 }.map { it.date }.toSet()
+            }
+            val offset = month.atDay(1).dayOfWeek.value - 1
+            val rows = (offset + month.lengthOfMonth() + 6) / 7
+            for (r in 0 until rows) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    for (c in 0..6) {
+                        val index = r * 7 + c
+                        val dayNumber = index - offset + 1
+                        if (dayNumber < 1 || dayNumber > month.lengthOfMonth()) {
+                            Spacer(Modifier.weight(1f).aspectRatio(1f))
+                        } else {
+                            val date = month.atDay(dayNumber)
+                            DayCell(
+                                date = date,
+                                marks = marks[date],
+                                hasLog = date.toString() in loggedDates,
+                                isToday = date == today,
+                                onClick = { onSelectDate(date) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                LegendDot(MaterialTheme.colorScheme.error, filled = true, label = "Period")
+                LegendDot(MaterialTheme.colorScheme.error, filled = false, label = "Expected period")
+                LegendDot(MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), filled = true, label = "Fertile window")
+                LegendDot(MaterialTheme.colorScheme.primary, filled = false, label = "Ovulation (estimate)")
+            }
+        }
+    }
+
+    if (ledger != null && ledger.totalOutstanding > 0) {
+        Spacer(Modifier.height(12.dp))
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth().clickable { onOpenDetails() }
+        ) {
+            Text(
+                "Fasting make-up: ${ledger.totalOutstanding} fast${if (ledger.totalOutstanding == 1) "" else "s"} left to make up. See Details.",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(14.dp)
+            )
+        }
+    }
+
+    Spacer(Modifier.height(12.dp))
+    Text(
+        "Tap a day to log it. See Details for your numbers and history.",
+        fontSize = 12.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 4.dp)
+    )
+}
+
+@Composable
+internal fun InfoCard(text: String) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(16.dp),
@@ -407,8 +434,11 @@ private fun DayLogDialog(
     viewModel: ShasthoViewModel,
     date: LocalDate,
     periods: List<PeriodLog>,
+    ramadanEnabled: Boolean,
     onDismiss: () -> Unit
 ) {
+    var fasting by remember(date) { mutableIntStateOf(0) }
+    var originalFasting by remember(date) { mutableIntStateOf(0) }
     var flow by remember(date) { mutableIntStateOf(0) }
     var symptoms by remember(date) { mutableIntStateOf(0) }
     var mood by remember(date) { mutableIntStateOf(0) }
@@ -420,6 +450,11 @@ private fun DayLogDialog(
             flow = it.flow
             symptoms = it.symptoms
             mood = it.mood
+        }
+        if (ramadanEnabled) {
+            val type = viewModel.getFastingType(date).code
+            fasting = type
+            originalFasting = type
         }
         loaded = true
     }
@@ -462,6 +497,19 @@ private fun DayLogDialog(
                         )
                     }
                 }
+                if (ramadanEnabled) {
+                    Spacer(Modifier.height(12.dp))
+                    Text("Fasting", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(FastingType.MISSED_PERIOD, FastingType.MISSED_OTHER, FastingType.MADE_UP).forEach { type ->
+                            FilterChip(
+                                selected = fasting == type.code,
+                                onClick = { fasting = if (fasting == type.code) FastingType.NONE.code else type.code },
+                                label = { Text(type.label) }
+                            )
+                        }
+                    }
+                }
                 Spacer(Modifier.height(8.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 TextButton(onClick = { viewModel.startPeriodOn(date); onDismiss() }) { Text("Period started on this day") }
@@ -478,6 +526,7 @@ private fun DayLogDialog(
                 enabled = loaded,
                 onClick = {
                     viewModel.saveCycleDay(date, flow, symptoms, mood)
+                    if (ramadanEnabled && fasting != originalFasting) viewModel.setFasting(date, FastingType.fromCode(fasting))
                     onDismiss()
                 }
             ) { Text("Save") }

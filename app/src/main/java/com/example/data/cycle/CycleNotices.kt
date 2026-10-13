@@ -5,7 +5,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-enum class CycleNoticeKind { PERIOD_SOON, PERIOD_LATE, FERTILE_START }
+enum class CycleNoticeKind { PERIOD_SOON, PERIOD_LATE, FERTILE_START, FASTING_MAKEUP }
 
 /** The real text of a cycle notification. By default only a generic text shows on the lock screen (see NotificationHelper). */
 data class CycleNotice(val kind: CycleNoticeKind, val title: String, val message: String)

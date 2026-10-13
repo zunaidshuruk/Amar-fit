@@ -2228,6 +2228,19 @@ class AppRepository(
 
     suspend fun getCycleDay(date: String): com.example.data.local.CycleDayLog? = cycleDao?.getDay(date)
 
+    fun observeFasting(): kotlinx.coroutines.flow.Flow<List<com.example.data.local.FastingLog>> =
+        cycleDao?.observeFasting() ?: kotlinx.coroutines.flow.flowOf(emptyList())
+
+    suspend fun getFasting(date: String): com.example.data.local.FastingLog? = cycleDao?.getFasting(date)
+
+    /** Sets what happened on a fasting day (a FastingType code; 0 clears it). */
+    suspend fun setFasting(date: String, typeCode: Int) {
+        val dao = cycleDao ?: return
+        val entry = com.example.data.local.FastingLog(date = date, type = typeCode, updatedAt = System.currentTimeMillis())
+        dao.upsertFasting(entry)
+        syncScope.launch { FirebaseManager.syncFasting(entry) }
+    }
+
     suspend fun getLivePeriods(): List<com.example.data.local.PeriodLog> =
         cycleDao?.getAllPeriodsIncludingRemoved()?.filter { !it.removed } ?: emptyList()
 
@@ -2291,11 +2304,16 @@ class AppRepository(
         if (!FirebaseManager.deleteAllCycleDataRemote()) return false
         dao.clearPeriods()
         dao.clearDays()
+        dao.clearFasting()
         return true
     }
 
     /** Backup restore: a backed-up item is stored only when it is missing here or newer than the copy here. */
-    suspend fun mergeCycleBackup(periods: List<com.example.data.local.PeriodLog>, days: List<com.example.data.local.CycleDayLog>) {
+    suspend fun mergeCycleBackup(
+        periods: List<com.example.data.local.PeriodLog>,
+        days: List<com.example.data.local.CycleDayLog>,
+        fasting: List<com.example.data.local.FastingLog> = emptyList()
+    ) {
         val dao = cycleDao ?: return
         for (p in periods) {
             val local = dao.getPeriod(p.cloudId)
@@ -2304,6 +2322,10 @@ class AppRepository(
         for (d in days) {
             val local = dao.getDay(d.date)
             if (local == null || d.updatedAt > local.updatedAt) dao.upsertDay(d)
+        }
+        for (f in fasting) {
+            val local = dao.getFasting(f.date)
+            if (local == null || f.updatedAt > local.updatedAt) dao.upsertFasting(f)
         }
         reconcileCycleData()
     }
@@ -2340,6 +2362,17 @@ class AppRepository(
             )
             plan.pull.forEach { dao.upsertDay(it); changes++ }
             plan.push.forEach { FirebaseManager.syncCycleDay(it) }
+        }
+
+        val fastPull = FirebaseManager.fetchCollection("fasting_days", com.example.data.local.FastingLog::class.java)
+        if (fastPull != null) {
+            anyOk = true
+            val remoteLive = fastPull.live.map { it.item.copy(date = it.id) }
+            val plan = com.example.data.cycle.LwwSyncPlanner.plan(
+                dao.getAllFasting(), remoteLive, emptySet(), { it.date }, { it.updatedAt }
+            )
+            plan.pull.forEach { dao.upsertFasting(it); changes++ }
+            plan.push.forEach { FirebaseManager.syncFasting(it) }
         }
         return if (anyOk) changes else -1
     }

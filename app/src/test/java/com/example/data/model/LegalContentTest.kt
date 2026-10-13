@@ -68,4 +68,14 @@ class LegalContentTest {
         assertTrue("not contraception", p.contains("cannot be used as contraception"))
         assertTrue("deletion covers it", p.contains("cycle tracker logs, friend code"))
     }
+
+    @Test
+    fun theRamadanFastingTrackingIsDisclosedAsPartOfTheCycleData() {
+        val p = LegalContent.PRIVACY_POLICY
+        assertTrue(p.contains("Ramadan fasting make-up"))
+        assertTrue("optional and off by default", p.contains("off by default"))
+        assertTrue("it can reveal religious practice", p.contains("can reveal religious practice"))
+        assertTrue("never shown to friends or sent to the AI", p.contains("never shown to friends, and are never sent to the AI"))
+        assertTrue("storage mention", p.contains("including fasting make-up days"))
+    }
 }

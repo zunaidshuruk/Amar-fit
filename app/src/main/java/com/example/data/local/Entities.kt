@@ -47,6 +47,10 @@ data class UserProfile(
     /** Typical values used for predictions until there is history. */
     val cycleDefaultLength: Int = 28,
     val cyclePeriodDefaultLength: Int = 5,
+    /** Optional Ramadan fasting make-up tracking inside the cycle tracker (off by default; it reveals religious practice). */
+    val ramadanTrackingEnabled: Boolean = false,
+    /** Local moon sighting can start Ramadan a day later or earlier than the built-in calendar: -2 to +2 days. */
+    val ramadanOffsetDays: Int = 0,
     val friendCode: String = "",
     val lastActiveDate: String = "",
     val profilePictureUri: String? = null,

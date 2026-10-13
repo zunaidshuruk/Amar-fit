@@ -25,7 +25,8 @@ data class DriveBackupPayload(
     val medicalRecords: List<MedicalRecord>,
     val workoutPrograms: List<WorkoutProgram> = emptyList(),
     val periodLogs: List<com.example.data.local.PeriodLog> = emptyList(),
-    val cycleDays: List<com.example.data.local.CycleDayLog> = emptyList()
+    val cycleDays: List<com.example.data.local.CycleDayLog> = emptyList(),
+    val fastingDays: List<com.example.data.local.FastingLog> = emptyList()
 )
 
 object GoogleDriveManager {

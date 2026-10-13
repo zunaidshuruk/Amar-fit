@@ -83,6 +83,7 @@ sealed class TabScreen(val route: String, val label: String, val icon: ImageVect
     object Sleep : TabScreen("sleep", "Sleep", Icons.Rounded.Bedtime)
     object Health : TabScreen("health", "Health", Icons.Rounded.Favorite)
     object MindBody : TabScreen("mind_body", "Mind & Body", Icons.Rounded.SelfImprovement)
+    object Cycle : TabScreen("cycle", "Cycle", Icons.Rounded.CalendarMonth)
     object Friends : TabScreen("friends", "Friends", Icons.Rounded.People)
     object Settings : TabScreen("settings", "Settings", Icons.Rounded.Settings)
 }
@@ -101,6 +102,7 @@ val chooseableTabs = listOf(
     TabScreen.Sleep,
     TabScreen.Health,
     TabScreen.MindBody,
+    TabScreen.Cycle,
     TabScreen.Friends,
     TabScreen.Settings
 )
@@ -181,7 +183,7 @@ class MainActivity : ComponentActivity() {
             }
         } else {
             val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-            val activeTabs = listOf(TabScreen.Today) + NavTabs.parse(userProfile?.navTabs).mapNotNull { tabForRoute(it) }.take(3)
+            val activeTabs = listOf(TabScreen.Today) + NavTabs.parse(userProfile?.navTabs, cycleAvailable).mapNotNull { tabForRoute(it) }.take(3)
             val showBottomBar = NavTabs.isTabRoute(currentRoute)
             val showTopBar = NavTabs.showsTopBar(currentRoute)
             var showMoreSheet by remember { mutableStateOf(false) }
@@ -513,7 +515,6 @@ class MainActivity : ComponentActivity() {
                   composable("cycle") {
                       com.example.presentation.cycle.CycleScreen(
                           viewModel = viewModel,
-                          onNavigateBack = { navController.popBackStack() },
                           onOpenSettings = { navController.navigate("cycle_settings") }
                       )
                   }
@@ -539,9 +540,8 @@ class MainActivity : ComponentActivity() {
             }
 
             if (showMoreSheet) {
-                val hiddenTabs = chooseableTabs.filter { it.route !in activeTabs.map { t -> t.route } }
+                val hiddenTabs = chooseableTabs.filter { it.route !in activeTabs.map { t -> t.route } && (cycleAvailable || it.route != "cycle") }
                 MoreSheet(
-                    showCycle = cycleAvailable,
                     hiddenTabs = hiddenTabs,
                     onOpenTab = { route ->
                         showMoreSheet = false

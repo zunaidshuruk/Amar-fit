@@ -5,6 +5,9 @@ import android.content.Context
 import android.content.Intent
 import com.example.data.cycle.CycleAccess
 import com.example.data.cycle.CycleNotices
+import com.example.data.cycle.FastingLedgerBuilder
+import com.example.data.cycle.FastingNotices
+import com.example.data.cycle.toEntry
 import com.example.data.cycle.CyclePredictor
 import com.example.data.cycle.toSpan
 import com.example.data.local.AppDatabase
@@ -58,8 +61,9 @@ object ReminderRunner {
         if (!prefs.masterEnabled) return
 
         // Cycle reminders are shown only while tracking is on for a Female profile (settings can be stale after a gender change).
-        val isCycleKind = spec.kind == ReminderKind.CYCLE || spec.kind == ReminderKind.CYCLE_LOG
+        val isCycleKind = spec.kind == ReminderKind.CYCLE || spec.kind == ReminderKind.CYCLE_LOG || spec.kind == ReminderKind.FASTING
         if (isCycleKind && !CycleAccess.isActive(profile.gender, profile.cycleTrackingEnabled, profile.cycleConsentAt)) return
+        if (spec.kind == ReminderKind.FASTING && !profile.ramadanTrackingEnabled) return
 
         val now = LocalDateTime.now()
         val minuteNow = now.hour * 60 + now.minute
@@ -107,6 +111,14 @@ object ReminderRunner {
             val periods = db.cycleDao().getAllPeriodsIncludingRemoved().filter { !it.removed }.mapNotNull { it.toSpan() }
             val prediction = CyclePredictor.predict(periods, today, profile.cycleDefaultLength, profile.cyclePeriodDefaultLength)
             val notice = CycleNotices.forToday(prediction, prefs, today) ?: return
+            title = notice.title
+            message = notice.message
+        }
+        if (spec.kind == ReminderKind.FASTING) {
+            val entries = db.cycleDao().getAllFasting().mapNotNull { it.toEntry() }
+            val periods = db.cycleDao().getAllPeriodsIncludingRemoved().filter { !it.removed }.mapNotNull { it.toSpan() }
+            val ledger = FastingLedgerBuilder.build(entries, periods, today, profile.ramadanOffsetDays)
+            val notice = FastingNotices.makeUp(ledger) ?: return
             title = notice.title
             message = notice.message
         }

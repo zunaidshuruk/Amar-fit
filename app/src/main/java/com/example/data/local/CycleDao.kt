@@ -41,4 +41,19 @@ interface CycleDao {
 
     @Query("DELETE FROM cycle_days")
     suspend fun clearDays()
+
+    @Query("SELECT * FROM fasting_days WHERE type > 0 ORDER BY date ASC")
+    fun observeFasting(): Flow<List<FastingLog>>
+
+    @Query("SELECT * FROM fasting_days")
+    suspend fun getAllFasting(): List<FastingLog>
+
+    @Query("SELECT * FROM fasting_days WHERE date = :date")
+    suspend fun getFasting(date: String): FastingLog?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertFasting(entry: FastingLog)
+
+    @Query("DELETE FROM fasting_days")
+    suspend fun clearFasting()
 }

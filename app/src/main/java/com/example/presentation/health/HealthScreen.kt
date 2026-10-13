@@ -254,7 +254,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
         if (cycleActive) {
             com.example.presentation.cycle.CycleSummaryCard(
                 prediction = cyclePrediction,
-                onClick = { navController.navigate("cycle") }
+                onClick = { com.example.presentation.navigation.navigateToTab(navController, "cycle") }
             )
         }
 

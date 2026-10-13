@@ -34,7 +34,9 @@ class CycleIsolationTest {
         val firebase = source("com/example/data/repository/FirebaseManager.kt")
         for (name in listOf("syncFriendStats", "syncPublicProfile", "postActivityEvent", "createChallenge", "sendKudos")) {
             if (!firebase.contains("fun $name(")) continue
-            assertFalse("$name must not touch cycle data", functionBody(firebase, name).lowercase().contains("cycle"))
+            val body = functionBody(firebase, name).lowercase()
+            assertFalse("$name must not touch cycle data", body.contains("cycle"))
+            assertFalse("$name must not touch fasting data", body.contains("fasting"))
         }
     }
 
@@ -43,7 +45,8 @@ class CycleIsolationTest {
         val cycleFiles = listOf(
             "com/example/data/cycle/CycleModels.kt", "com/example/data/cycle/CyclePredictor.kt", "com/example/data/cycle/CycleNotices.kt",
             "com/example/data/cycle/CycleAiSummary.kt", "com/example/data/cycle/CycleTexts.kt", "com/example/presentation/cycle/CycleScreen.kt",
-            "com/example/presentation/cycle/CycleCards.kt", "com/example/presentation/cycle/CycleSettingsScreen.kt"
+            "com/example/presentation/cycle/CycleCards.kt", "com/example/presentation/cycle/CycleSettingsScreen.kt",
+            "com/example/presentation/cycle/CycleDetails.kt", "com/example/data/cycle/Ramadan.kt"
         )
         for (file in cycleFiles) {
             val text = source(file)
@@ -62,5 +65,6 @@ class CycleIsolationTest {
         assertFalse(code.contains("CycleDayLog"))
         assertFalse(code.lowercase().contains("symptom"))
         assertFalse(code.lowercase().contains("mood"))
+        assertFalse("fasting days are never sent to the AI", code.lowercase().contains("fasting"))
     }
 }

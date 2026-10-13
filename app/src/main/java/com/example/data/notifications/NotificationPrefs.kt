@@ -82,6 +82,8 @@ data class NotificationPrefs(
     /** When the daily cycle check runs (it decides whether any of the cycle notices above applies today). */
     val cycleCheckMinute: Int = 9 * 60,
     val cycleLogReminder: ReminderPref = ReminderPref(false, 20 * 60),
+    /** Evening before a good day to make up a fast (default Sunday and Wednesday evenings); only while Ramadan tracking is on. */
+    val fastingMakeUp: ReminderPref = ReminderPref(false, 20 * 60, Days.SUN or Days.WED),
 
     // Social (server pushes)
     val socialMessages: Boolean = true,

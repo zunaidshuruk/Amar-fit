@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [UserProfile::class, DailyMetric::class, FoodLog::class, SavedDietChart::class, SavedWorkout::class, SavedChat::class, ActivityEvent::class, YoutubeVideoCache::class, MedicalRecord::class, FoodChatMessage::class, AssistantChatMessage::class, AssistantChatSession::class, HealthExerciseSession::class, WorkoutProgram::class, PeriodLog::class, CycleDayLog::class], version = 52, exportSchema = true)
+@Database(entities = [UserProfile::class, DailyMetric::class, FoodLog::class, SavedDietChart::class, SavedWorkout::class, SavedChat::class, ActivityEvent::class, YoutubeVideoCache::class, MedicalRecord::class, FoodChatMessage::class, AssistantChatMessage::class, AssistantChatSession::class, HealthExerciseSession::class, WorkoutProgram::class, PeriodLog::class, CycleDayLog::class, FastingLog::class], version = 52, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun metricsDao(): MetricsDao
@@ -282,6 +282,9 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE user_profile ADD COLUMN cycleHealthConnectSync INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE user_profile ADD COLUMN cycleDefaultLength INTEGER NOT NULL DEFAULT 28")
                 db.execSQL("ALTER TABLE user_profile ADD COLUMN cyclePeriodDefaultLength INTEGER NOT NULL DEFAULT 5")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `fasting_days` (`date` TEXT NOT NULL, `type` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`date`))")
+                db.execSQL("ALTER TABLE user_profile ADD COLUMN ramadanTrackingEnabled INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE user_profile ADD COLUMN ramadanOffsetDays INTEGER NOT NULL DEFAULT 0")
             }
         }
 

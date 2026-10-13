@@ -80,11 +80,11 @@ the activity feed (a test will guard this).
 5. Open question for Zunaid: is Ramadan fasting relevant for users (tracking missed fasting days to make up)? Not in v1 unless he says so.
 
 ## As built (differences from the plan above)
-* Not a bottom-bar tab: reachable from More, the Today card and the Health card (a tab would have to be filtered by gender in Customize navigation).
+* **Changed after Zunaid's review (2026-10-13):** Cycle IS a bottom-bar tab (choosable in Customize navigation bar, Female profiles only, listed in More while not in the bar); the screen has a Calendar view (easy) and a Details view; Ramadan fasting make-up tracking was added (optional, off by default, `docs/cycle-tracker.md`).
 * Enabling tracking switches "period expected soon" and "period is late" ON (they can be switched off in Settings > Notifications); the fertile
   window and the daily log reminder stay off.
 * Cycle notifications use ONE daily check at a fixed time that decides from the predictions, instead of arming alarms on predicted dates.
 * Health Connect permissions are requested only from Cycle settings and are NOT in `REQUIRED_PERMISSIONS` (everyone else would otherwise be prompted);
   periods are written once when finished, later edits are not sent.
 * Privacy policy: section 1.6 added and the same release re-asks everyone to accept (policy version 2), so nobody is asked twice.
-* Still open for Zunaid: Ramadan fasting make-up days (not built), and a legal review of the policy.
+* Still open for Zunaid: a legal review of the policy (the policy itself says it was not legally reviewed).

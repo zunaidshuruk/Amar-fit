@@ -22,6 +22,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import com.example.data.cycle.toSpan
+import com.example.data.cycle.toEntry
 import kotlinx.coroutines.sync.withLock
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -404,6 +405,44 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 )
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    // ---- Ramadan fasting make-up (optional, off by default)
+    val fastingLogs: StateFlow<List<com.example.data.local.FastingLog>> = repository.observeFasting()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** The make-up ledger, or null unless Ramadan tracking is switched on. */
+    val fastingLedger: StateFlow<com.example.data.cycle.FastingLedger?> =
+        combine(fastingLogs, periodLogs, userProfile, _todayDate) { fasting, periods, profile, todayStr ->
+            if (profile == null || !profile.ramadanTrackingEnabled) {
+                null
+            } else {
+                val today = try { java.time.LocalDate.parse(todayStr) } catch (e: Exception) { java.time.LocalDate.now() }
+                com.example.data.cycle.FastingLedgerBuilder.build(
+                    fasting.mapNotNull { it.toEntry() }, periods.mapNotNull { it.toSpan() }, today, profile.ramadanOffsetDays
+                )
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    fun setFasting(date: java.time.LocalDate, type: com.example.data.cycle.FastingType) {
+        viewModelScope.launch(Dispatchers.IO) { repository.setFasting(date.toString(), type.code) }
+    }
+
+    /** Counts the given period days inside Ramadan as missed fasts (the person confirmed them). */
+    fun countAsMissedFasts(dates: List<java.time.LocalDate>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dates.forEach { repository.setFasting(it.toString(), com.example.data.cycle.FastingType.MISSED_PERIOD.code) }
+        }
+    }
+
+    suspend fun getFastingType(date: java.time.LocalDate): com.example.data.cycle.FastingType =
+        withContext(Dispatchers.IO) { com.example.data.cycle.FastingType.fromCode(repository.getFasting(date.toString())?.type ?: 0) }
+
+    fun setRamadanTracking(enabled: Boolean, offsetDays: Int) {
+        viewModelScope.launch {
+            val profile = userProfile.value ?: return@launch
+            saveProfile(profile.copy(ramadanTrackingEnabled = enabled, ramadanOffsetDays = offsetDays.coerceIn(-2, 2)))
+        }
+    }
 
     /**
      * Switches tracking on after the consent screen. The profile and the notification settings are saved in ONE write
@@ -3733,6 +3772,7 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         val cycleOn = cycleActive.value
         val periodLogs = if (cycleOn) repository.getLivePeriods() else emptyList()
         val cycleDayLogs = if (cycleOn) (database.cycleDao().getAllDays()) else emptyList()
+        val fastingDayLogs = if (cycleOn) database.cycleDao().getAllFasting().filter { it.type > 0 } else emptyList()
 
         return com.example.data.repository.DriveBackupPayload(
             backupDate = java.time.Instant.now().toString(),
@@ -3745,7 +3785,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
             medicalRecords = medicalRecords,
             workoutPrograms = workoutPrograms,
             periodLogs = periodLogs,
-            cycleDays = cycleDayLogs
+            cycleDays = cycleDayLogs,
+            fastingDays = fastingDayLogs
         )
     }
 
@@ -3883,8 +3924,8 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
                 for (record in payload.medicalRecords) {
                     repository.addMedicalRecord(record)
                 }
-                if (payload.periodLogs.isNotEmpty() || payload.cycleDays.isNotEmpty()) {
-                    repository.mergeCycleBackup(payload.periodLogs, payload.cycleDays)
+                if (payload.periodLogs.isNotEmpty() || payload.cycleDays.isNotEmpty() || payload.fastingDays.isNotEmpty()) {
+                    repository.mergeCycleBackup(payload.periodLogs, payload.cycleDays, payload.fastingDays)
                 }
                 withContext(Dispatchers.Main) {
                     onResult(true, "Restore complete")

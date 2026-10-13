@@ -79,4 +79,25 @@ class CycleReminderTest {
         assertFalse(ReminderDecider.shouldShow(spec, TodaySnapshot(), NotificationPrefs(masterEnabled = false), 9 * 60))
         assertFalse(ReminderDecider.shouldShow(spec, TodaySnapshot(), NotificationPrefs(quietStartMinute = 22 * 60, quietEndMinute = 10 * 60), 9 * 60))
     }
+
+    @Test
+    fun theFastingMakeUpReminderIsOffByDefaultAndHasItsOwnCode() {
+        assertTrue(ReminderCatalog.build(NotificationPrefs()).none { it.kind == ReminderKind.FASTING })
+        val spec = ReminderCatalog.build(NotificationPrefs(fastingMakeUp = ReminderPref(true, 20 * 60, Days.SUN or Days.WED))).single { it.kind == ReminderKind.FASTING }
+        assertEquals("fasting_makeup", spec.id)
+        assertEquals(Days.SUN or Days.WED, spec.days)
+        assertEquals("cycle", spec.route)
+        assertEquals(Channels.CYCLE, spec.channel)
+        val codes = ReminderCatalog.build(NotificationPrefs(fastingMakeUp = ReminderPref(true), cyclePeriodSoon = true, cycleLogReminder = ReminderPref(true))).map { it.requestCode }
+        assertEquals(codes.size, codes.toSet().size)
+        assertTrue(ReminderCatalog.allRequestCodes().containsAll(codes))
+    }
+
+    @Test
+    fun theFastingReminderObeysQuietHoursAndTheMasterSwitch() {
+        val spec = ReminderCatalog.build(NotificationPrefs(fastingMakeUp = ReminderPref(true))).single { it.kind == ReminderKind.FASTING }
+        assertTrue(ReminderDecider.shouldShow(spec, TodaySnapshot(), NotificationPrefs(), 20 * 60))
+        assertFalse(ReminderDecider.shouldShow(spec, TodaySnapshot(), NotificationPrefs(masterEnabled = false), 20 * 60))
+        assertFalse(ReminderDecider.shouldShow(spec, TodaySnapshot(), NotificationPrefs(quietStartMinute = 19 * 60, quietEndMinute = 7 * 60), 20 * 60))
+    }
 }
