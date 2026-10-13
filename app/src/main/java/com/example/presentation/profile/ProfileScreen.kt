@@ -1,6 +1,7 @@
 package com.example.presentation.profile
 
 import android.net.Uri
+import com.example.presentation.common.appSafeInsets
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -194,7 +195,7 @@ fun ProfileScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .windowInsetsPadding(appSafeInsets())
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState())
             .imePadding()

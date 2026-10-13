@@ -1,6 +1,7 @@
 package com.example.presentation.social
 
 import androidx.compose.foundation.background
+import com.example.presentation.common.bottomSafePadding
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -91,7 +92,7 @@ fun DirectMessageScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .navigationBarsPadding()
+                        .bottomSafePadding()
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)

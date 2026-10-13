@@ -1,6 +1,9 @@
 package com.example.presentation.assistant
 
 import android.app.Activity
+import com.example.presentation.common.bottomSafePadding
+import com.example.presentation.common.FullScreenDialog
+import com.example.presentation.common.appSafeInsets
 import android.content.Intent
 import android.speech.RecognizerIntent
 import androidx.activity.compose.BackHandler
@@ -43,7 +46,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.example.data.local.AssistantChatSession
 import com.example.data.local.SavedChat
 import com.example.presentation.viewmodel.ShasthoViewModel
@@ -193,15 +195,14 @@ fun UniversalAssistantScreen(
     }
 
     if (legacyChatToView != null) {
-        Dialog(
-            onDismissRequest = { legacyChatToView = null },
-            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        FullScreenDialog(
+            onDismissRequest = { legacyChatToView = null }
         ) {
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background
             ) {
-                Box(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+                Box(modifier = Modifier.fillMaxSize().windowInsetsPadding(appSafeInsets())) {
                     LegacyChatViewer(chat = legacyChatToView!!, onBack = { legacyChatToView = null })
                 }
             }
@@ -291,7 +292,7 @@ fun UniversalAssistantScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .navigationBarsPadding()
+                            .bottomSafePadding()
                             .imePadding()
                     ) {
                         if (!isLoading && !reviewPending) {

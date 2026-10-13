@@ -1,6 +1,8 @@
 package com.example.presentation.workout
 
 import android.widget.Toast
+import com.example.presentation.common.FullScreenDialog
+import com.example.presentation.common.appSafeInsets
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,7 +24,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.example.data.local.LibraryExercise
 import com.example.data.model.WorkoutExercise
 import com.example.data.model.WorkoutPlan
@@ -56,9 +57,8 @@ fun WorkoutPlanEditor(
 
     val totalExercises = warmup.size + main.size + cooldown.size
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    FullScreenDialog(
+        onDismissRequest = onDismiss
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
@@ -67,7 +67,7 @@ fun WorkoutPlanEditor(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .windowInsetsPadding(appSafeInsets())
             ) {
                 // Top bar Row
                 Row(
@@ -341,9 +341,8 @@ private fun AddExerciseDialog(
     var sectionIndex by remember { mutableStateOf(1) }
     var query by remember { mutableStateOf("") }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    FullScreenDialog(
+        onDismissRequest = onDismiss
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
@@ -352,7 +351,7 @@ private fun AddExerciseDialog(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .windowInsetsPadding(appSafeInsets())
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {

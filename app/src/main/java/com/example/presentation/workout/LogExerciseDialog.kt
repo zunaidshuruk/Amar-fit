@@ -1,6 +1,9 @@
 package com.example.presentation.workout
 
 import android.widget.Toast
+import com.example.presentation.common.fullBleed
+import com.example.presentation.common.FullScreenDialog
+import com.example.presentation.common.appSafeInsets
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -23,7 +26,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.example.data.local.LibraryExercise
 import com.example.util.ExerciseCalorieEstimator
 import kotlinx.coroutines.launch
@@ -81,9 +83,8 @@ fun LogExerciseDialog(
     val durationSeconds = if (mode == 0) ExerciseCalorieEstimator.sessionSeconds(sets, reps, restSeconds) else minutes * 60
     val estimate = ExerciseCalorieEstimator.estimateKcal(category, weightKg, durationSeconds)
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    FullScreenDialog(
+        onDismissRequest = onDismiss
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
@@ -92,7 +93,7 @@ fun LogExerciseDialog(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .windowInsetsPadding(appSafeInsets())
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -239,8 +240,9 @@ fun LogExerciseDialog(
                         Spacer(modifier = Modifier.height(6.dp))
                         Row(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
+                                .fullBleed(16.dp) // the chips scroll to the screen edge instead of being cut at the margin
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 16.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             listOf(

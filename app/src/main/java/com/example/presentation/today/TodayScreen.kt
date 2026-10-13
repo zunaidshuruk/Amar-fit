@@ -1,6 +1,7 @@
 package com.example.presentation.today
 
 import androidx.compose.animation.core.animateFloatAsState
+import com.example.presentation.common.bottomSafePadding
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -639,7 +640,9 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                 }
             }
         }
-    }
+            // keeps the last items clear of the assistant button
+            Spacer(modifier = Modifier.height(88.dp))
+        }
     }
 
     // Dialogs
@@ -798,6 +801,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .bottomSafePadding()
                     .padding(horizontal = 24.dp)
                     .padding(bottom = 36.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)

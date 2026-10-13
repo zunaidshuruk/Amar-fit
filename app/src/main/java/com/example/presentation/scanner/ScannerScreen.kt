@@ -1,6 +1,9 @@
 package com.example.presentation.scanner
 
 import android.content.Context
+import com.example.presentation.common.bottomSafePadding
+import com.example.presentation.common.topSafePadding
+import com.example.presentation.common.appSafeInsets
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
@@ -33,7 +36,6 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -131,7 +133,7 @@ fun ScannerScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit, onNav
     }
 
     if (cameraPermissionState.status.isGranted) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black).windowInsetsPadding(WindowInsets.safeDrawing)) {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black).windowInsetsPadding(appSafeInsets())) {
             CameraPreviewView(
                 onImageCaptured = { bitmap ->
                     if (scanMode == ScanMode.SCAN_MEAL) {
@@ -422,7 +424,7 @@ fun CameraPreviewView(
         IconButton(
             onClick = onClose,
             modifier = Modifier
-                .windowInsetsPadding(WindowInsets.statusBars)
+                .topSafePadding()
                 .padding(16.dp)
                 .background(Color.Black.copy(alpha = 0.5f), CircleShape)
                 .align(Alignment.TopStart)
@@ -434,7 +436,7 @@ fun CameraPreviewView(
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
+                .bottomSafePadding()
                 .padding(bottom = 32.dp)
                 .size(72.dp)
                 .background(Color.White, CircleShape)

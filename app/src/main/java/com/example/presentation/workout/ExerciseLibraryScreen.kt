@@ -380,6 +380,7 @@ fun ExerciseLibraryScreen(
                         }
                     }
                 }
+                item { Spacer(modifier = Modifier.height(88.dp)) }
             }
         }
     }

@@ -1,6 +1,8 @@
 package com.example.presentation.auth
 
 import androidx.compose.foundation.clickable
+import com.example.presentation.common.FullScreenDialog
+import com.example.presentation.common.appSafeInsets
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -13,7 +15,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.LegalContent
 import com.example.presentation.settings.LegalDocumentScreen
 
@@ -34,7 +35,7 @@ fun ConsentGateScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .windowInsetsPadding(appSafeInsets())
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -133,9 +134,8 @@ fun ConsentGateScreen(
     }
 
     if (showPrivacyPolicy) {
-        Dialog(
-            onDismissRequest = { showPrivacyPolicy = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        FullScreenDialog(
+            onDismissRequest = { showPrivacyPolicy = false }
         ) {
             LegalDocumentScreen(
                 title = "Privacy Policy",
@@ -146,9 +146,8 @@ fun ConsentGateScreen(
     }
 
     if (showTerms) {
-        Dialog(
-            onDismissRequest = { showTerms = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+        FullScreenDialog(
+            onDismissRequest = { showTerms = false }
         ) {
             LegalDocumentScreen(
                 title = "Terms of Service",

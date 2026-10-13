@@ -1,11 +1,11 @@
 package com.example.presentation.mealplan
 
 import androidx.compose.foundation.background
+import com.example.presentation.common.appSafeInsets
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,7 +61,7 @@ fun DietChartScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .windowInsetsPadding(appSafeInsets())
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState()).imePadding()
     ) {
