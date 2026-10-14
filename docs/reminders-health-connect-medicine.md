@@ -23,12 +23,21 @@ after reboot, app update and time changes).
   again 10 minutes later (`MedicineNotifier`, receiver `MedicineActionReceiver`), unless the dose was marked taken meanwhile; it can be snoozed again. A dose already
   marked taken today (also with "Mark as taken today" under the reminder in Settings, which can be undone) is not reminded again that day. On a locked phone the
   buttons appear only after unlocking when the lock-screen switch is on (the generic lock-screen version has no buttons).
-* Not built (possible later): a history screen of taken doses and a missed-dose alert.
+* **Medicine history** (Settings > Notifications > Medicine reminders > View history, route `medicine_history`; also opened by the missed-dose alert): the last 14
+  days, newest first, each dose as Taken (with the time), Skipped, Missed, Due now or Later today, and "N of M doses taken" for the last 7 and 14 days
+  (doses still to come are not counted). Worked out from the CURRENT reminders from the day each was created (`MedicineReminder.createdOn`; reminders made before
+  the history existed start today, so they never show invented missed doses) and the phone-only records (`MedicineHistoryBuilder`, pure and tested). Editing a
+  reminder's time or days changes how earlier days look.
+* **Missed-dose alert** (on by default, Settings > Notifications > Medicine reminders; "Alert after" 15 to 180 minutes, default 60): when a reminder is shown, a check is
+  scheduled; if the dose was neither marked Taken nor Skipped by then, a "Missed dose?" notification appears with **Taken** and **Skip today** buttons (Skip is recorded
+  and shows as Skipped in the history). Not silenced by quiet hours, discreet on the lock screen like the reminder. Limit: the check is a one-shot alarm, so it is lost if
+  the phone restarts between the reminder and the alert.
 
 ## Phone test plan
 1. New install and first login with Health Connect not connected: the nudge arrives once when the app opens (after allowing notifications). Tap it: Settings opens.
 2. Do not connect: 3 days later at about 10:00 it arrives again; connect Health Connect: no more nudges. Switch it off in Settings > Notifications: none.
 3. Settings > Notifications > Medicine reminders: add a reminder two minutes ahead: a heads-up arrives with **Taken** and **Snooze 10 min** (on a locked phone only "You have a reminder" shows). Tap Snooze: it returns 10 minutes later. Tap Taken: it disappears and the row in Settings says "Taken today"; no repeat comes.
-4. Add six reminders: the add button changes to "All 6 reminders added"; delete one: it is enabled again. Edit one (time, days): the new time is used.
+4. Open Settings > Notifications > Medicine reminders > View history: today's dose shows Due now, then Taken with its time after you tap Taken; leave one dose alone: after the "Alert after" minutes a "Missed dose?" notification arrives with Taken and Skip today; tap Skip today: the history shows Skipped.
+5. Add six reminders: the add button changes to "All 6 reminders added"; delete one: it is enabled again. Edit one (time, days): the new time is used.
 5. Set quiet hours around a medicine time: the medicine reminder still arrives, a water reminder does not.
 6. Two phones: add a reminder on one, it appears on the other and rings there too.

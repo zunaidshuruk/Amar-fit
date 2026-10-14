@@ -44,7 +44,9 @@ data class MedicineReminder(
     val dose: String = "",
     val minuteOfDay: Int = 8 * 60,
     val days: Int = Days.ALL,
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    /** The day the reminder was created (yyyy-MM-dd); the history starts there. Empty for reminders made before the history existed. */
+    val createdOn: String = ""
 )
 
 /** Rules for the list of medicine reminders (the screen and the scheduler both go through these). */
@@ -52,6 +54,14 @@ object MedicineReminders {
     const val MAX = 6
     const val NAME_MAX = 40
     const val DOSE_MAX = 40
+
+    /** The missed-dose alert comes this many minutes after the reminder if the dose was not marked taken or skipped. */
+    const val MISSED_AFTER_MIN = 15
+    const val MISSED_AFTER_MAX = 180
+    const val MISSED_AFTER_STEP = 15
+    const val MISSED_AFTER_DEFAULT = 60
+
+    fun missedAfter(prefs: NotificationPrefs): Int = prefs.medicineMissedAfterMinutes.coerceIn(MISSED_AFTER_MIN, MISSED_AFTER_MAX)
 
     fun canAdd(list: List<MedicineReminder>): Boolean = list.size < MAX
 
@@ -71,7 +81,8 @@ object MedicineReminders {
         if (!isValid(cleaned)) return list
         val index = list.indexOfFirst { it.id == cleaned.id }
         return when {
-            index >= 0 -> list.mapIndexed { i, old -> if (i == index) cleaned else old }
+            // an edit keeps the day the reminder was created
+            index >= 0 -> list.mapIndexed { i, old -> if (i == index) cleaned.copy(createdOn = old.createdOn.ifBlank { cleaned.createdOn }) else old }
             canAdd(list) -> list + cleaned
             else -> list
         }
@@ -154,6 +165,9 @@ data class NotificationPrefs(
     // Medicine reminders (up to 6). Never silenced by quiet hours; the lock screen shows only a generic text unless switched off.
     val medicines: List<MedicineReminder> = emptyList(),
     val medicineDiscreet: Boolean = true,
+    /** A "Missed dose?" alert [medicineMissedAfterMinutes] after a reminder when the dose was neither marked taken nor skipped. */
+    val medicineMissedAlert: Boolean = true,
+    val medicineMissedAfterMinutes: Int = 60,
 
     // Social (server pushes)
     val socialMessages: Boolean = true,

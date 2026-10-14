@@ -510,7 +510,14 @@ class MainActivity : ComponentActivity() {
                       com.example.presentation.notifications.NotificationSettingsScreen(
                           viewModel = viewModel,
                           onNavigateBack = { navController.popBackStack() },
-                          onOpenHealthGoals = { navController.navigate("health_goals") }
+                          onOpenHealthGoals = { navController.navigate("health_goals") },
+                          onOpenMedicineHistory = { navController.navigate("medicine_history") }
+                      )
+                  }
+                  composable("medicine_history") {
+                      com.example.presentation.notifications.MedicineHistoryScreen(
+                          viewModel = viewModel,
+                          onNavigateBack = { navController.popBackStack() }
                       )
                   }
                   composable("cycle") {

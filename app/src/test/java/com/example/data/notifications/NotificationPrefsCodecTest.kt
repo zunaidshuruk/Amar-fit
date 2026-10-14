@@ -63,4 +63,18 @@ class NotificationPrefsCodecTest {
         assertTrue(p.medicines.isEmpty())
         assertTrue(p.medicineDiscreet)
     }
+
+    @Test
+    fun missedAlertSettingsAndCreationDaysSurviveARoundTrip() {
+        val p = NotificationPrefs(
+            medicines = listOf(MedicineReminder("a1", "Metformin", "500 mg", 8 * 60, Days.ALL, true, "2026-10-08")),
+            medicineMissedAlert = false, medicineMissedAfterMinutes = 90
+        )
+        assertEquals(p, NotificationPrefsCodec.decode(NotificationPrefsCodec.encode(p)))
+        // reminders saved before the history existed load with an empty creation day and the missed alert on
+        val old = NotificationPrefsCodec.decode("""{"medicines":[{"id":"x","name":"Aspirin","minuteOfDay":480,"days":127,"enabled":true}]}""")
+        assertEquals("", old.medicines.single().createdOn)
+        assertTrue(old.medicineMissedAlert)
+        assertEquals(60, old.medicineMissedAfterMinutes)
+    }
 }

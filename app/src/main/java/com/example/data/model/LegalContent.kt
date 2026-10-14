@@ -56,7 +56,7 @@ Depending on which features you use, we may collect:
 - Your workout history: the workouts, programs and exercise sessions you complete or log in the app
 - Your AI Assistant conversations: what you ask and the replies you receive
 - Your notification settings: which reminders and alerts you turned on, and their times
-- Medicine reminders you set up (optional, up to 6): the medicine names, doses and times you type in. They are kept in your private area with your other settings, are never shown to friends and are never sent to the AI. If you tap Taken, which doses you marked as taken in the last two weeks is kept on your phone only
+- Medicine reminders you set up (optional, up to 6): the medicine names, doses and times you type in. They are kept in your private area with your other settings, are never shown to friends and are never sent to the AI. If you tap Taken or Skip, which doses you marked as taken or skipped in the last two weeks, and at what time, is kept on your phone only (it feeds the medicine history screen)
 - Medical records you manually enter (e.g., conditions, medications) — this is entirely optional and under your control
 
 Most of this data comes from **Google Health Connect**, which syncs data from your phone's sensors and any other health apps you've connected on your device. Some of it (food logs, manual entries, medical records) is entered directly by you.

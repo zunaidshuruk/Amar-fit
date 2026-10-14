@@ -80,7 +80,8 @@ internal fun pickTime(context: Context, minuteOfDay: Int, onPicked: (Int) -> Uni
 fun NotificationSettingsScreen(
     viewModel: ShasthoViewModel,
     onNavigateBack: () -> Unit,
-    onOpenHealthGoals: () -> Unit = {}
+    onOpenHealthGoals: () -> Unit = {},
+    onOpenMedicineHistory: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val prefs by viewModel.notificationPrefs.collectAsState()
@@ -192,7 +193,7 @@ fun NotificationSettingsScreen(
             }
         }
 
-        MedicineSection(prefs = prefs, update = { transform -> update(transform) })
+        MedicineSection(prefs = prefs, update = { transform -> update(transform) }, onOpenHistory = onOpenMedicineHistory)
 
         SectionCard(title = "Meals and nutrition") {
             SwitchRow("Meal reminders", "Skipped when that meal is already logged", prefs.mealRemindersEnabled) { on ->
