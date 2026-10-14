@@ -259,42 +259,6 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
             }
         }
 
-        // Edit tiles: icon with a tiny caption, right-aligned just below the large tiles (outside them),
-        // so it is always reachable, even when every large tile has been removed.
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
-        ) {
-            Column(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .clickable { navController.navigate("edit_focus") }
-                    .testTag("today_edit_tiles_button")
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .border(1.5.dp, MaterialTheme.colorScheme.primary, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.DashboardCustomize,
-                        contentDescription = "Edit tiles",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                Text(
-                    text = "Edit tiles",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
-                )
-            }
-        }
-
         // Small Metric Tiles (2-Column Grid)
         if (activeSmallIds.isNotEmpty()) {
             val smallChunked = activeSmallIds.chunked(2)
@@ -341,6 +305,26 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                         }
                     }
                 }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            IconButton(
+                onClick = { navController.navigate("edit_focus") },
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                    .testTag("today_edit_tiles_button")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Edit tiles",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
 
