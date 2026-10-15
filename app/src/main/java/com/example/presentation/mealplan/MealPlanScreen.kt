@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -20,13 +19,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.presentation.common.appSafeInsets
 import com.example.presentation.viewmodel.ShasthoViewModel
-import com.example.ui.theme.*
 
 data class Meal(val type: String, val title: String, val instructions: String, val videoQuery: String)
 data class DailyPlan(val day: Int, val meals: List<Meal>)
@@ -105,26 +103,27 @@ fun MealPlanScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .windowInsetsPadding(appSafeInsets())
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 16.dp, vertical = 24.dp)
+                .background(MaterialTheme.colorScheme.background)
+                .padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onNavigateBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900
+                        tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
                 Text(
                     text = "7-Day Fat Adaptation Plan",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
         }
@@ -152,7 +151,7 @@ fun MealPlanScreen(
                 DailyPlanCard(plan)
             }
             
-            item { Spacer(modifier = Modifier.height(100.dp)) }
+            item { Spacer(modifier = Modifier.height(88.dp)) }
         }
     }
 }
@@ -162,13 +161,14 @@ fun DailyPlanCard(plan: DailyPlan) {
     var expanded by remember { mutableStateOf(plan.day == 1) } // First day open by default
     val context = LocalContext.current
     
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = Modifier.fillMaxWidth()
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(16.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -176,7 +176,12 @@ fun DailyPlanCard(plan: DailyPlan) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Day ${plan.day}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    text = "Day ${plan.day}", 
+                    fontWeight = FontWeight.Bold, 
+                    fontSize = 18.sp, 
+                    color = MaterialTheme.colorScheme.primary
+                )
                 Icon(
                     imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, 
                     contentDescription = "Toggle", 
@@ -190,9 +195,9 @@ fun DailyPlanCard(plan: DailyPlan) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 16.dp)
+                            .padding(bottom = 12.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .background(MaterialTheme.colorScheme.background)
                             .padding(12.dp)
                     ) {
                         Text(meal.type, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
@@ -207,14 +212,17 @@ fun DailyPlanCard(plan: DailyPlan) {
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=${Uri.encode(meal.videoQuery)}"))
                                 context.startActivity(intent)
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Red500, contentColor = Color.White),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer, 
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ),
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                             modifier = Modifier.height(36.dp)
                         ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = "Watch", modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.PlayArrow, contentDescription = "Watch", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Watch Recipe", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Watch Recipe", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                         }
                     }
                 }
@@ -227,15 +235,15 @@ fun DailyPlanCard(plan: DailyPlan) {
 fun ShoppingListCard(isDark: Boolean = true) {
     var expanded by remember { mutableStateOf(false) }
     val checkedState = remember { mutableStateMapOf<String, Boolean>() }
-    val stepsAccent = AccentTokens.stepsAccent(isDark)
     
-    Card(
-        colors = CardDefaults.cardColors(containerColor = stepsAccent.bg),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = Modifier.fillMaxWidth()
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(16.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -244,20 +252,26 @@ fun ShoppingListCard(isDark: Boolean = true) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ShoppingCart, contentDescription = "Shopping List", tint = if (isDark) stepsAccent.onBg else Emerald700)
+                    Icon(Icons.Default.ShoppingCart, contentDescription = "Shopping List", tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("7-Day Shopping List", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = if (isDark) stepsAccent.onBg else Emerald900)
+                    Text("7-Day Shopping List", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
                 }
                 Icon(
                     imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, 
                     contentDescription = "Toggle", 
-                    tint = if (isDark) stepsAccent.onBg else Emerald700
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             
             if (expanded) {
                 Spacer(modifier = Modifier.height(16.dp))
-                shoppingListItems.forEach { item ->
+                shoppingListItems.forEachIndexed { index, item ->
+                    if (index > 0) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
                     val isChecked = checkedState[item.name] ?: false
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -269,13 +283,13 @@ fun ShoppingListCard(isDark: Boolean = true) {
                         Checkbox(
                             checked = isChecked,
                             onCheckedChange = { checkedState[item.name] = it },
-                            colors = CheckboxDefaults.colors(checkedColor = stepsAccent.onBg)
+                            colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
                         )
                         Column(modifier = Modifier.padding(start = 8.dp)) {
                             Text(
                                 text = item.name, 
                                 fontSize = 16.sp, 
-                                color = if (isChecked) MaterialTheme.colorScheme.onSurfaceVariant else (if (isDark) stepsAccent.onBg else MaterialTheme.colorScheme.onSurface),
+                                color = if (isChecked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                                 textDecoration = if (isChecked) androidx.compose.ui.text.style.TextDecoration.LineThrough else null
                             )
                             Text(text = item.quantity, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -286,3 +300,4 @@ fun ShoppingListCard(isDark: Boolean = true) {
         }
     }
 }
+

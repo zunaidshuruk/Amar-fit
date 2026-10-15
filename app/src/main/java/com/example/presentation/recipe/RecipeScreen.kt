@@ -17,13 +17,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.presentation.common.appSafeInsets
 import com.example.presentation.viewmodel.ShasthoViewModel
-import com.example.ui.theme.*
 import com.example.ui.components.MarkdownText
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,12 +37,13 @@ fun RecipeScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .windowInsetsPadding(appSafeInsets())
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp)
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp)
         ) {
             IconButton(onClick = onNavigateBack) {
                 Icon(
@@ -75,8 +75,8 @@ fun RecipeScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
             ),
             trailingIcon = {
                 IconButton(
@@ -110,14 +110,14 @@ fun RecipeScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(20.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(24.dp)
+                        .padding(20.dp)
                 ) {
                     MarkdownText(displayRecipe, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface, lineHeight = 24.sp)
                     
@@ -128,18 +128,21 @@ fun RecipeScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=${Uri.encode(youtubeQuery)}"))
                                 context.startActivity(intent)
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Red500),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ),
                             modifier = Modifier.fillMaxWidth().height(56.dp),
                             shape = RoundedCornerShape(16.dp)
                         ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = "Watch", tint = Color.White)
+                            Icon(Icons.Default.PlayArrow, contentDescription = "Watch", tint = MaterialTheme.colorScheme.onPrimaryContainer)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Watch Video Recipe", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text("Watch Video Recipe", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                         }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(100.dp))
+            Spacer(modifier = Modifier.height(88.dp))
         } else {
             Box(
                 modifier = Modifier.fillMaxWidth().padding(32.dp),
@@ -160,3 +163,4 @@ fun RecipeScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}) {
         }
     }
 }
+

@@ -1,22 +1,18 @@
 package com.example.presentation.mealplan
 
+import android.widget.Toast
 import androidx.compose.foundation.background
-import com.example.presentation.common.appSafeInsets
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,16 +20,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import android.widget.Toast
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.SavedDietChart
+import com.example.presentation.common.appSafeInsets
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.components.MarkdownText
-import com.example.ui.theme.*
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -63,7 +58,8 @@ fun DietChartScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
             .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(appSafeInsets())
             .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()).imePadding()
+            .verticalScroll(rememberScrollState())
+            .imePadding()
     ) {
         if (selectedSavedChart != null) {
             SavedChartDetailView(
@@ -75,52 +71,73 @@ fun DietChartScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
         } else {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp, top = 16.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp)
             ) {
                 IconButton(onClick = onNavigateBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900
+                        tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
                 Text(
                     text = "Diet Plans",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
 
-            // Tabs
-            Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
-                Button(
-                    onClick = { selectedTab = 0 },
-                    colors = ButtonDefaults.buttonColors(containerColor = if (selectedTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant),
-                    modifier = Modifier.weight(1f).padding(end = 4.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp)
-                ) {
-                    Text(
-                        "Generate New",
-                        color = if (selectedTab == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = TextOverflow.Clip
-                    )
-                }
-                Button(
-                    onClick = { selectedTab = 1 },
-                    colors = ButtonDefaults.buttonColors(containerColor = if (selectedTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant),
-                    modifier = Modifier.weight(1f).padding(start = 4.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp)
-                ) {
-                    Text(
-                        "Saved Plans",
-                        color = if (selectedTab == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = TextOverflow.Clip
-                    )
+            // Pill-shaped Segmented Control
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+                    .clip(RoundedCornerShape(50.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(4.dp)
+            ) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(50.dp))
+                            .background(if (selectedTab == 0) MaterialTheme.colorScheme.primary else Color.Unspecified)
+                            .clickable { selectedTab = 0 }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Generate New",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (selectedTab == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Clip
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(50.dp))
+                            .background(if (selectedTab == 1) MaterialTheme.colorScheme.primary else Color.Unspecified)
+                            .clickable { selectedTab = 1 }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Saved Plans",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (selectedTab == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Clip
+                        )
+                    }
                 }
             }
 
@@ -155,32 +172,46 @@ fun GenerateNewDietView(
         }
     }
 
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(16.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Create a new plan based on Bangladeshi local foods & your metrics.", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 16.dp))
+        Column {
+            Text(
+                text = "Create a new plan based on Bangladeshi local foods & your metrics.", 
+                fontSize = 14.sp, 
+                color = MaterialTheme.colorScheme.onSurfaceVariant, 
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
             OutlinedTextField(
                 value = duration,
                 onValueChange = { duration = it },
                 label = { Text("Duration (Days)") },
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                )
             )
             Button(
                 onClick = { 
                     val days = (duration.toIntOrNull() ?: 7).coerceIn(1, 30)
                     navController?.navigate("universal_assistant?starter=" + android.net.Uri.encode("Create a $days-day diet chart for me using Bangladeshi foods that fit my profile and goals."))
                 },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text("Ask AI for a Diet Chart")
+                Text("Ask AI for a Diet Chart", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
             }
         }
     }
 
-    Spacer(modifier = Modifier.height(24.dp))
+    Spacer(modifier = Modifier.height(16.dp))
 
     if (isGenerating && dietChart.isNullOrEmpty()) {
         Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
@@ -188,12 +219,21 @@ fun GenerateNewDietView(
         }
     } else if (!dietChart.isNullOrEmpty()) {
         if (showShoppingList && !shoppingList.isNullOrEmpty()) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(16.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Shopping List", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900, modifier = Modifier.padding(bottom = 12.dp))
+                Column {
+                    Text(
+                        text = "Shopping List", 
+                        fontSize = 20.sp, 
+                        fontWeight = FontWeight.Bold, 
+                        color = MaterialTheme.colorScheme.onSurface, 
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
                     MarkdownText(text = shoppingList, color = MaterialTheme.colorScheme.onSurface)
                     Spacer(modifier = Modifier.height(16.dp))
                     
@@ -201,9 +241,10 @@ fun GenerateNewDietView(
                         Button(
                             onClick = { showShoppingList = false },
                             modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                containerColor = MaterialTheme.colorScheme.background,
+                                contentColor = MaterialTheme.colorScheme.onBackground
                             )
                         ) {
                             Text("Back")
@@ -211,25 +252,34 @@ fun GenerateNewDietView(
                         Button(
                             onClick = { showSaveDialog = true },
                             modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
-                            Text("Save Plan")
+                            Text("Save Plan", color = MaterialTheme.colorScheme.onPrimary)
                         }
                     }
                 }
             }
         } else {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(16.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Your Diet Chart", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900)
+                        Text(
+                            text = "Your Diet Chart", 
+                            fontSize = 20.sp, 
+                            fontWeight = FontWeight.Bold, 
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                         if (isEditing) {
                             IconButton(onClick = { 
                                 isEditing = false 
@@ -243,6 +293,8 @@ fun GenerateNewDietView(
                             }
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     if (isEditing) {
                         OutlinedTextField(
@@ -264,21 +316,23 @@ fun GenerateNewDietView(
                                 showShoppingList = true
                             },
                             modifier = Modifier.fillMaxWidth().height(50.dp).padding(bottom = 8.dp),
+                            shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
-                            Icon(Icons.Default.ShoppingCart, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.ShoppingCart, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onPrimary)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Generate Shopping List")
+                            Text("Generate Shopping List", color = MaterialTheme.colorScheme.onPrimary)
                         }
 
                         Button(
                             onClick = { showSaveDialog = true },
                             modifier = Modifier.fillMaxWidth().height(50.dp),
+                            shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
-                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onPrimary)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Save Diet Plan")
+                            Text("Save Diet Plan", color = MaterialTheme.colorScheme.onPrimary)
                         }
                     }
                 }
@@ -302,7 +356,6 @@ fun GenerateNewDietView(
             confirmButton = {
                 TextButton(onClick = {
                     val finalShoppingList = shoppingList ?: ""
-                    // Convert markdown shopping list to JSON
                     val jsonArray = JSONArray()
                     finalShoppingList.lines().forEach { line ->
                         val trimmed = line.trim()
@@ -326,7 +379,7 @@ fun GenerateNewDietView(
                     showSaveDialog = false
                     chartName = ""
                 }) {
-                    Text("Save")
+                    Text("Save", color = MaterialTheme.colorScheme.primary)
                 }
             },
             dismissButton = {
@@ -337,7 +390,7 @@ fun GenerateNewDietView(
         )
     }
     
-    Spacer(modifier = Modifier.height(100.dp))
+    Spacer(modifier = Modifier.height(88.dp))
 }
 
 @Composable
@@ -353,20 +406,29 @@ fun SavedChartsListView(
         }
     } else {
         savedCharts.forEach { chart ->
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).clickable { onSelect(chart) },
-                shape = RoundedCornerShape(16.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { onSelect(chart) }
+                    .padding(16.dp)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(chart.name, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900)
                         Text(
-                            java.text.SimpleDateFormat("MMM dd, yyyy").format(java.util.Date(chart.createdAt)), 
+                            text = chart.name, 
+                            fontSize = 16.sp, 
+                            fontWeight = FontWeight.Bold, 
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = java.text.SimpleDateFormat("MMM dd, yyyy").format(java.util.Date(chart.createdAt)), 
                             fontSize = 12.sp, 
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -378,7 +440,7 @@ fun SavedChartsListView(
             }
         }
     }
-    Spacer(modifier = Modifier.height(100.dp))
+    Spacer(modifier = Modifier.height(88.dp))
 }
 
 @Composable
@@ -388,36 +450,41 @@ fun SavedChartDetailView(
     onBack: () -> Unit, 
     onUpdate: (SavedDietChart) -> Unit
 ) {
-    var isEditingList by remember { mutableStateOf(false) }
-
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 16.dp)) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically, 
+        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
+    ) {
         IconButton(onClick = onBack) {
             Icon(
-                Icons.AutoMirrored.Filled.ArrowBack, 
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack, 
                 contentDescription = "Back", 
-                tint = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900
+                tint = MaterialTheme.colorScheme.onBackground
             )
         }
         Text(
             text = chart.name, 
             fontSize = 24.sp, 
             fontWeight = FontWeight.Bold, 
-            color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900
+            color = MaterialTheme.colorScheme.onBackground
         )
     }
 
     if (chart.shoppingList.startsWith("[")) {
         // Render Checklist
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).padding(bottom = 24.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .padding(16.dp)
+                .padding(bottom = 8.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column {
                 Text(
-                    "Shopping List", 
+                    text = "Shopping List", 
                     fontSize = 20.sp, 
                     fontWeight = FontWeight.Bold, 
-                    color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900, 
+                    color = MaterialTheme.colorScheme.onSurface, 
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
                 
@@ -437,17 +504,26 @@ fun SavedChartDetailView(
                     Text("Could not parse checklist.", color = MaterialTheme.colorScheme.error)
                 } else {
                     items.forEachIndexed { i, (text, isChecked) ->
+                        if (i > 0) {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().clickable {
-                                try {
-                                    val jsonArray = JSONArray(chart.shoppingList)
-                                    val obj = jsonArray.getJSONObject(i)
-                                    obj.put("checked", !isChecked)
-                                    jsonArray.put(i, obj)
-                                    onUpdate(chart.copy(shoppingList = jsonArray.toString()))
-                                } catch (e: Exception) {}
-                            }.padding(vertical = 4.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    try {
+                                        val jsonArray = JSONArray(chart.shoppingList)
+                                        val obj = jsonArray.getJSONObject(i)
+                                        obj.put("checked", !isChecked)
+                                        jsonArray.put(i, obj)
+                                        onUpdate(chart.copy(shoppingList = jsonArray.toString()))
+                                    } catch (e: Exception) {}
+                                }
+                                .padding(vertical = 4.dp)
                         ) {
                             Checkbox(
                                 checked = isChecked,
@@ -473,39 +549,48 @@ fun SavedChartDetailView(
                 }
             }
         }
+        Spacer(modifier = Modifier.height(16.dp))
     } else if (chart.shoppingList.isNotBlank()) {
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).padding(bottom = 24.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .padding(16.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column {
                 Text(
-                    "Shopping List", 
+                    text = "Shopping List", 
                     fontSize = 20.sp, 
                     fontWeight = FontWeight.Bold, 
-                    color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900, 
+                    color = MaterialTheme.colorScheme.onSurface, 
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
                 MarkdownText(text = chart.shoppingList, color = MaterialTheme.colorScheme.onSurface)
             }
         }
+        Spacer(modifier = Modifier.height(16.dp))
     }
 
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(16.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column {
             Text(
-                "Diet Chart", 
+                text = "Diet Chart", 
                 fontSize = 20.sp, 
                 fontWeight = FontWeight.Bold, 
-                color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald900, 
+                color = MaterialTheme.colorScheme.onSurface, 
                 modifier = Modifier.padding(bottom = 12.dp)
             )
             MarkdownText(text = chart.chartContent, color = MaterialTheme.colorScheme.onSurface)
         }
     }
 
-    Spacer(modifier = Modifier.height(100.dp))
+    Spacer(modifier = Modifier.height(88.dp))
 }
+
