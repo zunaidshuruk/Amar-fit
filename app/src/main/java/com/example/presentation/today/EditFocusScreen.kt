@@ -57,7 +57,7 @@ fun EditFocusScreen(
                         text = "Edit focus",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 },
                 navigationIcon = {
@@ -68,37 +68,38 @@ fun EditFocusScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = if (isDark) MaterialTheme.colorScheme.background else Background
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         },
-        containerColor = if (isDark) MaterialTheme.colorScheme.background else Background
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(bottom = 32.dp, top = 8.dp)
         ) {
             // Section 1: Your Tiles
             item {
+                SectionCard {
                 Text(
                     text = "Your tiles",
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = "Tiles currently showing on your Today tab.",
                     fontSize = 13.sp,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate500,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp, bottom = 12.dp)
                 )
 
@@ -107,14 +108,14 @@ fun EditFocusScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Slate100)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                             .padding(24.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "No tiles added. Choose from below to customize your focus.",
                             fontSize = 14.sp,
-                            color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate600
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 } else {
@@ -138,20 +139,22 @@ fun EditFocusScreen(
                         }
                     }
                 }
+                }
             }
 
             // Section 2: Large Tiles
             item {
+                SectionCard {
                 Text(
                     text = "Large tiles",
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = "Full-width circular ring gauges for high-priority daily goals.",
                     fontSize = 13.sp,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate500,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp, bottom = 12.dp)
                 )
 
@@ -188,20 +191,22 @@ fun EditFocusScreen(
                         }
                     }
                 }
+                }
             }
 
             // Section 3: Small Tiles
             item {
+                SectionCard {
                 Text(
                     text = "Small tiles",
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = "Compact metric cards displaying health vitals and activity logs.",
                     fontSize = 13.sp,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate500,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp, bottom = 12.dp)
                 )
 
@@ -255,6 +260,7 @@ fun EditFocusScreen(
                             }
                         }
                     }
+                }
                 }
             }
             item { Spacer(modifier = Modifier.height(88.dp)) }
@@ -311,9 +317,8 @@ private fun ActiveTileRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(1.dp, RoundedCornerShape(16.dp))
             .clip(RoundedCornerShape(16.dp))
-            .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface)
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -337,21 +342,21 @@ private fun ActiveTileRow(
                         text = title,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     if (isLarge) {
                         Spacer(modifier = Modifier.width(6.dp))
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(if (isDark) MaterialTheme.colorScheme.surface else Slate200)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .padding(horizontal = 4.dp, vertical = 1.dp)
                         ) {
                             Text(
                                 text = "Large",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate600
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -360,7 +365,7 @@ private fun ActiveTileRow(
                     Text(
                         text = value,
                         fontSize = 12.sp,
-                        color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate500
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -371,13 +376,13 @@ private fun ActiveTileRow(
             modifier = Modifier
                 .size(32.dp)
                 .clip(CircleShape)
-                .background(if (isDark) MaterialTheme.colorScheme.surface else Slate100)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .testTag("remove_tile_${tileId}")
         ) {
             Icon(
                 imageVector = Icons.Default.Remove,
                 contentDescription = "Remove $title",
-                tint = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate600,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -396,9 +401,8 @@ private fun TileOptionCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(if (isAdded) 0.dp else 1.dp, RoundedCornerShape(16.dp))
             .clip(RoundedCornerShape(16.dp))
-            .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface)
+            .background(MaterialTheme.colorScheme.background)
             .border(
                 width = if (isAdded) 1.5.dp else 0.dp,
                 color = if (isAdded) accent.onBg.copy(alpha = 0.5f) else Color.Transparent,
@@ -420,7 +424,7 @@ private fun TileOptionCard(
                     text = title,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
@@ -447,12 +451,12 @@ private fun TileOptionCard(
                         modifier = Modifier
                             .size(24.dp)
                             .clip(CircleShape)
-                            .background(if (isDark) MaterialTheme.colorScheme.surface else Slate100)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Add $title",
-                            tint = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(14.dp)
                         )
                     }
@@ -463,7 +467,7 @@ private fun TileOptionCard(
                 text = value,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
-                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate500,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -482,24 +486,22 @@ private fun SmallTileOptionCard(
     onAdd: () -> Unit
 ) {
     val containerBg = when {
-        isAdded -> if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f) else Slate100.copy(alpha = 0.7f)
-        accent != null -> accent.bg
-        else -> if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface
+        isAdded -> MaterialTheme.colorScheme.background.copy(alpha = 0.6f)
+        else -> MaterialTheme.colorScheme.background
     }
     val contentTint = when {
         accent != null -> accent.onBg
-        else -> if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
+        else -> MaterialTheme.colorScheme.onSurface
     }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(if (isAdded) 0.dp else 1.dp, RoundedCornerShape(16.dp))
             .clip(RoundedCornerShape(16.dp))
             .background(containerBg)
             .border(
                 width = if (isAdded) 1.dp else 0.dp,
-                color = if (isAdded) (if (isDark) MaterialTheme.colorScheme.outline else Slate300) else Color.Transparent,
+                color = if (isAdded) (MaterialTheme.colorScheme.outline) else Color.Transparent,
                 shape = RoundedCornerShape(16.dp)
             )
             .clickable(enabled = !isAdded) { onAdd() }
@@ -520,7 +522,7 @@ private fun SmallTileOptionCard(
                         .clip(CircleShape)
                         .background(
                             if (accent != null) accent.onBg.copy(alpha = 0.15f)
-                            else if (isDark) MaterialTheme.colorScheme.surface else Slate200
+                            else MaterialTheme.colorScheme.surfaceVariant
                         ),
                     contentAlignment = Alignment.Center
                 ) {
@@ -537,13 +539,13 @@ private fun SmallTileOptionCard(
                         modifier = Modifier
                             .size(22.dp)
                             .clip(CircleShape)
-                            .background(if (isDark) MaterialTheme.colorScheme.surface else Slate200),
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = "Added",
-                            tint = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate600,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(12.dp)
                         )
                     }
@@ -553,12 +555,12 @@ private fun SmallTileOptionCard(
                         modifier = Modifier
                             .size(22.dp)
                             .clip(CircleShape)
-                            .background(if (isDark) MaterialTheme.colorScheme.surface else Slate100)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Add $label",
-                            tint = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(12.dp)
                         )
                     }
@@ -569,7 +571,7 @@ private fun SmallTileOptionCard(
                 text = label,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
-                color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate500,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -577,10 +579,24 @@ private fun SmallTileOptionCard(
                 text = value,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (accent != null) accent.onBg else if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
+                color = if (accent != null) accent.onBg else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
     }
+}
+
+
+/** A section of the Edit tiles screen: a 20 dp card in the surfaceVariant color, like the cards on the Nutrition screen. */
+@Composable
+private fun SectionCard(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(16.dp),
+        content = content
+    )
 }

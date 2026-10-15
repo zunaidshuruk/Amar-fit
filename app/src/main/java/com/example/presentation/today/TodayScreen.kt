@@ -451,12 +451,12 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                 text = "View All",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = if (isDark) MaterialTheme.colorScheme.primary else Emerald600
+                                color = MaterialTheme.colorScheme.primary
                             )
                             Icon(
                                 imageVector = Icons.Default.ChevronRight,
                                 contentDescription = "View All Badges",
-                                tint = if (isDark) MaterialTheme.colorScheme.primary else Emerald600,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -687,8 +687,8 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                         showWaterDialog = false
                                     },
                                 shape = RoundedCornerShape(12.dp),
-                                color = if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Emerald50,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f) else Emerald200)
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
                             ) {
                                 Column(
                                     modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
@@ -708,7 +708,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                         text = label,
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isDark) MaterialTheme.colorScheme.primary else Emerald700
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             }
@@ -759,7 +759,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                                     showWaterDialog = false
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = if (isDark) MaterialTheme.colorScheme.primary else Emerald600),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.height(56.dp)
                         ) {
@@ -779,11 +779,11 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
         ModalBottomSheet(
             onDismissRequest = { showLogBottomSheet = false },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = if (isDark) MaterialTheme.colorScheme.surface else Surface,
+            containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
             dragHandle = {
                 BottomSheetDefaults.DragHandle(
-                    color = if (isDark) MaterialTheme.colorScheme.outlineVariant else Slate200
+                    color = MaterialTheme.colorScheme.outlineVariant
                 )
             }
         ) {
@@ -799,7 +799,7 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     text = "Log Health Activity",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
@@ -880,14 +880,14 @@ private fun TodayPillCard(
     onClick: (() -> Unit)? = null
 ) {
     val containerBg = when {
-        isMuted -> if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) else Slate100.copy(alpha = 0.8f)
+        isMuted -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         accent != null -> accent.bg
-        else -> if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface
+        else -> MaterialTheme.colorScheme.surfaceVariant
     }
     val contentTint = when {
-        isMuted -> if (isDark) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else Slate400
+        isMuted -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
         accent != null -> accent.onBg
-        else -> if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
+        else -> MaterialTheme.colorScheme.onSurface
     }
 
     val cardShape = if (featured) RoundedCornerShape(18.dp) else RoundedCornerShape(16.dp)
@@ -916,9 +916,9 @@ private fun TodayPillCard(
                     .size(if (featured) 38.dp else 32.dp)
                     .clip(CircleShape)
                     .background(
-                        if (isMuted) (if (isDark) MaterialTheme.colorScheme.surface else Slate200)
+                        if (isMuted) (MaterialTheme.colorScheme.surface)
                         else if (accent != null) accent.onBg.copy(alpha = 0.15f)
-                        else (if (isDark) MaterialTheme.colorScheme.surface else Slate100)
+                        else (MaterialTheme.colorScheme.surface)
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -934,7 +934,7 @@ private fun TodayPillCard(
                     text = label,
                     fontSize = if (featured) 12.sp else 11.sp,
                     fontWeight = FontWeight.Medium,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate500,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -942,7 +942,7 @@ private fun TodayPillCard(
                     text = value,
                     fontSize = if (featured) 16.sp else 14.sp,
                     fontWeight = if (isMuted) FontWeight.Normal else FontWeight.Bold,
-                    color = if (isMuted) (if (isDark) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else Slate400) else if (accent != null) accent.onBg else (if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary),
+                    color = if (isMuted) (MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) else if (accent != null) accent.onBg else (MaterialTheme.colorScheme.onSurface),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -1073,7 +1073,7 @@ private fun FlippableHeroCard(
             .fillMaxWidth()
             .shadow(2.dp, RoundedCornerShape(20.dp))
             .clip(RoundedCornerShape(20.dp))
-            .background(if (heroStyle) MaterialTheme.colorScheme.primary else (if (isDark) MaterialTheme.colorScheme.surfaceVariant else Surface))
+            .background(if (heroStyle) MaterialTheme.colorScheme.primary else (MaterialTheme.colorScheme.surfaceVariant))
             // Swipe (in either direction) toggles the flip, same as a tap.
             .pointerInput(tile.id) {
                 detectHorizontalDragGestures(
@@ -1217,7 +1217,7 @@ private fun HeroCardFrontFace(
                     text = tile.insideValue,
                     fontSize = if (heroStyle) 30.sp else 22.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (heroStyle) MaterialTheme.colorScheme.onPrimary else (if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary)
+                    color = if (heroStyle) MaterialTheme.colorScheme.onPrimary else (MaterialTheme.colorScheme.onSurface)
                 )
                 Text(
                     text = tile.insideSubtext,
@@ -1269,7 +1269,7 @@ private fun HeroCardBackFace(
     heroStyle: Boolean
 ) {
     val labelColor = if (heroStyle) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant
-    val valueColor = if (heroStyle) MaterialTheme.colorScheme.onPrimary else (if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary)
+    val valueColor = if (heroStyle) MaterialTheme.colorScheme.onPrimary else (MaterialTheme.colorScheme.onSurface)
 
     Box(
         modifier = Modifier
@@ -1345,7 +1345,7 @@ private fun LogActionRowItem(
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
-        color = if (isDark) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f) else Slate100.copy(alpha = 0.7f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -1374,18 +1374,18 @@ private fun LogActionRowItem(
                     text = title,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurface else TextPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = subtitle,
                     fontSize = 12.sp,
-                    color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate500
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Slate400,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
         }

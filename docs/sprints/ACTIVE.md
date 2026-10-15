@@ -2,7 +2,20 @@
 
 Only open or unverified work lives here. Budget ~12 KB — when a Part closes, move its notes to `archive/` and leave one line in [INDEX.md](INDEX.md).
 
-Current as of `76beb27` (2026-10-07). Statuses marked *code-checked* were confirmed by reading the code at that commit, not from a push-verification.
+Current as of `main` after Sprints 23 and 24 (2026-10-15). Statuses marked *code-checked* were confirmed by reading the code at that commit, not from a push-verification.
+
+## Open work (checked 2026-10-15; everything else on this page is closed)
+**Only Zunaid can do**
+- [ ] Look at the merged-but-unreleased work on a phone once the next release is installed: Today's medicine card, the Sleep screen, the Diet Chart / Meal Plan / Recipes restyle, the Edit tiles screen and the other cleaned screens (Sprints 19 to 24), the bottom bar's unselected color, chip rows and the Friends lists.
+- [ ] Cycle tracker (12-step test in `docs/cycle-tracker.md`) and Ramadan tracking: confirm they were run on a real phone, including the two-phone sync.
+- [ ] Part I #7: real-device heart-rate check.
+- [ ] Legal review of the privacy policy (it says it was not reviewed; it now also covers cycle, Ramadan and medicine data, added without a new accept).
+- [ ] If AI Studio is used again: make sure `debug.keystore` exists in its project (it deleted the file on every push so far) and sync from GitHub before each prompt and before pushing (`docs/sprints/PARALLEL.md`).
+
+**Claude**
+- [ ] Release 3.3 with everything merged since 3.2 (waiting for Zunaid's go-ahead).
+
+**Ideas, not scheduled**: the bottom bar that pages scroll behind (NV-1 overlay variant); friend-request pushes from the notification server (it only sends direct messages and challenges); the release and push-notification workflows still use the old action versions (moved only in the compile check; the notifications run from a schedule, so change them carefully); the Gradle version notice.
 
 ## debug.keystore
 Present on `main` (sha256 `4d6742b2...5f0faa`, 2666 B) after the web-upload restore. AI Studio's working copy lacks the file, so its pushes keep deleting it (`3cb859b`, `65ca328`, `6684f03`, `3abfc55`; restores `f864870`, `78c6447`, `e85362f`, `cd3894b`). Since that cannot be fixed from our side, the release workflow now repairs it: a "Restore debug keystore" step writes the known-good key (checksum-verified) when the repo copy is missing or wrong, and "Pre-flight checks" still fail a tag build on a tag/versionCode mismatch or empty key secrets. Tag `6` and tag `9` were cut before the keystore was present and built without it. Still: restore the file on GitHub and check AI Studio's diff for a deleted `debug.keystore` before every push. Earlier history: [archive/00-tracker-preamble.md](archive/00-tracker-preamble.md).
@@ -32,7 +45,7 @@ Multi-day workout programs (Part AC), the Assistant consolidation (Part Z Phase 
 Open follow-ups:
 - [x] **Scanner chat button starter (already fixed; checked 2026-10-13):** `MainActivity.kt` opens `universal_assistant?starter=nutrition`, which sends the bare word "nutrition" as the user's first message. Fixed by AH-1 (Sprint 11): no `starter=nutrition` route is left anywhere in the code.
 - [x] **Dead-code cleanup in the view model/repository (done 2026-10-13, branch `claude/leftovers`):** removed 24 unused public functions that nothing in the app or tests called (`ShasthoViewModel`: `updateSettings`, `setBloodGlucoseMorning/Night`, the six `setBloodGlucoseBefore/After...` setters that raced each other (replaced by `saveGlucoseReadingsForDate`), `setWeight`, `setSteps`, `addSteps`, `sendChatMessage`, `loadFoodChatHistory`, `requestCoachAdvice`, `clearCoachAdvice`, `generateAIStructuredWorkout`, `clearStructuredWorkoutPlan`, the `glucoseText` helper, the coach and chat loading flags; `AppRepository`: `getChatResponse`, `getChatResponseStream`, `generateCoachAdvice`, `generateCoachAdviceStream`, `getFoodChatHistoryOnce`, `getAssistantChatHistoryOnce`, `deleteOldFoodLogs`, `earliestHealthExerciseSessionStart`; `FirebaseManager`: the old last-writer-wins `syncMetric` and `syncProfile`, which must never be used again because they overwrite whole rows). About 460 lines. Left on purpose: the food chat state (`_foodChatHistory` is still written by a function that remains) and the unused public aliases `activeAssistantSessionId` / `universalAssistantHistory` (their backing state is used).
-- [ ] Optional: more Assistant tools (e.g. `generate_workout_program`) so programs can also be created by chat.
+- [x] Assistant tool `create_workout_program` already exists (since Part AF); nothing to build (checked 2026-10-15).
 
 ## Sprint 11 — closed (one small fix pending)
 Manual exercise logging (AE), Assistant creates programs (AF), Today big-card polish (AG), Assistant food logging with blank start and multi-meal (AH), workout music (AI), blood glucose unit choice (AJ) and Health Connect history for all metrics (AD) are done: [archive/PART-AD-AJ-sprint-11.md](archive/PART-AD-AJ-sprint-11.md). **AD-4 (only sync `friend_stats` for today's metric) is done**: `AppRepository.uploadMetricNow` guards it with `date == LocalDate.now()` and it is the only caller (checked 2026-10-13). **Release 13** is not cut yet; checklist: bump `versionCode` AND `versionName` (release 12 still says 1.5), tag = `versionCode`, create the release last, title matching `versionName`; after installing, Settings > Health Connect > Connect once (new permissions since release 11: active-calories write) and consider allowing "Older exercise history".
@@ -230,7 +243,7 @@ Shipped: repository layer, ViewModel wiring, screen, global floating button, too
 ## Carried over
 - [x] (code fixed, device check is Zunaid's) `WorkoutScreen.kt` "AI Workouts" tab label wrap — all three tab labels already have `maxLines = 1`, `softWrap = false`, an ellipsis and 4 dp padding (checked 2026-10-13); confirm on a device (left over from Part R, now closed).
 - [ ] Part I #7 — real-device heart-rate check (Zunaid only).
-- [ ] Part P #6 — multi-day workout programs (deferred, needs its own scoping).
-- [ ] Tile customization via DataStore — not built (*code-checked*: no DataStore usage; tile slots persist via `updateTodayTileSlots` on the profile instead). Confirm whether that's sufficient.
-- [ ] Repo hygiene — 34 one-off root scripts (`fix_*.py`, `update_*.py`, `rewrite_*.py`, `add_*.py`, `test_*.kt`). Candidate for an AI Studio cleanup prompt.
+- [x] Part P #6 — multi-day workout programs: done (Part AC, plus AF for creating them by chat).
+- [x] Tile customization via DataStore — decided sufficient as it is (2026-10-15): tile slots persist on the profile and sync. (Was: not built (*code-checked*: no DataStore usage; tile slots persist via `updateTodayTileSlots` on the profile instead.)
+- [x] Repo hygiene — already clean (checked 2026-10-15: no one-off scripts in the repo root). Was: 34 one-off root scripts (`fix_*.py`, `update_*.py`, `rewrite_*.py`, `add_*.py`, `test_*.kt`). Candidate for an AI Studio cleanup prompt.
 - Thriva name / T-monogram explored, not implemented; shipping name is KardIQ.

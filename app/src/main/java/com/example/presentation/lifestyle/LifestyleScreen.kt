@@ -121,7 +121,7 @@ fun LifestyleScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                            Text(phase.title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = if (isDark) MaterialTheme.colorScheme.onSurface else Emerald700)
+                            Text(phase.title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
                             Text(phase.duration, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Spacer(modifier = Modifier.height(8.dp))

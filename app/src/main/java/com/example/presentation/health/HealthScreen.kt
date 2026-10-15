@@ -61,8 +61,8 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val stepsAccent = AccentTokens.stepsAccent(isDark)
     val resilienceAccent = AccentTokens.resilienceAccent(isDark)
 
-    val bmiTrackColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Emerald200
-    val bmiFillColor = if (isDark) MaterialTheme.colorScheme.primary else Emerald600
+    val bmiTrackColor = MaterialTheme.colorScheme.surfaceVariant
+    val bmiFillColor = MaterialTheme.colorScheme.primary
     val resilienceTrackColor = resilienceAccent.onBg.copy(alpha = 0.2f)
     val resilienceFillColor = resilienceAccent.onBg
 

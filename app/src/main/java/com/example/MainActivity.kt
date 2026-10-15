@@ -179,7 +179,7 @@ class MainActivity : ComponentActivity() {
 
         if (!sessionChecked) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = if (isDark) MaterialTheme.colorScheme.primary else Emerald600)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else {
             val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
@@ -224,7 +224,7 @@ class MainActivity : ComponentActivity() {
                               }
                               val name = (userProfile?.name ?: "Guest").trim().split(" ").firstOrNull { it.isNotBlank() } ?: "Guest"
                               Column {
-                                  Text(text = "HEALTH & DIET", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = if (isDark) MaterialTheme.colorScheme.primary else Emerald700, letterSpacing = 1.sp)
+                                  Text(text = "HEALTH & DIET", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary, letterSpacing = 1.sp)
                                   Text(
                                       text = "$greeting, $name",
                                       fontSize = 18.sp,
@@ -241,8 +241,8 @@ class MainActivity : ComponentActivity() {
                                       .padding(end = 16.dp)
                                       .size(36.dp)
                                       .clip(CircleShape)
-                                      .background(if (isDark) MaterialTheme.colorScheme.surfaceVariant else Emerald200)
-                                      .border(2.dp, if (isDark) MaterialTheme.colorScheme.outline else Color.White, CircleShape)
+                                      .background(MaterialTheme.colorScheme.surfaceVariant)
+                                      .border(2.dp, MaterialTheme.colorScheme.outline, CircleShape)
                                       .shadow(2.dp, CircleShape)
                                       .clickable { navController.navigate("profile") },
                                   contentAlignment = Alignment.Center
@@ -276,7 +276,7 @@ class MainActivity : ComponentActivity() {
                                       Text(
                                           text = initial,
                                           fontWeight = FontWeight.Bold,
-                                          color = if (isDark) MaterialTheme.colorScheme.primary else Emerald800,
+                                          color = MaterialTheme.colorScheme.primary,
                                           fontSize = 14.sp
                                       )
                                   }
@@ -306,8 +306,8 @@ class MainActivity : ComponentActivity() {
                     ) {
                       activeTabs.forEach { tab ->
                           val isSelected = currentRoute == tab.route
-                          val color = if (isSelected) (if (isDark) MaterialTheme.colorScheme.primary else Emerald600) else Slate400
-                          val pillColor = if (isSelected) (if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Emerald50) else Color.Transparent
+                          val color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                          val pillColor = if (isSelected) (MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)) else Color.Transparent
                           Column(
                               horizontalAlignment = Alignment.CenterHorizontally,
                               verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -335,8 +335,8 @@ class MainActivity : ComponentActivity() {
                       }
                       
                       val isMoreSelected = chooseableTabs.any { it.route == currentRoute } && activeTabs.none { it.route == currentRoute }
-                      val moreColor = if (isMoreSelected) (if (isDark) MaterialTheme.colorScheme.primary else Emerald600) else Slate400
-                      val morePillColor = if (isMoreSelected) (if (isDark) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Emerald50) else Color.Transparent
+                      val moreColor = if (isMoreSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                      val morePillColor = if (isMoreSelected) (MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)) else Color.Transparent
                       
                       Column(
                           horizontalAlignment = Alignment.CenterHorizontally,
