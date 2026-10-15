@@ -64,11 +64,49 @@ object UpdateChecker {
         }
     }
 
-    fun downloadAndInstallApk(context: Context, updateInfo: UpdateInfo) {
-        val destination = File(context.getExternalFilesDir(null), "amar_fit_update.apk")
-        if (destination.exists()) {
-            destination.delete()
+    private const val PREFS = "UpdateChecker"
+    private const val KEY_PENDING_VERSION = "pending_version_code"
+    private const val KEY_PENDING_STARTED = "pending_started_at"
+
+    /** Deletes every update APK in the app's own storage and returns how many bytes that freed. */
+    private fun deleteUpdateFiles(context: Context): Long {
+        var freed = 0L
+        val dirs = listOfNotNull(context.getExternalFilesDir(null), context.externalCacheDir, context.cacheDir, context.filesDir)
+        for (dir in dirs) {
+            dir.listFiles()?.filter { it.isFile && UpdateCleanupPolicy.isUpdateFile(it.name) }?.forEach { file ->
+                val size = file.length()
+                if (file.delete()) freed += size
+            }
         }
+        return freed
+    }
+
+    /**
+     * Frees the storage the downloaded update APKs take (about 105 MB each): called when the app starts and right after an update is installed
+     * (BootReceiver, MY_PACKAGE_REPLACED). Files of an update that is downloaded but not installed yet are kept (see UpdateCleanupPolicy).
+     */
+    fun cleanUpOldApks(context: Context, installedVersionCode: Int) {
+        try {
+            val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val pendingVersion = prefs.getInt(KEY_PENDING_VERSION, 0)
+            val pendingStarted = prefs.getLong(KEY_PENDING_STARTED, 0L)
+            if (!UpdateCleanupPolicy.shouldDelete(installedVersionCode, pendingVersion, pendingStarted, System.currentTimeMillis())) return
+            val freed = deleteUpdateFiles(context.applicationContext)
+            prefs.edit().remove(KEY_PENDING_VERSION).remove(KEY_PENDING_STARTED).apply()
+            if (freed > 0) android.util.Log.i("UpdateChecker", "Deleted old update files, freed ${freed / 1024 / 1024} MB")
+        } catch (e: Exception) {
+            android.util.Log.e("UpdateChecker", "Could not clean up old update files", e)
+        }
+    }
+
+    fun downloadAndInstallApk(context: Context, updateInfo: UpdateInfo) {
+        // an older download (or any other leftover APK) goes first, so there is never more than one file
+        deleteUpdateFiles(context)
+        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_PENDING_VERSION, updateInfo.versionCode)
+            .putLong(KEY_PENDING_STARTED, System.currentTimeMillis())
+            .apply()
+        val destination = File(context.getExternalFilesDir(null), "amar_fit_update.apk")
 
         val request = DownloadManager.Request(Uri.parse(updateInfo.downloadUrl))
             .setTitle("Downloading KardIQ Update")
