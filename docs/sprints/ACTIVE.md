@@ -6,14 +6,14 @@ Current as of `main` after Sprints 23 and 24 (2026-10-15). Statuses marked *code
 
 ## Open work (checked 2026-10-15; everything else on this page is closed)
 **Only Zunaid can do**
-- [ ] Look at the merged-but-unreleased work on a phone once the next release is installed: Today's medicine card, the Sleep screen, the Diet Chart / Meal Plan / Recipes restyle, the Edit tiles screen and the other cleaned screens (Sprints 19 to 24), the bottom bar's unselected color, chip rows and the Friends lists.
+- [ ] Look at the work in release 3.3 on a phone (it was only checked by builds and tests): Today's medicine card, the Sleep screen, the Diet Chart / Meal Plan / Recipes restyle, the Edit tiles screen and the other cleaned screens (Sprints 19 to 24), the bottom bar's unselected color, chip rows and the Friends lists.
 - [ ] Cycle tracker (12-step test in `docs/cycle-tracker.md`) and Ramadan tracking: confirm they were run on a real phone, including the two-phone sync.
 - [ ] Part I #7: real-device heart-rate check.
 - [ ] Legal review of the privacy policy (it says it was not reviewed; it now also covers cycle, Ramadan and medicine data, added without a new accept).
 - [ ] If AI Studio is used again: make sure `debug.keystore` exists in its project (it deleted the file on every push so far) and sync from GitHub before each prompt and before pushing (`docs/sprints/PARALLEL.md`).
 
 **Claude**
-- [ ] Release 3.3 with everything merged since 3.2 (waiting for Zunaid's go-ahead).
+- [x] Release 3.3 (build 33) cut with everything merged since 3.2 (2026-10-15).
 
 **Ideas, not scheduled**: the bottom bar that pages scroll behind (NV-1 overlay variant); friend-request pushes from the notification server (it only sends direct messages and challenges); the release and push-notification workflows still use the old action versions (moved only in the compile check; the notifications run from a schedule, so change them carefully); the Gradle version notice.
 
