@@ -33,6 +33,16 @@ after reboot, app update and time changes).
   and shows as Skipped in the history). Not silenced by quiet hours, discreet on the lock screen like the reminder. Limit: the check is a one-shot alarm, so it is lost if
   the phone restarts between the reminder and the alert.
 
+## The master switch ("Allow KardIQ notifications")
+Turning it off switches EVERYTHING off (Zunaid's request, from a screenshot where other switches still looked active):
+* **Nothing is shown.** Every notification is posted through `NotificationHelper` or `MedicineNotifier`, and each post first checks `NotificationGate`
+  (a flag kept in sync by `ReminderScheduler.rescheduleAll`, on by default). That covers reminders, goal alerts, medicine reminders, their snoozed repeats and
+  missed-dose alerts, the Health Connect reminder, nutrition alerts, the Test button and pushes from friends. `NotificationGateGuardTest` fails the build if a
+  notification is posted anywhere else or without the check.
+* **Pending alerts are cancelled** when it is turned off: all scheduled reminders, snoozed medicine repeats and missed-dose checks, and whatever is still showing.
+* **The screen shows it:** a banner says all notifications are off, and every other control is disabled and dimmed (they keep their saved values, so turning the
+  master switch back on restores everything). The Test button is disabled too.
+
 ## Phone test plan
 1. New install and first login with Health Connect not connected: the nudge arrives once when the app opens (after allowing notifications). Tap it: Settings opens.
 2. Do not connect: 3 days later at about 10:00 it arrives again; connect Health Connect: no more nudges. Switch it off in Settings > Notifications: none.
@@ -41,3 +51,6 @@ after reboot, app update and time changes).
 5. Add six reminders: the add button changes to "All 6 reminders added"; delete one: it is enabled again. Edit one (time, days): the new time is used.
 5. Set quiet hours around a medicine time: the medicine reminder still arrives, a water reminder does not.
 6. Two phones: add a reminder on one, it appears on the other and rings there too.
+7. Turn "Allow KardIQ notifications" off: a banner appears and every other switch, time, day chip and button on the screen is dimmed and locked (the Test button too).
+   A medicine reminder set for two minutes ahead does not ring; a snoozed or missed-dose alert that was pending does not appear. Turn it on again: the settings are
+   unchanged and the reminders work again.

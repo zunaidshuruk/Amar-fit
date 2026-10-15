@@ -64,7 +64,7 @@ internal fun MedicineSection(
         prefs.medicines.forEach { m ->
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Row(
-                modifier = Modifier.fillMaxWidth().clickable { editing = m }.padding(vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().clickable(enabled = LocalControlsEnabled.current) { editing = m }.padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -99,6 +99,7 @@ internal fun MedicineSection(
                     }
                 }
                 Switch(
+                    enabled = LocalControlsEnabled.current,
                     checked = m.enabled,
                     onCheckedChange = { on ->
                         update { p -> p.copy(medicines = p.medicines.map { x -> if (x.id == m.id) x.copy(enabled = on) else x }) }
@@ -108,7 +109,7 @@ internal fun MedicineSection(
                         checkedTrackColor = MaterialTheme.colorScheme.primary
                     )
                 )
-                IconButton(onClick = { confirmDelete = m }) {
+                IconButton(onClick = { confirmDelete = m }, enabled = LocalControlsEnabled.current) {
                     Icon(Icons.Default.Delete, contentDescription = "Delete ${m.name}", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -117,7 +118,7 @@ internal fun MedicineSection(
         val canAdd = MedicineReminders.canAdd(prefs.medicines)
         OutlinedButton(
             onClick = { editing = MedicineReminder(id = java.util.UUID.randomUUID().toString().take(8), createdOn = java.time.LocalDate.now().toString()) },
-            enabled = canAdd,
+            enabled = canAdd && LocalControlsEnabled.current,
             modifier = Modifier.padding(top = 8.dp)
         ) {
             Text(if (canAdd) "Add medicine reminder (${prefs.medicines.size} of ${MedicineReminders.MAX})" else "All ${MedicineReminders.MAX} reminders added")

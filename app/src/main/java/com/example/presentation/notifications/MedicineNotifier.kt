@@ -63,6 +63,7 @@ object MedicineNotifier {
         /** Minutes until the "Missed dose?" alert is checked; 0 = no alert (used for the snoozed repeat and when the alert is off). */
         missedAfterMinutes: Int = 0
     ) {
+        if (!NotificationGate.isEnabled(context)) return
         NotificationHelper.createNotificationChannel(context)
         val open = PendingIntent.getActivity(
             context, notificationId,
@@ -125,6 +126,7 @@ object MedicineNotifier {
     }
 
     fun showMissed(context: Context, medicineId: String, notificationId: Int, message: String, discreet: Boolean) {
+        if (!NotificationGate.isEnabled(context)) return
         NotificationHelper.createNotificationChannel(context)
         val open = PendingIntent.getActivity(
             context, missedNotificationId(notificationId),
