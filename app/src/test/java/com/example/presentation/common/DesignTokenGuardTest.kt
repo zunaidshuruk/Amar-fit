@@ -32,7 +32,7 @@ class DesignTokenGuardTest {
         (if (file.name in mayUsePlainWhiteAndBlack) oldStyleWithoutPlain else oldStyle).containsMatchIn(code(file))
 
     /** Files that still contain old-style colors or light-mode branches. Remove a file from this list when it is cleaned. */
-    private val pendingCleanup = setOf("EditFocusScreen.kt", "BadgeGalleryScreen.kt", "LifestyleScreen.kt", "HealthGoalsScreen.kt")
+    private val pendingCleanup = setOf<String>()
 
     @Test
     fun screensUseThemeTokensOnly() {

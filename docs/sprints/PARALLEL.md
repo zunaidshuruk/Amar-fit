@@ -6,7 +6,7 @@
 ## Who owns which files (never overlap)
 | Owner | Files |
 |---|---|
-| **AI Studio** (Sprint 23: Edit tiles screen and three small screens in the new look, old colors removed) | `app/src/main/java/com/example/presentation/today/EditFocusScreen.kt`, `app/src/main/java/com/example/presentation/badges/BadgeGalleryScreen.kt`, `app/src/main/java/com/example/presentation/lifestyle/LifestyleScreen.kt`, `app/src/main/java/com/example/presentation/settings/HealthGoalsScreen.kt` |
+| **AI Studio** | nothing right now: Sprint 23 (Edit tiles and three small screens) was taken over and finished by Claude on 2026-10-15, so its prompt is void. Give AI Studio new files here before starting a new prompt |
 | **Claude** (Sprint 24: old colors and light-mode branches removed from the other screens, design guard test) | everything else: all other app code, tests, `.github/`, `docs/`, build files. Claude never edits the AI Studio files above; AI Studio never edits anything else |
 
 Docs under `docs/` (including this file and the sprint board) are Claude's only; AI Studio does not edit them.

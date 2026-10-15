@@ -1,6 +1,9 @@
 package com.example.presentation.badges
 
 import androidx.compose.animation.AnimatedVisibility
+import com.example.ui.theme.BadgeGold
+import com.example.ui.theme.BadgeSilver
+import com.example.ui.theme.BadgeBronze
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -48,9 +51,9 @@ import kotlinx.coroutines.delay
 /** Medallion ring color per tier, mirroring Apple Fitness' bronze/silver/gold styling
  * plus a "platinum" tier in the app's own signature lime for the rarest badges. */
 private fun tierColor(tier: BadgeTier): Color = when (tier) {
-    BadgeTier.BRONZE -> Color(0xFFCD7F32)
-    BadgeTier.SILVER -> Color(0xFFC7D0D6)
-    BadgeTier.GOLD -> Color(0xFFFFD54A)
+    BadgeTier.BRONZE -> BadgeBronze
+    BadgeTier.SILVER -> BadgeSilver
+    BadgeTier.GOLD -> BadgeGold
     BadgeTier.PLATINUM -> SignatureAccent
 }
 

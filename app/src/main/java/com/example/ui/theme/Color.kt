@@ -59,3 +59,8 @@ val Slate100 = Color(0xFFF1F5F9)
 
 // Missing Indigo500 used in dark theme badges/points
 val Indigo500 = Color(0xFF6366F1)
+
+// Badge medal tiers (the one place plain medal colors belong: they are not theme roles)
+val BadgeBronze = Color(0xFFCD7F32)
+val BadgeSilver = Color(0xFFC7D0D6)
+val BadgeGold = Color(0xFFFFD54A)
