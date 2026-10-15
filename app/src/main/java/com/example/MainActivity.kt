@@ -120,6 +120,12 @@ class MainActivity : ComponentActivity() {
     
     NotificationHelper.createNotificationChannel(this)
 
+    // downloaded update APKs (about 105 MB each) are deleted as soon as that update is installed (also done right after an update by BootReceiver)
+    val appContextForCleanup = applicationContext
+    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        com.example.data.repository.UpdateChecker.cleanUpOldApks(appContextForCleanup, BuildConfig.VERSION_CODE)
+    }
+
     com.google.firebase.messaging.FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
         if (task.isSuccessful) {
             task.result?.let { token ->
