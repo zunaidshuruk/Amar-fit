@@ -44,7 +44,6 @@ import androidx.core.content.ContextCompat
 import com.example.ui.components.MarkdownText
 import com.example.ui.components.MealTypeSelector
 import com.example.presentation.viewmodel.ShasthoViewModel
-import com.example.ui.theme.Slate900
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState

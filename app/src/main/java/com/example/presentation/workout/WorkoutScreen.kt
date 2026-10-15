@@ -81,16 +81,8 @@ fun WorkoutScreen(viewModel: ShasthoViewModel) {
         }
     }
 
-    val bodyTextColor = if (isDark) {
-        android.graphics.Color.parseColor("#E2E8F0")
-    } else {
-        android.graphics.Color.parseColor("#1E293B")
-    }
-    val linkTextColor = if (isDark) {
-        android.graphics.Color.parseColor("#93C5FD")
-    } else {
-        android.graphics.Color.parseColor("#3B82F6")
-    }
+    val bodyTextColor = android.graphics.Color.parseColor("#E2E8F0")
+    val linkTextColor = android.graphics.Color.parseColor("#93C5FD")
     
     val context = LocalContext.current
     val isSyncing by viewModel.isSyncing.collectAsState()
@@ -781,7 +773,7 @@ fun ExerciseItemRow(exercise: WorkoutExercise) {
             Icon(
                 Icons.Default.PlayCircle,
                 contentDescription = "Watch tutorial on YouTube",
-                tint = Red500
+                tint = MaterialTheme.colorScheme.primary
             )
         }
     }
@@ -797,16 +789,8 @@ fun SavedWorkoutDetailView(
     loadLibrary: suspend () -> List<LibraryExercise>
 ) {
     var showEditor by remember { mutableStateOf(false) }
-    val bodyTextColor = if (isDark) {
-        android.graphics.Color.parseColor("#E2E8F0")
-    } else {
-        android.graphics.Color.parseColor("#1E293B")
-    }
-    val linkTextColor = if (isDark) {
-        android.graphics.Color.parseColor("#93C5FD")
-    } else {
-        android.graphics.Color.parseColor("#3B82F6")
-    }
+    val bodyTextColor = android.graphics.Color.parseColor("#E2E8F0")
+    val linkTextColor = android.graphics.Color.parseColor("#93C5FD")
 
     val parsedPlan: WorkoutPlan? = remember(workout.structuredJson) {
         if (workout.structuredJson.isNotBlank()) {

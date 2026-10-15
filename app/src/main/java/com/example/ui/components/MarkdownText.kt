@@ -45,7 +45,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.Red500
 
 private sealed class MarkdownBlock {
     data class Heading(val level: Int, val text: String) : MarkdownBlock()
@@ -278,8 +277,8 @@ fun MarkdownText(
                             }
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Red500,
-                            contentColor = Color.White
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         ),
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
@@ -291,14 +290,14 @@ fun MarkdownText(
                             imageVector = Icons.Default.PlayArrow,
                             contentDescription = "Watch",
                             modifier = Modifier.size(16.dp),
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onPrimary
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "Watch: ${block.query}",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )

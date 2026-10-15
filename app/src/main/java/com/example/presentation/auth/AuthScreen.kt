@@ -30,8 +30,6 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.ui.theme.Primary
 import com.example.ui.theme.Secondary
-import com.example.ui.theme.Emerald50
-import com.example.ui.theme.Emerald600
 
 import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager

@@ -6,8 +6,8 @@
 ## Who owns which files (never overlap)
 | Owner | Files |
 |---|---|
-| **AI Studio** (Sprint 21: Sleep screen in the new Nutrition look) | `app/src/main/java/com/example/presentation/sleep/SleepScreen.kt` |
-| **Claude** (Sprint 22: Today's medicine card) | everything else: all other app code, tests, `.github/`, `docs/`, build files. Claude never edits the three files above; AI Studio never edits anything else |
+| **AI Studio** (Sprint 23: Edit tiles screen and three small screens in the new look, old colors removed) | `app/src/main/java/com/example/presentation/today/EditFocusScreen.kt`, `app/src/main/java/com/example/presentation/badges/BadgeGalleryScreen.kt`, `app/src/main/java/com/example/presentation/lifestyle/LifestyleScreen.kt`, `app/src/main/java/com/example/presentation/settings/HealthGoalsScreen.kt` |
+| **Claude** (Sprint 24: old colors and light-mode branches removed from the other screens, design guard test) | everything else: all other app code, tests, `.github/`, `docs/`, build files. Claude never edits the AI Studio files above; AI Studio never edits anything else |
 
 Docs under `docs/` (including this file and the sprint board) are Claude's only; AI Studio does not edit them.
 
