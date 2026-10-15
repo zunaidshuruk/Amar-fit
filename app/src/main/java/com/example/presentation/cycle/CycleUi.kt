@@ -1,6 +1,7 @@
 package com.example.presentation.cycle
 
 import androidx.compose.foundation.layout.Arrangement
+import com.example.presentation.notifications.LocalControlsEnabled
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -36,11 +37,11 @@ internal fun StepperRow(
     ) {
         Text(label, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onMinus, enabled = canMinus) {
+            IconButton(onClick = onMinus, enabled = canMinus && LocalControlsEnabled.current) {
                 Icon(Icons.Default.Remove, contentDescription = "Less")
             }
             Text(valueText, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-            IconButton(onClick = onPlus, enabled = canPlus) {
+            IconButton(onClick = onPlus, enabled = canPlus && LocalControlsEnabled.current) {
                 Icon(Icons.Default.Add, contentDescription = "More")
             }
         }

@@ -57,6 +57,7 @@ object NotificationHelper {
         /** On the lock screen only a generic text shows; the details appear after the phone is unlocked. */
         discreet: Boolean = false
     ) {
+        if (!NotificationGate.isEnabled(context)) return
         createNotificationChannel(context)
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -97,6 +98,7 @@ object NotificationHelper {
     }
 
     fun showMessageNotification(context: Context, senderName: String, messageText: String, pairId: String) {
+        if (!NotificationGate.isEnabled(context)) return
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("NAVIGATE_TO", "dm/$pairId/$senderName")
@@ -128,6 +130,7 @@ object NotificationHelper {
     }
 
     fun showChallengeNotification(context: Context, title: String, messageText: String, notificationId: Int = 3001) {
+        if (!NotificationGate.isEnabled(context)) return
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("NAVIGATE_TO", "friends")

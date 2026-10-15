@@ -11,6 +11,7 @@ import com.example.data.cycle.toEntry
 import com.example.data.cycle.CyclePredictor
 import com.example.data.cycle.toSpan
 import com.example.data.local.AppDatabase
+import com.example.data.notifications.MedicineReminders
 import com.example.data.notifications.NotificationPrefsCodec
 import com.example.data.notifications.ReminderCatalog
 import com.example.data.notifications.ReminderDecider
@@ -92,7 +93,7 @@ object ReminderRunner {
                 (metric?.bloodGlucoseBeforeDinner ?: 0f) > 0f,
                 (metric?.bloodGlucoseAfterDinner ?: 0f) > 0f
             ),
-            medicineTakenToday = if (spec.kind == ReminderKind.MEDICINE) MedicineTakenStore(context).takenOn(today) else emptySet(),
+            medicineTakenToday = if (spec.kind == ReminderKind.MEDICINE) MedicineTakenStore(context).handledOn(today) else emptySet(),
             cycleLoggedToday = if (isCycleKind) {
                 db.cycleDao().getDay(date)?.let { it.flow > 0 || it.symptoms != 0 || it.mood != 0 } == true
             } else false
@@ -101,7 +102,10 @@ object ReminderRunner {
 
         // medicine reminders carry the Taken and Snooze buttons
         if (spec.kind == ReminderKind.MEDICINE) {
-            MedicineNotifier.show(context, spec.detail, spec.requestCode, spec.title, spec.message, prefs.medicineDiscreet)
+            MedicineNotifier.show(
+                context, spec.detail, spec.requestCode, spec.title, spec.message, prefs.medicineDiscreet,
+                missedAfterMinutes = if (prefs.medicineMissedAlert) MedicineReminders.missedAfter(prefs) else 0
+            )
             return
         }
 

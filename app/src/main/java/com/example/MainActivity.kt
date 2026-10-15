@@ -507,10 +507,23 @@ class MainActivity : ComponentActivity() {
                   composable("mindfulness_timer") { com.example.presentation.mindfulness.MindfulnessTimerScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("edit_focus") { com.example.presentation.today.EditFocusScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("notification_settings") {
-                      com.example.presentation.notifications.NotificationSettingsScreen(
+                      val notificationPrefs by viewModel.notificationPrefs.collectAsState()
+                      // everything on the screen except the master switch is locked while the master switch is off
+                      androidx.compose.runtime.CompositionLocalProvider(
+                          com.example.presentation.notifications.LocalControlsEnabled provides notificationPrefs.masterEnabled
+                      ) {
+                          com.example.presentation.notifications.NotificationSettingsScreen(
+                              viewModel = viewModel,
+                              onNavigateBack = { navController.popBackStack() },
+                              onOpenHealthGoals = { navController.navigate("health_goals") },
+                              onOpenMedicineHistory = { navController.navigate("medicine_history") }
+                          )
+                      }
+                  }
+                  composable("medicine_history") {
+                      com.example.presentation.notifications.MedicineHistoryScreen(
                           viewModel = viewModel,
-                          onNavigateBack = { navController.popBackStack() },
-                          onOpenHealthGoals = { navController.navigate("health_goals") }
+                          onNavigateBack = { navController.popBackStack() }
                       )
                   }
                   composable("cycle") {

@@ -66,6 +66,9 @@ import com.example.data.notifications.formatMinuteOfDay
 import com.example.presentation.cycle.StepperRow
 import com.example.presentation.viewmodel.ShasthoViewModel
 
+/** False while the master switch is off: every other control on this screen is then disabled (and shown dimmed), but keeps its saved value. */
+internal val LocalControlsEnabled = androidx.compose.runtime.compositionLocalOf { true }
+
 internal fun pickTime(context: Context, minuteOfDay: Int, onPicked: (Int) -> Unit) {
     TimePickerDialog(
         context,
@@ -80,7 +83,8 @@ internal fun pickTime(context: Context, minuteOfDay: Int, onPicked: (Int) -> Uni
 fun NotificationSettingsScreen(
     viewModel: ShasthoViewModel,
     onNavigateBack: () -> Unit,
-    onOpenHealthGoals: () -> Unit = {}
+    onOpenHealthGoals: () -> Unit = {},
+    onOpenMedicineHistory: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val prefs by viewModel.notificationPrefs.collectAsState()
@@ -122,6 +126,24 @@ fun NotificationSettingsScreen(
             Text("Notifications", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         }
 
+        if (!prefs.masterEnabled) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("All notifications are off", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary)
+                    Text(
+                        "Reminders, goal alerts, medicine reminders, the Health Connect reminder and messages from friends will not show until you turn on \"Allow KardIQ notifications\". Everything below is locked, and your settings are kept.",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+        }
+
         if (!systemAllowed) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -152,7 +174,7 @@ fun NotificationSettingsScreen(
         }
 
         SectionCard(title = "General") {
-            SwitchRow("Allow KardIQ notifications", "Master switch for every reminder, alert and push", prefs.masterEnabled) { on ->
+            SwitchRow("Allow KardIQ notifications", "Master switch for every reminder, alert and push", prefs.masterEnabled, alwaysEnabled = true) { on ->
                 update { it.copy(masterEnabled = on) }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -188,11 +210,11 @@ fun NotificationSettingsScreen(
                     Text("Send a test notification", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                     Text("Check that notifications reach this phone", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                OutlinedButton(onClick = { viewModel.sendTestNotification() }) { Text("Test") }
+                OutlinedButton(onClick = { viewModel.sendTestNotification() }, enabled = prefs.masterEnabled) { Text("Test") }
             }
         }
 
-        MedicineSection(prefs = prefs, update = { transform -> update(transform) })
+        MedicineSection(prefs = prefs, update = { transform -> update(transform) }, onOpenHistory = onOpenMedicineHistory)
 
         SectionCard(title = "Meals and nutrition") {
             SwitchRow("Meal reminders", "Skipped when that meal is already logged", prefs.mealRemindersEnabled) { on ->
@@ -410,7 +432,7 @@ internal fun SectionCard(title: String, content: @Composable ColumnScope.() -> U
 }
 
 @Composable
-internal fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
+internal fun SwitchRow(title: String, subtitle: String?, checked: Boolean, alwaysEnabled: Boolean = false, onChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -425,6 +447,7 @@ internal fun SwitchRow(title: String, subtitle: String?, checked: Boolean, onCha
         Switch(
             checked = checked,
             onCheckedChange = onChange,
+            enabled = alwaysEnabled || LocalControlsEnabled.current,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                 checkedTrackColor = MaterialTheme.colorScheme.primary
@@ -442,7 +465,7 @@ internal fun TimeRow(label: String, minuteOfDay: Int, onPicked: (Int) -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(label, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-        TextButton(onClick = { pickTime(context, minuteOfDay, onPicked) }) {
+        TextButton(onClick = { pickTime(context, minuteOfDay, onPicked) }, enabled = LocalControlsEnabled.current) {
             Text(formatMinuteOfDay(minuteOfDay), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         }
     }
@@ -458,12 +481,16 @@ private fun ReminderTimeRow(label: String, pref: ReminderPref, onChange: (Remind
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(label, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-        TextButton(onClick = { pickTime(context, pref.minuteOfDay) { m -> onChange(pref.copy(minuteOfDay = m)) } }) {
+        TextButton(
+            onClick = { pickTime(context, pref.minuteOfDay) { m -> onChange(pref.copy(minuteOfDay = m)) } },
+            enabled = LocalControlsEnabled.current
+        ) {
             Text(formatMinuteOfDay(pref.minuteOfDay), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         }
         Switch(
             checked = pref.enabled,
             onCheckedChange = { on -> onChange(pref.copy(enabled = on)) },
+            enabled = LocalControlsEnabled.current,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                 checkedTrackColor = MaterialTheme.colorScheme.primary
@@ -482,6 +509,7 @@ internal fun DayChips(mask: Int, onChange: (Int) -> Unit) {
     ) {
         labels.forEachIndexed { index, label ->
             FilterChip(
+                enabled = LocalControlsEnabled.current,
                 selected = Days.has(mask, index + 1),
                 onClick = { onChange(Days.toggle(mask, index + 1)) },
                 label = { Text(label, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontSize = 12.sp) },

@@ -24,10 +24,20 @@ object ReminderScheduler {
     private val legacyMealCodes = listOf(100, 200, 300)
 
     fun rescheduleAll(context: Context, prefs: NotificationPrefs) {
+        NotificationGate.setEnabled(context, prefs.masterEnabled)
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         cancelLegacyMealAlarms(context, alarmManager)
         ReminderCatalog.allRequestCodes().forEach { cancel(context, alarmManager, it) }
-        if (!prefs.masterEnabled) return
+        if (!prefs.masterEnabled) {
+            // everything is off: also drop the pending snoozed repeats and missed-dose checks, and what is still showing
+            for (slot in 0 until com.example.data.notifications.MedicineReminders.MAX) {
+                val notificationId = ReminderCatalog.medicineNotificationId(slot)
+                MedicineNotifier.cancelSnooze(context, notificationId)
+                MedicineNotifier.cancelMissedCheck(context, notificationId)
+            }
+            androidx.core.app.NotificationManagerCompat.from(context).cancelAll()
+            return
+        }
         val now = System.currentTimeMillis()
         ReminderCatalog.build(prefs).forEach { arm(context, alarmManager, it, now) }
     }

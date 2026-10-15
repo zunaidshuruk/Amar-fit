@@ -42,7 +42,8 @@ import com.example.data.notifications.formatMinuteOfDay
 @Composable
 internal fun MedicineSection(
     prefs: NotificationPrefs,
-    update: ((NotificationPrefs) -> NotificationPrefs) -> Unit
+    update: ((NotificationPrefs) -> NotificationPrefs) -> Unit,
+    onOpenHistory: () -> Unit = {}
 ) {
     var editing by remember { mutableStateOf<MedicineReminder?>(null) }
     var confirmDelete by remember { mutableStateOf<MedicineReminder?>(null) }
@@ -63,7 +64,7 @@ internal fun MedicineSection(
         prefs.medicines.forEach { m ->
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Row(
-                modifier = Modifier.fillMaxWidth().clickable { editing = m }.padding(vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().clickable(enabled = LocalControlsEnabled.current) { editing = m }.padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -98,6 +99,7 @@ internal fun MedicineSection(
                     }
                 }
                 Switch(
+                    enabled = LocalControlsEnabled.current,
                     checked = m.enabled,
                     onCheckedChange = { on ->
                         update { p -> p.copy(medicines = p.medicines.map { x -> if (x.id == m.id) x.copy(enabled = on) else x }) }
@@ -107,7 +109,7 @@ internal fun MedicineSection(
                         checkedTrackColor = MaterialTheme.colorScheme.primary
                     )
                 )
-                IconButton(onClick = { confirmDelete = m }) {
+                IconButton(onClick = { confirmDelete = m }, enabled = LocalControlsEnabled.current) {
                     Icon(Icons.Default.Delete, contentDescription = "Delete ${m.name}", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -115,12 +117,31 @@ internal fun MedicineSection(
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         val canAdd = MedicineReminders.canAdd(prefs.medicines)
         OutlinedButton(
-            onClick = { editing = MedicineReminder(id = java.util.UUID.randomUUID().toString().take(8)) },
-            enabled = canAdd,
+            onClick = { editing = MedicineReminder(id = java.util.UUID.randomUUID().toString().take(8), createdOn = java.time.LocalDate.now().toString()) },
+            enabled = canAdd && LocalControlsEnabled.current,
             modifier = Modifier.padding(top = 8.dp)
         ) {
             Text(if (canAdd) "Add medicine reminder (${prefs.medicines.size} of ${MedicineReminders.MAX})" else "All ${MedicineReminders.MAX} reminders added")
         }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        SwitchRow(
+            "Missed-dose alert",
+            "Asks \"Missed dose?\" when a dose is not marked taken or skipped, with Taken and Skip buttons",
+            prefs.medicineMissedAlert
+        ) { on -> update { it.copy(medicineMissedAlert = on) } }
+        if (prefs.medicineMissedAlert) {
+            val minutes = MedicineReminders.missedAfter(prefs)
+            com.example.presentation.cycle.StepperRow(
+                label = "Alert after",
+                valueText = "$minutes min",
+                onMinus = { update { it.copy(medicineMissedAfterMinutes = (MedicineReminders.missedAfter(it) - MedicineReminders.MISSED_AFTER_STEP).coerceAtLeast(MedicineReminders.MISSED_AFTER_MIN)) } },
+                onPlus = { update { it.copy(medicineMissedAfterMinutes = (MedicineReminders.missedAfter(it) + MedicineReminders.MISSED_AFTER_STEP).coerceAtMost(MedicineReminders.MISSED_AFTER_MAX)) } },
+                canMinus = minutes > MedicineReminders.MISSED_AFTER_MIN,
+                canPlus = minutes < MedicineReminders.MISSED_AFTER_MAX
+            )
+        }
+        OutlinedButton(onClick = onOpenHistory, modifier = Modifier.padding(top = 4.dp)) { Text("View history") }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(top = 8.dp))
         SwitchRow(
             "Hide the medicine name on the lock screen",
             "Shows only \"You have a reminder\" until the phone is unlocked",
