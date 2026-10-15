@@ -1,6 +1,7 @@
 package com.example.presentation.workout
 
 import android.widget.Toast
+import com.example.presentation.common.fullBleed
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -153,7 +154,8 @@ fun ExerciseLibraryScreen(
                     )
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        modifier = Modifier.fullBleed(16.dp) // the chips scroll to the screen edge
                     ) {
                         item {
                             FilterChip(
@@ -185,7 +187,8 @@ fun ExerciseLibraryScreen(
                     )
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        modifier = Modifier.fullBleed(16.dp) // the chips scroll to the screen edge
                     ) {
                         item {
                             FilterChip(

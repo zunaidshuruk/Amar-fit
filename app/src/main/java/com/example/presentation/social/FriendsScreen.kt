@@ -234,6 +234,7 @@ fun FriendsScreen(
                                 )
                             }
                         }
+                        item { Spacer(modifier = Modifier.height(88.dp)) }
                     }
                 }
                 3 -> {
@@ -374,6 +375,7 @@ fun FriendsScreen(
                                 }
                             }
                         }
+                        item { Spacer(modifier = Modifier.height(88.dp)) }
                     }
                 }
                 5 -> {
@@ -404,6 +406,7 @@ fun FriendsScreen(
                                 }
                             }
                         }
+                        item { Spacer(modifier = Modifier.height(88.dp)) }
                     }
                 }
             }
