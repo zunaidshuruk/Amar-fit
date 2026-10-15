@@ -1,6 +1,7 @@
 package com.example.presentation.foodlog
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import com.example.presentation.common.fullBleed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.core.animateFloatAsState
@@ -607,7 +608,9 @@ fun FoodLogScreen(viewModel: ShasthoViewModel, navController: androidx.navigatio
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
                         LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            modifier = Modifier.fullBleed(16.dp) // the chips scroll to the screen edge
                         ) {
                             items(frequentFoods) { food ->
                                 Column(
