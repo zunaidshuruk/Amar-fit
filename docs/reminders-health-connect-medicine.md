@@ -28,6 +28,7 @@ after reboot, app update and time changes).
   (doses still to come are not counted). Worked out from the CURRENT reminders from the day each was created (`MedicineReminder.createdOn`; reminders made before
   the history existed start today, so they never show invented missed doses) and the phone-only records (`MedicineHistoryBuilder`, pure and tested). Editing a
   reminder's time or days changes how earlier days look.
+* **Today's medicine card** (Today screen, after the workout card; today only, hidden when there are no active medicine reminders): today's doses by time with their state (Taken with the time, Skipped, Missed, Due now, Later today), a **Taken** button per dose and **Undo** for taken or skipped ones, "N of M taken today" and a History link. Uses the same phone-only records as the notifications and the history, so ticking a dose here also cancels its snoozed repeat, missed-dose check and notification (`MedicineNotifier.markTaken`). Numbers: `MedicineToday` (pure, tested).
 * **Missed-dose alert** (on by default, Settings > Notifications > Medicine reminders; "Alert after" 15 to 180 minutes, default 60): when a reminder is shown, a check is
   scheduled; if the dose was neither marked Taken nor Skipped by then, a "Missed dose?" notification appears with **Taken** and **Skip today** buttons (Skip is recorded
   and shows as Skipped in the history). Not silenced by quiet hours, discreet on the lock screen like the reminder. Limit: the check is a one-shot alarm, so it is lost if

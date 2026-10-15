@@ -346,6 +346,11 @@ fun TodayScreen(viewModel: ShasthoViewModel, navController: NavController) {
             )
         }
 
+        // today's medicine doses with a Taken button (shown only when there are medicine reminders, and only for today)
+        if (selectedDate == java.time.LocalDate.now()) {
+            MedicineTodayCard(viewModel = viewModel, onOpenHistory = { navController.navigate("medicine_history") })
+        }
+
         // Streak, Points & Badges Card
         Card(
             modifier = Modifier.fillMaxWidth(),

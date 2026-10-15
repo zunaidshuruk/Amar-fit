@@ -6,8 +6,8 @@
 ## Who owns which files (never overlap)
 | Owner | Files |
 |---|---|
-| **AI Studio** (Sprint 19: Diet Chart, Meal Plan and Recipes in the new Nutrition look) | `app/src/main/java/com/example/presentation/mealplan/DietChartScreen.kt`, `app/src/main/java/com/example/presentation/mealplan/MealPlanScreen.kt`, `app/src/main/java/com/example/presentation/recipe/RecipeScreen.kt` |
-| **Claude** (Sprint 20: polish and CI) | everything else: all other app code, tests, `.github/`, `docs/`, build files. Claude never edits the three files above; AI Studio never edits anything else |
+| **AI Studio** (Sprint 21: Sleep screen in the new Nutrition look) | `app/src/main/java/com/example/presentation/sleep/SleepScreen.kt` |
+| **Claude** (Sprint 22: Today's medicine card) | everything else: all other app code, tests, `.github/`, `docs/`, build files. Claude never edits the three files above; AI Studio never edits anything else |
 
 Docs under `docs/` (including this file and the sprint board) are Claude's only; AI Studio does not edit them.
 
@@ -17,3 +17,5 @@ Docs under `docs/` (including this file and the sprint board) are Claude's only;
 3. **Claude verifies every AI Studio push** (`git diff --stat` against the previous `main`): only its files changed, keystore present, braces and imports clean, then a real build on a branch. If a Claude file was reverted, Claude restores it.
 4. **Claude works on `claude/*` branches and merges by pull request**, never touching AI Studio's files, and rebases on the newest `main` before merging.
 5. A release is cut by Claude only when both sprints are verified and merged.
+
+**History:** Sprint 19 (Diet Chart, Meal Plan, Recipes; AI Studio) and Sprint 20 (chip rows, Friends, CI; Claude) were verified and merged on 2026-10-15; Sprint 21 and 22 run now.

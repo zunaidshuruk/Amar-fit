@@ -62,3 +62,5 @@ Other archived snapshots:
 | AY | Buttons hidden under the gesture bar in dialogs, sheets and screens (app-wide fix and guard test) | ✅ closed (release 31, PR #9; confirm on a phone) | PR #9 | [rules for new screens](../ui-insets.md) |
 | AZ | Medicine history and missed-dose alert; the master notification switch turns everything off | ✅ closed (release 32, PR #11; phone test pending) | PR #11 | [how it works and phone test](../reminders-health-connect-medicine.md) |
 | BA | Nutrition & Diet screen redesign (intake ring, tappable week, target range, macros, recommended vs eaten) | ✅ closed (release 32, PR #12; needs a look on a phone) | PR #12 | [the screen](../nutrition-screen.md) |
+| BB | Today's medicine card on the Today screen (Taken button per dose) | ⏳ built on `claude/today-medicine`, build pending | — | [how it works](../reminders-health-connect-medicine.md) |
+
