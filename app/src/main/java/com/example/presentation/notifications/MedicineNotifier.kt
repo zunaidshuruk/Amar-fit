@@ -173,6 +173,18 @@ object MedicineNotifier {
         alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, fire)
     }
 
+    /** Marks the dose taken today and clears its notification, snoozed repeat and missed-dose check (used by the Today card). */
+    fun markTaken(context: Context, store: MedicineTakenStore, medicineId: String, notificationId: Int) {
+        store.markTaken(medicineId, LocalDate.now())
+        if (notificationId >= 0) {
+            val manager = NotificationManagerCompat.from(context)
+            manager.cancel(notificationId)
+            manager.cancel(missedNotificationId(notificationId))
+            cancelSnooze(context, notificationId)
+            cancelMissedCheck(context, notificationId)
+        }
+    }
+
     fun cancelSnooze(context: Context, notificationId: Int) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val existing = PendingIntent.getBroadcast(
