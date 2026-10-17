@@ -45,16 +45,17 @@ import com.example.data.model.BadgeDefinition
 import com.example.data.model.BadgeTier
 import com.example.presentation.viewmodel.ShasthoViewModel
 import com.example.ui.components.HeroStatCard
-import com.example.ui.theme.SignatureAccent
+import com.example.ui.theme.AppPalette
+import com.example.ui.theme.accentColor
 import kotlinx.coroutines.delay
 
 /** Medallion ring color per tier, mirroring Apple Fitness' bronze/silver/gold styling
- * plus a "platinum" tier in the app's own signature lime for the rarest badges. */
+ * plus a "platinum" tier in the chosen theme's accent color for the rarest badges. */
 private fun tierColor(tier: BadgeTier): Color = when (tier) {
     BadgeTier.BRONZE -> BadgeBronze
     BadgeTier.SILVER -> BadgeSilver
     BadgeTier.GOLD -> BadgeGold
-    BadgeTier.PLATINUM -> SignatureAccent
+    BadgeTier.PLATINUM -> AppPalette.current.accentColor
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

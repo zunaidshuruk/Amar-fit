@@ -45,4 +45,24 @@ class DesignTokenGuardTest {
         val stale = sourceFiles().filter { it.name in pendingCleanup }.filter { !hasOldStyle(it) }.map { it.name }
         assertEquals("these files are clean now: remove them from pendingCleanup: $stale", emptyList<String>(), stale)
     }
+
+    private fun themeFile(name: String): File {
+        val root = listOf("src/main/java/com/example", "app/src/main/java/com/example").map { File(it) }.first { it.exists() }
+        return root.walkTopDown().first { it.isFile && it.name == name }
+    }
+
+    @Test
+    fun screensNeverUseThePaletteConstantsDirectly() {
+        // the colors of the chosen theme come from MaterialTheme.colorScheme or AppPalette, never from the default palette's constants
+        val constants = Regex("""\b(SignatureAccent|GunMetal|SecondaryAccent|AlertAccent)\b""")
+        val offenders = sourceFiles().filter { constants.containsMatchIn(code(it)) }.map { it.name }.sorted()
+        assertEquals("these files use the default palette's constants instead of the chosen theme: $offenders", emptyList<String>(), offenders)
+    }
+
+    @Test
+    fun accentTokensFollowTheChosenPalette() {
+        val tokens = code(themeFile("AccentTokens.kt"))
+        assertTrue("AccentTokens must read AppPalette.current", tokens.contains("AppPalette.current"))
+        assertEquals("AccentTokens must not use a fixed accent", false, Regex("""\bSignatureAccent\b""").containsMatchIn(tokens))
+    }
 }

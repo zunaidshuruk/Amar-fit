@@ -1,6 +1,12 @@
 package com.example.ui.theme
 
 import android.app.Activity
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import android.content.Context
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -22,21 +28,48 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.core.view.WindowCompat
 
-// Redesign Sprint 2 - Robust dark mode mappings
-private val DarkColorScheme =  darkColorScheme(
-    primary = SignatureAccent,
-    onPrimary = GunMetal,
-    secondary = SecondaryAccent,
-    onSecondary = GunMetal,
-    tertiary = AlertAccent,
-    onTertiary = GunMetal,
-    background = GunMetal,
-    surface = Color(0xFF0C3135),
-    surfaceVariant = Color(0xFF163A3E),
-    onBackground = Color(0xFFE0E0E0),
-    onSurface = Color(0xFFE0E0E0),
-    onSurfaceVariant = SecondaryAccent,
-    outline = SecondaryAccent
+/** The palette the whole app is drawn with. AccentTokens and other color helpers outside composables read it; MyApplicationTheme keeps it in sync. */
+object AppPalette {
+  var current by mutableStateOf(ThemePalettes.default)
+}
+
+/** Remembers the chosen palette on the phone, so the app starts in the right colors before the profile has loaded (no flash of the default palette). */
+object ThemeCache {
+  private const val PREFS = "ThemeCache"
+  private const val KEY = "theme_id"
+
+  fun load(context: Context): String? =
+    context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null)
+
+  fun save(context: Context, id: String) {
+    context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, id).apply()
+  }
+}
+
+val ThemePalette.accentColor: Color get() = Color(accent)
+val ThemePalette.surfaceVariantColor: Color get() = Color(surfaceVariant)
+
+/** The Material color scheme for a palette: every role the app reads (including dialogs, sheets and dividers) comes from the palette. */
+private fun colorSchemeFor(p: ThemePalette) = darkColorScheme(
+    primary = Color(p.accent),
+    onPrimary = Color(p.onAccent),
+    secondary = Color(p.secondary),
+    onSecondary = Color(p.onAccent),
+    tertiary = Color(p.alert),
+    onTertiary = Color(p.onAccent),
+    background = Color(p.background),
+    surface = Color(p.surface),
+    surfaceVariant = Color(p.surfaceVariant),
+    onBackground = Color(p.text),
+    onSurface = Color(p.text),
+    onSurfaceVariant = Color(p.secondary),
+    outline = Color(p.secondary),
+    outlineVariant = lerp(Color(p.surfaceVariant), Color(p.secondary), 0.25f),
+    surfaceContainerLowest = Color(p.background),
+    surfaceContainerLow = Color(p.surface),
+    surfaceContainer = Color(p.surface),
+    surfaceContainerHigh = Color(p.surfaceVariant),
+    surfaceContainerHighest = Color(p.surfaceVariant)
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -63,6 +96,7 @@ val DefaultButtonHeight = 56.dp
 @Composable
 fun MyApplicationTheme(
   darkTheme: Boolean = true,
+  palette: ThemePalette = AppPalette.current,
   dynamicColor: Boolean = false,
   content: @Composable () -> Unit,
 ) {
@@ -72,13 +106,16 @@ fun MyApplicationTheme(
         val context = LocalContext.current
         if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
       }
-      darkTheme -> DarkColorScheme
+      darkTheme -> remember(palette) { colorSchemeFor(palette) }
       else -> LightColorScheme
     }
     
   val view = LocalView.current
   if (!view.isInEditMode) {
     SideEffect {
+      // keep the shared palette (read by AccentTokens) and the phone's copy in step with what is drawn
+      if (AppPalette.current != palette) AppPalette.current = palette
+      if (ThemeCache.load(view.context) != palette.id) ThemeCache.save(view.context, palette.id)
       val window = (view.context as Activity).window
       window.statusBarColor = colorScheme.background.toArgb()
       window.navigationBarColor = colorScheme.background.toArgb()

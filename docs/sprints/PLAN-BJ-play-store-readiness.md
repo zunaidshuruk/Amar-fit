@@ -24,7 +24,7 @@ Requirements below were checked against Google's own pages on 2026-10-17; re-che
 - [ ] Pricing: free (no merchant account needed).
 
 ## C. Account and testing path (Zunaid, with Claude's checklist)
-- [ ] Decide **personal or organization account**. A personal account created after 2023-11-13 must run a **closed test with at least 12 testers opted in for 14 continuous days** before it may apply for production. Organization accounts are exempt but need a D-U-N-S number and business verification. (Bangladesh is a supported registration location.)
+- [x] **Decision (Zunaid, 2026-10-17): a personal account.** The store work is parked until after the theme release; the 12 testers for 14 days rule below therefore applies. (Was: decide **personal or organization account**.) A personal account created after 2023-11-13 must run a **closed test with at least 12 testers opted in for 14 continuous days** before it may apply for production. Organization accounts are exempt but need a D-U-N-S number and business verification. (Bangladesh is a supported registration location.)
 - [ ] Pay the one-time registration fee, verify identity, set up the payments profile (needed even for free apps), verify with the Play Console app on an Android phone if asked.
 - [ ] Internal test (quick, up to 100 testers) then closed test (the 14-day clock) then **production access questionnaire** then production with a staged rollout.
 

@@ -68,6 +68,8 @@ data class UserProfile(
     val notificationPrefsJson: String = "",
     /** Workout days per week the user aims for (weekly workout goal notification). */
     val weeklyWorkoutGoal: Int = 3,
+    /** The color theme chosen under Settings > App theme (an id from ThemePalettes). Unknown ids fall back to the default. */
+    val themeId: String = "chartreuse",
     val updatedAt: Long = 0L
 )
 

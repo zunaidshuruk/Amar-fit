@@ -61,6 +61,7 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit = {},
     onLogout: () -> Unit = {},
     onNavigateToHealthGoals: () -> Unit = {},
+    onNavigateToAppearance: () -> Unit = {},
     onNavigateToFriends: () -> Unit = {},
     onNavigateToAbout: () -> Unit = {},
     onOpenProfile: () -> Unit = {},
@@ -879,6 +880,30 @@ fun SettingsScreen(
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = "Offline AI (beta)",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateToAppearance() }
+                        .padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("App theme", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onBackground)
+                        Text(
+                            "${com.example.ui.theme.ThemePalettes.byId(profile?.themeId).name}: the colors of the whole app",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "App theme",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

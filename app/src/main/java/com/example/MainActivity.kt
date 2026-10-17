@@ -135,12 +135,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // start in the colors the person chose, before the profile has loaded (no flash of the default palette)
+    com.example.ui.theme.AppPalette.current = com.example.ui.theme.ThemePalettes.byId(com.example.ui.theme.ThemeCache.load(this))
+
     enableEdgeToEdge()
     setContent {
       val userProfile by viewModel.userProfile.collectAsState()
       val cycleAvailable by viewModel.cycleAvailable.collectAsState()
       val isDark = true
-      MyApplicationTheme(darkTheme = true) {
+      // the chosen palette; until the profile has loaded, the one remembered on this phone
+      val cachedPalette = androidx.compose.runtime.remember { com.example.ui.theme.ThemePalettes.byId(com.example.ui.theme.ThemeCache.load(this@MainActivity)) }
+      val palette = userProfile?.let { com.example.ui.theme.ThemePalettes.byId(it.themeId) } ?: cachedPalette
+      MyApplicationTheme(darkTheme = true, palette = palette) {
         val permissionState = rememberMultiplePermissionsState(
             permissions = listOf(
                 android.Manifest.permission.POST_NOTIFICATIONS,
@@ -444,7 +450,7 @@ class MainActivity : ComponentActivity() {
                   composable("recipe") { RecipeScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("foodlog") { FoodLogScreen(viewModel = viewModel, navController = navController, onNavigateToScanner = { navController.navigate("scanner") }, onNavigateBack = { navController.popBackStack() }) }
                   composable("profile") { com.example.presentation.profile.ProfileScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onOpenSettings = { navController.navigate("settings") }, onOpenHealthGoals = { navController.navigate("health_goals") }) }
-                  composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }, onNavigateToHealthGoals = { navController.navigate("health_goals") }, onNavigateToFriends = { navController.navigate("friends") }, onNavigateToAbout = { navController.navigate("about") }, onOpenProfile = { navController.navigate("profile") }, onNavigateToCustomizeNav = { navController.navigate("customize_nav") }, onNavigateToNotifications = { navController.navigate("notification_settings") }) }
+                  composable("settings") { SettingsScreen(viewModel = viewModel, onNavigateToAppearance = { navController.navigate("appearance") }, onNavigateBack = { navController.popBackStack() }, onLogout = { navController.navigate("auth") { popUpTo(0) { inclusive = true } } }, onNavigateToHealthGoals = { navController.navigate("health_goals") }, onNavigateToFriends = { navController.navigate("friends") }, onNavigateToAbout = { navController.navigate("about") }, onOpenProfile = { navController.navigate("profile") }, onNavigateToCustomizeNav = { navController.navigate("customize_nav") }, onNavigateToNotifications = { navController.navigate("notification_settings") }) }
                   composable("privacy_consent") {
                       com.example.presentation.auth.ConsentGateScreen(
                           onAccept = {
@@ -474,6 +480,12 @@ class MainActivity : ComponentActivity() {
                   }
                   composable("terms_of_service") {
                       LegalDocumentScreen(title = "Terms of Service", content = com.example.data.model.LegalContent.TERMS_OF_SERVICE, onNavigateBack = { navController.popBackStack() })
+                  }
+                  composable("appearance") {
+                      com.example.presentation.settings.AppearanceScreen(
+                          viewModel = viewModel,
+                          onNavigateBack = { navController.popBackStack() }
+                      )
                   }
                   composable("health_goals") { HealthGoalsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }) }
                   composable("friends") { FriendsScreen(viewModel = viewModel, onNavigateBack = { navController.popBackStack() }, onNavigateToLeaderboard = { navController.navigate("leaderboard") }, onNavigateToDm = { pairId, name -> navController.navigate("dm/$pairId/$name") }) }
