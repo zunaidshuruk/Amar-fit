@@ -15,7 +15,7 @@ Current as of `main` after Sprints 23 and 24 (2026-10-15). Statuses marked *code
 **Claude**
 - [x] Release 3.3 (build 33) cut with everything merged since 3.2 (2026-10-15).
 
-**Decisions needed from Zunaid (from the Part Q review):** (1) leaderboard: make it optional, or reword the policy to say every account appears on it; (2) friend-request pushes: build them in the notification server, or remove them from the policy.
+**Part Q review decisions (2026-10-15) are done:** the policy now says every account is on the leaderboard (option B), and friend-request pushes are built in the notification server. Still optional: a leaderboard switch, block/report, a switch for sharing daily progress with friends.
 
 **Ideas, not scheduled**: the bottom bar that pages scroll behind (NV-1 overlay variant); friend-request pushes from the notification server (it only sends direct messages and challenges); the release and push-notification workflows still use the old action versions (moved only in the compile check; the notifications run from a schedule, so change them carefully); the Gradle version notice.
 

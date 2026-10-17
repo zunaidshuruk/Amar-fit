@@ -23,3 +23,9 @@ deletion and push-token exposure; this review covers the feature code itself.
 
 ## Verdict
 The security design is sound (consent, friends-only data, server-side challenge winner). Part Q is closed as verified; findings 1 and 2 are accuracy problems with the policy text, 3 to 5 are optional hardening.
+
+## Resolved the same day (Zunaid's decisions)
+* **Finding 1 (leaderboard):** option B. The policy and terms now say every account appears on the public leaderboard and that there is currently no setting to hide it (no longer "if you choose to participate"). `LegalContentTest` guards the wording. The policy version was NOT bumped, so nobody has to re-accept; bump `LegalContent.POLICY_VERSION` if a re-accept is wanted. The leaderboard switch is still a possible future sprint.
+* **Finding 2 (friend-request pushes):** built. `scripts/send_push_notifications.js` has a new step `processNewFriendRequests` (rules in `scripts/friend_request_push.js`): a pending friendship created in the last 7 days is announced to the OTHER person ("X wants to be your friend on KardIQ", opens Friends) and marked `notifiedRequest: true`; older or incomplete pending requests are marked without a push, so nobody gets stale notifications. The step runs last and in its own try/catch, so a failure cannot stop messages or challenges. The app shows it on the social channel and respects Settings > Notifications > Friend requests, quiet hours and the master switch. Old app versions show it as a generic notification that still opens Friends.
+* Tests: `scripts/test_friend_request_push.js` (rules) and `scripts/test_poller.js` (the whole poller against a fake Firestore: all three push kinds sent once, nothing twice, missing token, friend-request failure isolated); both run in the compile check.
+* Findings 3 to 5 (block/report, a switch for sharing daily progress, social unit tests) remain optional.

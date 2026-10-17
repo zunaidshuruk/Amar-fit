@@ -4,6 +4,7 @@
 // and send FCM pushes (also free, unlimited) -- no Cloud Functions, no Blaze plan needed.
 
 const admin = require("firebase-admin");
+const { decide, recipientOf, buildPayload } = require("./friend_request_push");
 
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
 admin.initializeApp({
@@ -165,11 +166,37 @@ async function processCompletedChallenges() {
   }
 }
 
+async function processNewFriendRequests() {
+  const snap = await db.collection("friendships").where("status", "==", "pending").get();
+  console.log(`Found ${snap.size} pending friend request(s).`);
+
+  for (const doc of snap.docs) {
+    const friendship = doc.data();
+    const action = decide(friendship, Date.now());
+    if (action === "skip") continue;
+    if (action === "notify") {
+      const recipientUid = recipientOf(friendship);
+      const [requester, recipient] = await Promise.all([
+        getProfileForPush(friendship.requestedBy),
+        getProfileForPush(recipientUid),
+      ]);
+      await sendDataMessage(recipient.token, buildPayload(requester.name, friendship.requestedBy));
+    }
+    await doc.ref.update({ notifiedRequest: true });
+  }
+}
+
 async function main() {
   console.log("KardIQ push poller starting run:", new Date().toISOString());
   await processNewMessages();
   await processNewChallenges();
   await processCompletedChallenges();
+  // Friend requests last and on their own: if this step ever fails, messages and challenges above have already been sent.
+  try {
+    await processNewFriendRequests();
+  } catch (err) {
+    console.error("Friend request step failed (messages and challenges are unaffected):", err);
+  }
   console.log("Run complete.");
 }
 
