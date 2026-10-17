@@ -31,6 +31,11 @@ jobs:
           fi
           test "$(sha256sum debug.keystore | cut -d' ' -f1)" = "$EXPECTED"
 
+      - name: Notification server script tests (messages, challenges, friend requests)
+        run: |
+          node scripts/test_friend_request_push.js
+          node scripts/test_poller.js
+
       - name: Set up JDK 21
         uses: actions/setup-java@v6
         with:

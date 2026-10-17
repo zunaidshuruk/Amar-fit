@@ -29,12 +29,12 @@ class LegalContentTest {
     @Test
     fun theVersionWasRaisedForTheOctoberUpdate() {
         assertEquals(2, LegalContent.POLICY_VERSION)
-        assertTrue(LegalContent.PRIVACY_POLICY.contains("**Last updated:** October 13, 2026"))
+        assertTrue(LegalContent.PRIVACY_POLICY.contains("**Last updated:** October 15, 2026"))
     }
 
     @Test
     fun theTermsKeepTheirOwnDate() {
-        assertTrue(LegalContent.TERMS_OF_SERVICE.contains("**Last updated:** September 26, 2026"))
+        assertTrue(LegalContent.TERMS_OF_SERVICE.contains("**Last updated:** October 15, 2026"))
     }
 
     @Test
@@ -86,5 +86,20 @@ class LegalContentTest {
         assertTrue("never shown to friends or sent to the AI", p.contains("never shown to friends and are never sent to the AI"))
         assertTrue("storage mention", p.contains("including any medicine reminders you add"))
         assertTrue("taken log stays on the phone", p.contains("which doses you marked as taken or skipped in the last two weeks, and at what time, is kept on your phone only"))
+    }
+
+    @Test
+    fun theLeaderboardIsDescribedAsWhatItIs() {
+        val all = LegalContent.PRIVACY_POLICY + LegalContent.TERMS_OF_SERVICE
+        assertTrue("every account is on the leaderboard", LegalContent.PRIVACY_POLICY.contains("every account appears"))
+        assertTrue("no setting to hide it yet", LegalContent.PRIVACY_POLICY.contains("no setting to hide it"))
+        assertFalse("not described as optional", all.contains("if you choose to participate"))
+        assertFalse("not described as optional", all.contains("if you use it)"))
+        assertFalse("not described as something you join", all.contains("joining the leaderboard"))
+    }
+
+    @Test
+    fun friendRequestPushesAreStillDisclosed() {
+        assertTrue(LegalContent.PRIVACY_POLICY.contains("messages, friend requests and challenge results"))
     }
 }

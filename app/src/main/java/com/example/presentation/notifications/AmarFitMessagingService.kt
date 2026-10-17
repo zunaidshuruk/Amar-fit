@@ -1,6 +1,7 @@
 package com.example.presentation.notifications
 
 import android.util.Log
+import com.example.data.notifications.Channels
 import com.example.data.local.AppDatabase
 import com.example.data.notifications.NotificationPrefsCodec
 import com.example.data.notifications.PushFilter
@@ -61,6 +62,19 @@ class AmarFitMessagingService : FirebaseMessagingService() {
                     context = applicationContext,
                     title = title,
                     messageText = messageText
+                )
+            }
+            type == "friend_request" || type == "friend_request_accepted" -> {
+                val title = data["title"] ?: notification?.title ?: "New friend request"
+                val messageText = data["message"] ?: data["body"] ?: notification?.body ?: "Someone wants to be your friend on KardIQ."
+                NotificationHelper.showNotification(
+                    context = applicationContext,
+                    title = title,
+                    message = messageText,
+                    // one notification per person, so two requests do not replace each other
+                    notificationId = 3100 + ((data["fromUid"]?.hashCode() ?: 0) and 0xFF),
+                    targetRoute = "friends",
+                    channelId = Channels.SOCIAL
                 )
             }
             else -> {
