@@ -80,3 +80,16 @@ fun Modifier.bottomSafePadding(): Modifier = this.windowInsetsPadding(appSafeIns
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun Modifier.topSafePadding(): Modifier = this.windowInsetsPadding(appSafeInsets().only(WindowInsetsSides.Top))
+
+/**
+ * For a bar that is drawn at the very bottom of the screen (the floating tab bar): keeps it clear of the system navigation bar whatever the
+ * phone uses: the gesture pill, the three-button bar at the bottom (about 48 dp) or, in landscape, the buttons at the sides.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun Modifier.bottomBarSafePadding(): Modifier =
+    this.windowInsetsPadding(appSafeInsets().only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
+
+/** True on short screens (landscape phones, small windows) where bars and paddings should be tighter. */
+@Composable
+fun isCompactHeight(): Boolean = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp < 560

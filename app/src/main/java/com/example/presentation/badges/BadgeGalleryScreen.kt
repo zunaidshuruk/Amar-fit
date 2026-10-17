@@ -85,7 +85,7 @@ fun BadgeGalleryScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit =
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 88.dp), // the last row clears the assistant button
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
