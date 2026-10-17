@@ -15,12 +15,15 @@ Current as of `main` after Sprints 23 and 24 (2026-10-15). Statuses marked *code
 **Claude**
 - [x] Release 3.3 (build 33) cut with everything merged since 3.2 (2026-10-15).
 
+**Decisions needed from Zunaid (from the Part Q review):** (1) leaderboard: make it optional, or reword the policy to say every account appears on it; (2) friend-request pushes: build them in the notification server, or remove them from the policy.
+
 **Ideas, not scheduled**: the bottom bar that pages scroll behind (NV-1 overlay variant); friend-request pushes from the notification server (it only sends direct messages and challenges); the release and push-notification workflows still use the old action versions (moved only in the compile check; the notifications run from a schedule, so change them carefully); the Gradle version notice.
 
 ## debug.keystore
 Present on `main` (sha256 `4d6742b2...5f0faa`, 2666 B) after the web-upload restore. AI Studio's working copy lacks the file, so its pushes keep deleting it (`3cb859b`, `65ca328`, `6684f03`, `3abfc55`; restores `f864870`, `78c6447`, `e85362f`, `cd3894b`). Since that cannot be fixed from our side, the release workflow now repairs it: a "Restore debug keystore" step writes the known-good key (checksum-verified) when the repo copy is missing or wrong, and "Pre-flight checks" still fail a tag build on a tag/versionCode mismatch or empty key secrets. Tag `6` and tag `9` were cut before the keystore was present and built without it. Still: restore the file on GitHub and check AI Studio's diff for a deleted `debug.keystore` before every push. Earlier history: [archive/00-tracker-preamble.md](archive/00-tracker-preamble.md).
 
 ## Part Q — Social
+**Verified against the code 2026-10-15:** [social-review-2026-10-15.md](../social-review-2026-10-15.md). Security design is sound; 5 findings, two are policy-accuracy decisions (the leaderboard is not optional although the policy says it is; friend-request pushes are promised but not sent).
 Shipped: friend codes, QR scan, requests, leaderboard, friend stats, challenges, kudos, friend removal, activity feed, DMs (`ed3db2f` … `5b4d21e`). Challenge notifications/browse UI removed (`087a6f3`).
 - [x] **Firestore rules drift: closed 2026-10-13.** Zunaid pasted the live console rules. They behave exactly like `firestore.rules` in the repo (only a stale comment differs) and every collection the app uses is covered, including the new `users/{uid}/activity_events` and `users/{uid}/assistant_chats`. Details and optional hardening: [firestore-rules.md](../firestore-rules.md).
 

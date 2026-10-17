@@ -20,7 +20,7 @@ Open work: [ACTIVE.md](ACTIVE.md). Closed Parts link to their verbatim archive. 
 | N | Sleep goal display | ✅ closed | `8131b0a` | [archive](archive/PART-N-sleep-goal-display.md) |
 | O | Body fat % | ✅ closed | `31f611e` | [archive](archive/PART-O-body-fat.md) |
 | P | Gap review #2 | ✅ closed (#6 multi-day programs deferred) | `8125983` | [archive](archive/PART-P-gap-review-pass-2.md) |
-| Q | Social: friends, challenges, leaderboard, DMs | 🟡 shipped, not tracker-verified | `5b4d21e` | [ACTIVE](ACTIVE.md#part-q--social) · [archive](archive/PART-Q-social.md) |
+| Q | Social: friends, challenges, leaderboard, DMs | ✅ verified against the code 2026-10-15 (5 findings: [review](../social-review-2026-10-15.md)) | `5b4d21e` | [ACTIVE](ACTIVE.md#part-q--social) · [archive](archive/PART-Q-social.md) |
 | R | Dark theme redesign | ✅ closed | `931321a` | [archive](archive/PART-R-dark-theme-redesign.md) |
 | S | Urgent dark-mode / header / notification fixes | ✅ closed | `8ee76e9` | [archive](archive/PART-S-urgent-dark-mode-fixes.md) |
 | T | Measurement metadata | ✅ closed | `8a79a86` | [archive](archive/PART-T-measurement-metadata.md) |
