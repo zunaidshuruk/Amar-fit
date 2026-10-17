@@ -17,9 +17,9 @@ Current as of `main` after Sprints 23 and 24 (2026-10-15). Statuses marked *code
 
 **Part Q review decisions (2026-10-15) are done:** the policy now says every account is on the leaderboard (option B), and friend-request pushes are built in the notification server. Still optional: a leaderboard switch, block/report, a switch for sharing daily progress with friends.
 
-**Decisions (2026-10-17):** the Play Store account will be a personal one (so the 12 testers x 14 days closed test applies); the store work is parked until after the theme release. Theme sprint BK is built.
+**Decisions (2026-10-17):** the Play Store account will be a personal one (so the 12 testers x 14 days closed test applies); the store work is parked until after the theme release. Theme sprint BK is built and released in 3.5.
 
-**Planned sprints (2026-10-17):** BI security review ([plan](PLAN-BI-security-review.md)), then BJ Google Play readiness ([plan](PLAN-BJ-play-store-readiness.md); [step-by-step guide](../play-store-guide.md)). BK app themes is parked on `claude/themes`.
+**Planned sprints (2026-10-17):** BI security review ([plan](PLAN-BI-security-review.md)), then BJ Google Play readiness ([plan](PLAN-BJ-play-store-readiness.md); [step-by-step guide](../play-store-guide.md)). BK app themes is done (3.5).
 
 **Next candidates (not started)**
 - [ ] **Notification timing:** the push-notification job is scheduled every 5 minutes but GitHub actually ran it only every 2 to 10 hours (median about 4.5 hours) over the last six days, so message, challenge and friend-request pushes can arrive hours late. Fix: a small free external timer that triggers the job every few minutes (needs a GitHub token with permission to run workflows, which Zunaid would create).
