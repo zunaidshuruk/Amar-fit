@@ -209,9 +209,13 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            val overlayHost = androidx.compose.runtime.remember { com.example.presentation.common.OverlayHostState() }
+            androidx.compose.runtime.CompositionLocalProvider(com.example.presentation.common.LocalOverlayHost provides overlayHost) {
+              Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
               modifier = Modifier.fillMaxSize(),
               containerColor = MaterialTheme.colorScheme.background,
+              contentWindowInsets = com.example.presentation.common.systemBarsWithFloor(),
               floatingActionButton = {
                   if (NavTabs.showsAssistantButton(currentRoute)) {
                       SmallFloatingActionButton(
@@ -572,6 +576,10 @@ class MainActivity : ComponentActivity() {
                       com.example.presentation.health.MetricDetailScreen(viewModel = viewModel, metricKey = key, onNavigateBack = { navController.popBackStack() })
                   }
                 }
+              }
+            }
+                // full-screen editors (Add exercise, plan editors, the assistant, policy viewers, the QR scanner) are drawn here, inside the main window
+                com.example.presentation.common.OverlayLayer(overlayHost)
               }
             }
 

@@ -21,4 +21,9 @@ bar. The main window always has the right values.
 * **The floating tab bar** (the Scaffold's `bottomBar`) is not inset by Scaffold: it must use `Modifier.bottomBarSafePadding()` (gesture pill, three buttons, side buttons in landscape) and tighten on short screens (`isCompactHeight()`). `BottomInsetsGuardTest` enforces it.
 * **The assistant button** appears only where `NavTabs.showsAssistantButton(route)` says so. A screen with its own `bottomBar` (input bar, action bar) must be hidden there; the guard test fails until it is.
 * **Every screen must scroll** (a `verticalScroll`, `LazyColumn` or grid), so nothing is cut off on a small phone, in landscape or with large text.
+* **Full-screen editors are NOT pop-up windows any more (2026-10-17).** `FullScreenDialog` hands its content to `OverlayLayer` at the root of `MainActivity`, which draws it inside the
+  app's own window on top of everything (back button closes it). Reason: a pop-up window gets its own screen geometry from the system, and on Zunaid's phone that put the Save
+  button of Add exercise partly below the screen edge, under the gesture bar, even though the insets were applied. Do not add `Dialog(...)` for full-screen content.
+* **Never trust a reported bottom inset of 0.** Some phones draw the gesture pill but report no navigation bar. `appSafeInsets()` and the root Scaffold (`systemBarsWithFloor()`) include the
+  system gesture area and a floor of `MinBottomInset` (20 dp); a phone that reports more keeps the larger value, so there is no double padding.
 

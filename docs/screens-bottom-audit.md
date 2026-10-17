@@ -22,3 +22,10 @@ Every route either scrolls with at least 72 dp of end space, or hides the assist
 
 ## Not verifiable here
 The look on a real phone with each navigation style (gestures, three buttons, landscape, large text). The code follows the rules above; please check the tab bar with three buttons turned on.
+
+## Addendum (2026-10-17): the Add exercise screenshot
+Zunaid sent a screenshot of Add exercise on his phone (gesture navigation): the Save button was still drawn partly below the screen edge, under the gesture pill, although `FullScreenDialog` applied the insets.
+Measured from the screenshot: the 52 dp button ended about 22 px below the screen, so the pop-up window itself was laid out past the visible screen, which no inset can fix.
+Fix: full-screen editors are now drawn inside the app's own window (`OverlayHostState`, `OverlayLayer`, `LocalOverlayHost`), and the bottom spacing has a floor (`MinBottomInset`, plus the system gesture area) for phones that report a navigation bar height of 0.
+Guards: `BottomInsetsGuardTest` (overlay host, floor, guarded Scaffold) and `OverlayHostStateTest`.
+
