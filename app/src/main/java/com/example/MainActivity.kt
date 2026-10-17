@@ -1,6 +1,7 @@
 package com.example
 
 import android.content.Context
+import com.example.presentation.common.bottomBarSafePadding
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -206,7 +207,7 @@ class MainActivity : ComponentActivity() {
               modifier = Modifier.fillMaxSize(),
               containerColor = MaterialTheme.colorScheme.background,
               floatingActionButton = {
-                  if (currentRoute !in setOf("universal_assistant?starter={starter}&fresh={fresh}", "foodlog", "scanner", "cycle", "cycle_settings")) {
+                  if (NavTabs.showsAssistantButton(currentRoute)) {
                       SmallFloatingActionButton(
                           onClick = { navController.navigate("universal_assistant") },
                           containerColor = MaterialTheme.colorScheme.primary,
@@ -294,10 +295,13 @@ class MainActivity : ComponentActivity() {
               },
               bottomBar = {
                 if (showBottomBar) {
+                  val compact = com.example.presentation.common.isCompactHeight()
                   Box(
                     modifier = Modifier
                       .fillMaxWidth()
-                      .padding(horizontal = 16.dp, vertical = 12.dp)
+                      // keeps the bar clear of the system navigation bar: gesture pill, three buttons, or buttons at the side
+                      .bottomBarSafePadding()
+                      .padding(horizontal = 16.dp, vertical = if (compact) 4.dp else 12.dp)
                   ) {
                     Row(
                       modifier = Modifier
@@ -306,7 +310,7 @@ class MainActivity : ComponentActivity() {
                         .clip(RoundedCornerShape(28.dp))
                         .background(MaterialTheme.colorScheme.surface)
                         .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f), RoundedCornerShape(28.dp))
-                        .padding(horizontal = 4.dp, vertical = 8.dp),
+                        .padding(horizontal = 4.dp, vertical = if (compact) 4.dp else 8.dp),
                       horizontalArrangement = Arrangement.SpaceBetween,
                       verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -322,7 +326,7 @@ class MainActivity : ComponentActivity() {
                                   .clip(RoundedCornerShape(16.dp))
                                   .clickable { navigateToTab(navController, tab.route) }
                                   .background(pillColor)
-                                  .padding(vertical = 8.dp)
+                                  .padding(vertical = if (compact) 4.dp else 8.dp)
                           ) {
                               Icon(imageVector = tab.icon, contentDescription = tab.label, tint = color, modifier = Modifier.size(20.dp))
                               Text(
@@ -352,7 +356,7 @@ class MainActivity : ComponentActivity() {
                               .clip(RoundedCornerShape(16.dp))
                               .clickable { showMoreSheet = true }
                               .background(morePillColor)
-                              .padding(vertical = 8.dp)
+                              .padding(vertical = if (compact) 4.dp else 8.dp)
                       ) {
                           Icon(imageVector = Icons.Rounded.MoreHoriz, contentDescription = "More", tint = moreColor, modifier = Modifier.size(20.dp))
                           Text(

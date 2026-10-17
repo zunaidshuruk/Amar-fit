@@ -18,3 +18,7 @@ bar. The main window always has the right values.
 
 **History:** reported 2026-10-13 with a screenshot of Add exercise (Save under the gesture pill); the first fix (Part AQ) applied
 `WindowInsets.safeDrawing` inside the dialog, which is exactly the thing that does not work inside a dialog window on those phones.
+* **The floating tab bar** (the Scaffold's `bottomBar`) is not inset by Scaffold: it must use `Modifier.bottomBarSafePadding()` (gesture pill, three buttons, side buttons in landscape) and tighten on short screens (`isCompactHeight()`). `BottomInsetsGuardTest` enforces it.
+* **The assistant button** appears only where `NavTabs.showsAssistantButton(route)` says so. A screen with its own `bottomBar` (input bar, action bar) must be hidden there; the guard test fails until it is.
+* **Every screen must scroll** (a `verticalScroll`, `LazyColumn` or grid), so nothing is cut off on a small phone, in landscape or with large text.
+

@@ -17,6 +17,21 @@ object NavTabs {
         return route != null && (route == "today" || route in CHOOSABLE_ROUTES)
     }
 
+    /**
+     * Where the floating assistant button is shown. Never before login (auth, onboarding, consent), never where it would cover something the person
+     * has to tap (the chat input, the exercise library's bottom action bar, the scanner, forms the app opens full screen) and never on the assistant itself.
+     */
+    private val NO_ASSISTANT_BUTTON = setOf(
+        "auth", "onboarding", "privacy_consent", "privacy_policy", "terms_of_service",
+        "exercise_library", "foodlog", "scanner", "cycle", "cycle_settings", "universal_assistant"
+    )
+
+    fun showsAssistantButton(route: String?): Boolean {
+        if (route == null) return false
+        if (route.startsWith("dm/") || route.startsWith("universal_assistant")) return false
+        return route !in NO_ASSISTANT_BUTTON
+    }
+
     fun showsTopBar(route: String?): Boolean {
         return route != null && route in TOP_BAR_ROUTES
     }

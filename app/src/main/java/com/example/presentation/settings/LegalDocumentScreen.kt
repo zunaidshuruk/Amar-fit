@@ -34,6 +34,8 @@ fun LegalDocumentScreen(title: String, content: String, onNavigateBack: () -> Un
                 .padding(20.dp)
         ) {
             MarkdownText(content)
+            // keeps the last items clear of the assistant button
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
