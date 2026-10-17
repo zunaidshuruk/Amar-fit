@@ -71,4 +71,4 @@ Other archived snapshots:
 | BH | Bottom padding on every screen: the tab bar clears the three-button navigation bar, one rule for the assistant button, About and Badge gallery fixed (Zunaid's report) | ✅ closed (merged in PR #17, not released yet; check with three-button navigation on a phone) | PR #17 | [audit](../screens-bottom-audit.md) |
 | BI | Security review: 12 findings from a first scan, then full review, fixes, guard tests and a report | 📋 planned (next) | — | [plan](PLAN-BI-security-review.md) |
 | BJ | Google Play readiness: build flavors, signed bundle, policy forms, listing, testing path | 📋 planned (after BI) | — | [plan](PLAN-BJ-play-store-readiness.md), [guide](../play-store-guide.md) |
-| BK | App themes: six predefined dark palettes the user can pick under Settings > App theme | ⏸ parked (palettes and contrast tests done on `claude/themes`; not wired into the app) | — | branch `claude/themes` |
+| BK | App themes: six predefined dark palettes the user can pick under Settings > App theme (saved on the profile, synced) | ✅ closed (built and merged; needs a look on a phone) | PR (see release) | [themes](../themes.md) |

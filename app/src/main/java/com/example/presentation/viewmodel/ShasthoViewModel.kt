@@ -619,6 +619,13 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /** Saves the chosen color theme on the profile (it syncs to the other phones like the rest of the profile). */
+    fun setTheme(themeId: String) {
+        val profile = userProfile.value ?: return
+        if (profile.themeId == themeId) return
+        viewModelScope.launch { saveProfile(profile.copy(themeId = themeId)) }
+    }
+
     fun sendTestNotification() {
         com.example.presentation.notifications.NotificationHelper.showNotification(
             context = getApplication<Application>(),

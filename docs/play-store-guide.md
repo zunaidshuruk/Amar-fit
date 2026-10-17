@@ -4,6 +4,8 @@ Written 2026-10-17 from Google's own help pages; rules change, so each step says
 The plan behind this is in `docs/sprints/PLAN-BJ-play-store-readiness.md`; the security sprint (`PLAN-BI`) should come first.
 
 ## Step 0: Decide the account type (You, 15 minutes)
+**Decided 2026-10-17: a personal account.** So the 12-testers-for-14-days closed test (Step 7) applies. The rest of the store work is parked for now.
+
 * **Personal account:** quickest to open. A personal account created after 13 November 2023 must run a **closed test with at least 12 testers, opted in for 14 days in a row**, before it can ask for production.
 * **Organization account (for example Synesis IT PLC or your own company):** not subject to the 14-day test, but you need a **D-U-N-S number** and business verification (this can take weeks).
 * Either way the app's public name and developer name will show on the store page.

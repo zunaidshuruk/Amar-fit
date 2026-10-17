@@ -3,7 +3,7 @@ package com.example.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Accent Tokens mapping the semantic domain to a robust light/dark pair.
-// These are used for the distinct stat tiles in Redesign Sprint 2.
+// These are used for the distinct stat tiles. In the dark theme (the only one in use) every domain takes its colors from the palette the user chose (AppPalette).
 
 data class AccentColors(
     val bg: Color,
@@ -14,7 +14,7 @@ object AccentTokens {
     fun stepsAccent(isDark: Boolean): AccentColors {
         // Steps / positive-progress domain (teal-green)
         return if (isDark) {
-            AccentColors(bg = Color(0xFF163A3E), onBg = SignatureAccent)
+            AccentColors(bg = AppPalette.current.surfaceVariantColor, onBg = AppPalette.current.accentColor)
         } else {
             AccentColors(bg = Emerald50, onBg = Emerald700)
         }
@@ -23,7 +23,7 @@ object AccentTokens {
     fun caloriesAccent(isDark: Boolean): AccentColors {
         // Orange domain - muted dark bg with soft light tint
         return if (isDark) {
-            AccentColors(bg = Color(0xFF163A3E), onBg = SignatureAccent)
+            AccentColors(bg = AppPalette.current.surfaceVariantColor, onBg = AppPalette.current.accentColor)
         } else {
             AccentColors(bg = Orange50, onBg = Orange700)
         }
@@ -32,7 +32,7 @@ object AccentTokens {
     fun waterAccent(isDark: Boolean): AccentColors {
         // Blue / cardio / water domain
         return if (isDark) {
-            AccentColors(bg = Color(0xFF163A3E), onBg = SignatureAccent)
+            AccentColors(bg = AppPalette.current.surfaceVariantColor, onBg = AppPalette.current.accentColor)
         } else {
             AccentColors(bg = BlueBg, onBg = Blue700)
         }
@@ -41,7 +41,7 @@ object AccentTokens {
     fun streakAccent(isDark: Boolean): AccentColors {
         // Orange domain - muted dark bg with soft light tint
         return if (isDark) {
-            AccentColors(bg = Color(0xFF163A3E), onBg = SignatureAccent)
+            AccentColors(bg = AppPalette.current.surfaceVariantColor, onBg = AppPalette.current.accentColor)
         } else {
             AccentColors(bg = OrangeBg, onBg = Orange700)
         }
@@ -50,7 +50,7 @@ object AccentTokens {
     fun pointsAccent(isDark: Boolean): AccentColors {
         // Indigo domain - deep muted purple-indigo
         return if (isDark) {
-            AccentColors(bg = Color(0xFF163A3E), onBg = SignatureAccent)
+            AccentColors(bg = AppPalette.current.surfaceVariantColor, onBg = AppPalette.current.accentColor)
         } else {
             AccentColors(bg = IndigoBg, onBg = Indigo700)
         }
@@ -59,7 +59,7 @@ object AccentTokens {
     fun badgesAccent(isDark: Boolean): AccentColors {
         // Emerald domain - deep muted dark green
         return if (isDark) {
-            AccentColors(bg = Color(0xFF163A3E), onBg = SignatureAccent)
+            AccentColors(bg = AppPalette.current.surfaceVariantColor, onBg = AppPalette.current.accentColor)
         } else {
             AccentColors(bg = Emerald50, onBg = Emerald700)
         }
@@ -68,7 +68,7 @@ object AccentTokens {
     fun glucoseAccent(isDark: Boolean): AccentColors {
         // Indigo domain - deep muted indigo
         return if (isDark) {
-            AccentColors(bg = Color(0xFF163A3E), onBg = SignatureAccent)
+            AccentColors(bg = AppPalette.current.surfaceVariantColor, onBg = AppPalette.current.accentColor)
         } else {
             AccentColors(bg = Indigo50, onBg = Indigo700)
         }
@@ -77,7 +77,7 @@ object AccentTokens {
     fun weightAccent(isDark: Boolean): AccentColors {
         // Orange domain - muted warm amber/orange
         return if (isDark) {
-            AccentColors(bg = Color(0xFF163A3E), onBg = SignatureAccent)
+            AccentColors(bg = AppPalette.current.surfaceVariantColor, onBg = AppPalette.current.accentColor)
         } else {
             AccentColors(bg = Orange50, onBg = Orange700)
         }
@@ -85,7 +85,7 @@ object AccentTokens {
 
     fun bmiAccent(isDark: Boolean): AccentColors {
         return if (isDark) {
-            AccentColors(bg = Color(0xFF163A3E), onBg = SignatureAccent)
+            AccentColors(bg = AppPalette.current.surfaceVariantColor, onBg = AppPalette.current.accentColor)
         } else {
             AccentColors(bg = Emerald50, onBg = Emerald700)
         }
@@ -94,7 +94,7 @@ object AccentTokens {
     fun heartRateAccent(isDark: Boolean): AccentColors {
         // Red domain - muted dark wine/red bg with soft light rose onBg
         return if (isDark) {
-            AccentColors(bg = Color(0xFF163A3E), onBg = SignatureAccent)
+            AccentColors(bg = AppPalette.current.surfaceVariantColor, onBg = AppPalette.current.accentColor)
         } else {
             AccentColors(bg = Red50, onBg = Red700)
         }
@@ -103,7 +103,7 @@ object AccentTokens {
     fun bloodPressureAccent(isDark: Boolean): AccentColors {
         // Blue domain - deep muted blue
         return if (isDark) {
-            AccentColors(bg = Color(0xFF163A3E), onBg = SignatureAccent)
+            AccentColors(bg = AppPalette.current.surfaceVariantColor, onBg = AppPalette.current.accentColor)
         } else {
             AccentColors(bg = BlueBg, onBg = Blue700)
         }
@@ -112,7 +112,7 @@ object AccentTokens {
     fun mindfulnessAccent(isDark: Boolean): AccentColors {
         // Mindfulness / calm domain (purple)
         return if (isDark) {
-            AccentColors(bg = Color(0xFF163A3E), onBg = SignatureAccent)
+            AccentColors(bg = AppPalette.current.surfaceVariantColor, onBg = AppPalette.current.accentColor)
         } else {
             AccentColors(bg = Color(0xFFF3E8FF), onBg = Color(0xFF7E22CE))
         }
