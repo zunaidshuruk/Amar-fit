@@ -64,4 +64,26 @@ class BottomInsetsGuardTest {
             .filter { !scrolls.containsMatchIn(code(it)) }.map { it.name }.sorted().toList()
         assertEquals("these screens have no scrolling container (content can be cut off): $offenders", emptyList<String>(), offenders)
     }
+
+    @Test
+    fun fullScreenEditorsAreDrawnInsideTheMainWindowNotInAPopUpWindow() {
+        // a pop-up window gets its own screen geometry; on some phones that put the Save button partly below the screen edge, under the gesture bar
+        val main = code(File(sourceRoot(), "MainActivity.kt"))
+        assertTrue("the root hosts the overlay", main.contains("OverlayLayer(overlayHost)"))
+        assertTrue("every screen can reach the overlay host", main.contains("LocalOverlayHost provides overlayHost"))
+        val insets = code(File(sourceRoot(), "presentation/common/AppInsets.kt"))
+        assertTrue("FullScreenDialog draws through the host", insets.contains("LocalOverlayHost.current"))
+        assertTrue("the overlay is closed with the back button", insets.contains("BackHandler(onBack = onDismissRequest)"))
+    }
+
+    @Test
+    fun theBottomOfTheScreenIsNeverLessThanTheMinimumEvenIfThePhoneReportsZero() {
+        val insets = code(File(sourceRoot(), "presentation/common/AppInsets.kt"))
+        assertTrue(insets.contains("val MinBottomInset: Dp = 20.dp"))
+        assertTrue("appSafeInsets includes the guard", insets.contains(".union(bottomGuard())"))
+        assertTrue("the gesture area counts too", insets.contains("WindowInsets.safeGestures.only(WindowInsetsSides.Bottom)"))
+        val main = code(File(sourceRoot(), "MainActivity.kt"))
+        assertTrue("the root Scaffold uses the guarded insets", main.contains("contentWindowInsets = com.example.presentation.common.systemBarsWithFloor()"))
+    }
 }
+

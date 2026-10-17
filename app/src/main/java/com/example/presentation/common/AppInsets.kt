@@ -1,6 +1,16 @@
 package com.example.presentation.common
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.key
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.foundation.layout.safeGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
@@ -29,14 +39,55 @@ import androidx.compose.ui.window.DialogProperties
  */
 val LocalAppInsets = compositionLocalOf<WindowInsets> { WindowInsets(0, 0, 0, 0) }
 
-/** The larger of the main window's system bar insets and this window's own (which adds the on-screen keyboard inside dialogs). */
+/**
+ * The smallest space kept free at the bottom of the screen. Some phones draw the gesture pill but report a navigation bar height of 0, which put
+ * buttons under the pill; whatever the phone reports, at least this much is kept clear (a phone that reports more keeps the larger value).
+ */
+val MinBottomInset: Dp = 20.dp
+
+/** Bottom floor and the system gesture area, on top of what the phone reports as system bars. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun appSafeInsets(): WindowInsets = LocalAppInsets.current.union(WindowInsets.safeDrawing)
+private fun bottomGuard(): WindowInsets =
+    WindowInsets.safeGestures.only(WindowInsetsSides.Bottom).union(WindowInsets(left = 0.dp, top = 0.dp, right = 0.dp, bottom = MinBottomInset))
+
+/** The larger of the main window's system bar insets and this window's own (which adds the on-screen keyboard), never less than [MinBottomInset] at the bottom. */
+@Composable
+fun appSafeInsets(): WindowInsets = LocalAppInsets.current.union(WindowInsets.safeDrawing).union(bottomGuard())
+
+/** For the root Scaffold: the system bars with the same bottom guard, so screens with a pinned bottom bar (chat input, action bars) never sit under the gesture pill. */
+@Composable
+fun systemBarsWithFloor(): WindowInsets = WindowInsets.systemBars.union(bottomGuard())
+
+/** The full-screen editors that are currently open, drawn by [OverlayLayer] at the root of the app. */
+class OverlayHostState {
+    class Entry(val key: Any, val content: @Composable () -> Unit)
+
+    private val list = mutableStateListOf<Entry>()
+    val entries: List<Entry> get() = list
+
+    fun add(entry: Entry) {
+        if (list.none { it.key == entry.key }) list.add(entry)
+    }
+
+    fun remove(key: Any) {
+        list.removeAll { it.key == key }
+    }
+}
+
+val LocalOverlayHost = compositionLocalOf<OverlayHostState?> { null }
+
+/** Draws the open full-screen editors on top of everything, inside the main window of the app (the same window and insets as the Scaffold). */
+@Composable
+fun OverlayLayer(host: OverlayHostState) {
+    host.entries.forEach { entry -> key(entry.key) { entry.content() } }
+}
 
 /**
- * The one way to show a full-screen dialog. It draws the background under the system bars and pads the content by [appSafeInsets],
- * so nothing is hidden behind the status bar or the gesture bar. [safePadding] = false is for edge-to-edge content (a camera preview)
- * whose own controls then use [appSafeInsets].
+ * The one way to show a full-screen editor. It is drawn INSIDE the main window of the app by [OverlayLayer], not in a separate pop-up window: a pop-up window
+ * gets its own screen geometry from the system, and on some phones that put the bottom button partly below the screen edge, under the gesture bar. The editor
+ * covers everything (top bar, tab bar, assistant button), closes with the back button, and its content is padded by [appSafeInsets]. [safePadding] = false is
+ * for edge-to-edge content such as a camera preview, whose own controls then use [topSafePadding] and [bottomSafePadding].
  */
 @Composable
 fun FullScreenDialog(
@@ -44,6 +95,46 @@ fun FullScreenDialog(
     safePadding: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    val host = LocalOverlayHost.current
+    if (host == null) {
+        PlatformFullScreenDialog(onDismissRequest, safePadding, content)
+        return
+    }
+    val latestContent = rememberUpdatedState(content)
+    val latestDismiss = rememberUpdatedState(onDismissRequest)
+    val latestSafePadding = rememberUpdatedState(safePadding)
+    val key = remember { Any() }
+    DisposableEffect(host, key) {
+        host.add(OverlayHostState.Entry(key) {
+            OverlayFrame(
+                onDismissRequest = { latestDismiss.value() },
+                safePadding = latestSafePadding.value,
+                content = { latestContent.value() }
+            )
+        })
+        onDispose { host.remove(key) }
+    }
+}
+
+@Composable
+private fun OverlayFrame(onDismissRequest: () -> Unit, safePadding: Boolean, content: @Composable () -> Unit) {
+    BackHandler(onBack = onDismissRequest)
+    Surface(
+        modifier = Modifier
+            .fillMaxSize()
+            // anything the editor does not use itself must not reach the screen underneath
+            .pointerInput(Unit) { detectTapGestures { } },
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Box(modifier = if (safePadding) Modifier.fillMaxSize().windowInsetsPadding(appSafeInsets()) else Modifier.fillMaxSize()) {
+            content()
+        }
+    }
+}
+
+/** Only used where there is no overlay host (previews and tests). */
+@Composable
+private fun PlatformFullScreenDialog(onDismissRequest: () -> Unit, safePadding: Boolean, content: @Composable () -> Unit) {
     Dialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)

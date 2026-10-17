@@ -72,3 +72,5 @@ Other archived snapshots:
 | BI | Security review: 12 findings from a first scan, then full review, fixes, guard tests and a report | 📋 planned (next) | — | [plan](PLAN-BI-security-review.md) |
 | BJ | Google Play readiness: build flavors, signed bundle, policy forms, listing, testing path | 📋 planned (after BI) | — | [plan](PLAN-BJ-play-store-readiness.md), [guide](../play-store-guide.md) |
 | BK | App themes: six predefined dark palettes the user can pick under Settings > App theme (saved on the profile, synced) | ✅ closed (released in 3.5, PR #18; needs a look on a phone) | PR #18 | [themes](../themes.md) |
+| BL | Add exercise Save button still under the gesture bar (Zunaid's screenshot): full-screen editors drawn inside the app window, guarded bottom spacing | ⏳ built on `claude/dialog-bottom`, build pending | — | [audit addendum](../screens-bottom-audit.md) |
+
