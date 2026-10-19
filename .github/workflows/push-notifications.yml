@@ -9,6 +9,11 @@ name: KardIQ Push Notifications
     # Lets you trigger a run manually from the Actions tab, useful for testing
     # without waiting for the schedule.
 
+# One run at a time: the job is triggered every few minutes (see docs/notification-timing.md), and two runs must never overlap and send the same push twice.
+concurrency:
+  group: push-notifications
+  cancel-in-progress: false
+
 jobs:
   send-notifications:
     runs-on: ubuntu-24.04

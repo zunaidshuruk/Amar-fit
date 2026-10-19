@@ -3640,14 +3640,36 @@ class ShasthoViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /** True when a friend's progress was asked for and there is none (they switched sharing off, or it could not be read). */
+    private val _friendStatsMissing = MutableStateFlow(false)
+    val friendStatsMissing: StateFlow<Boolean> = _friendStatsMissing.asStateFlow()
+
     fun fetchFriendStats(uid: String) {
+        _friendStatsMissing.value = false
         viewModelScope.launch(Dispatchers.IO) {
-            _selectedFriendStats.value = FirebaseManager.getFriendStats(uid)
+            val stats = FirebaseManager.getFriendStats(uid)
+            _selectedFriendStats.value = stats
+            _friendStatsMissing.value = stats == null
         }
     }
 
     fun clearSelectedFriendStats() {
         _selectedFriendStats.value = null
+        _friendStatsMissing.value = false
+    }
+
+    /** Settings > Show me on the leaderboard. */
+    fun setShowOnLeaderboard(visible: Boolean) {
+        val profile = userProfile.value ?: return
+        if (profile.showOnLeaderboard == visible) return
+        viewModelScope.launch { saveProfile(profile.copy(showOnLeaderboard = visible)) }
+    }
+
+    /** Settings > Share my daily progress with friends. */
+    fun setShareProgressWithFriends(share: Boolean) {
+        val profile = userProfile.value ?: return
+        if (profile.shareProgressWithFriends == share) return
+        viewModelScope.launch { saveProfile(profile.copy(shareProgressWithFriends = share)) }
     }
 
     private val _challenges = MutableStateFlow<List<FirebaseManager.ChallengeInfo>>(emptyList())

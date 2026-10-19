@@ -29,12 +29,12 @@ class LegalContentTest {
     @Test
     fun theVersionWasRaisedForTheOctoberUpdate() {
         assertEquals(2, LegalContent.POLICY_VERSION)
-        assertTrue(LegalContent.PRIVACY_POLICY.contains("**Last updated:** October 15, 2026"))
+        assertTrue(LegalContent.PRIVACY_POLICY.contains("**Last updated:** October 18, 2026"))
     }
 
     @Test
     fun theTermsKeepTheirOwnDate() {
-        assertTrue(LegalContent.TERMS_OF_SERVICE.contains("**Last updated:** October 15, 2026"))
+        assertTrue(LegalContent.TERMS_OF_SERVICE.contains("**Last updated:** October 18, 2026"))
     }
 
     @Test
@@ -91,8 +91,11 @@ class LegalContentTest {
     @Test
     fun theLeaderboardIsDescribedAsWhatItIs() {
         val all = LegalContent.PRIVACY_POLICY + LegalContent.TERMS_OF_SERVICE
-        assertTrue("every account is on the leaderboard", LegalContent.PRIVACY_POLICY.contains("every account appears"))
-        assertTrue("no setting to hide it yet", LegalContent.PRIVACY_POLICY.contains("no setting to hide it"))
+        assertTrue("accounts are on the leaderboard unless switched off", LegalContent.PRIVACY_POLICY.contains("Accounts appear on the public leaderboard unless the person switches that off in Settings"))
+        assertTrue("the switch is named", LegalContent.PRIVACY_POLICY.contains("\"Show me on the leaderboard\" in Settings"))
+        assertTrue("sharing progress can be stopped", LegalContent.PRIVACY_POLICY.contains("\"Share my daily progress with friends\" in Settings"))
+        assertFalse("the old claim that it cannot be hidden is gone", all.contains("no setting to hide it"))
+        assertFalse(all.contains("every account appears"))
         assertFalse("not described as optional", all.contains("if you choose to participate"))
         assertFalse("not described as optional", all.contains("if you use it)"))
         assertFalse("not described as something you join", all.contains("joining the leaderboard"))
