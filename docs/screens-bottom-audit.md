@@ -29,3 +29,7 @@ Measured from the screenshot: the 52 dp button ended about 22 px below the scree
 Fix: full-screen editors are now drawn inside the app's own window (`OverlayHostState`, `OverlayLayer`, `LocalOverlayHost`), and the bottom spacing has a floor (`MinBottomInset`, plus the system gesture area) for phones that report a navigation bar height of 0.
 Guards: `BottomInsetsGuardTest` (overlay host, floor, guarded Scaffold) and `OverlayHostStateTest`.
 
+## Confirmed on a real phone (2026-10-18, Zunaid, gesture navigation, release 3.5.1)
+Add exercise (Save fully above the gesture bar), keyboard with Save and the back button closing the editor, the Assistant, the Privacy Policy from the login screen, the More menu and the Log sheet: all fixed.
+Not yet tried: a phone with the three-button navigation bar.
+
