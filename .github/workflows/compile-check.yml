@@ -96,7 +96,7 @@ jobs:
         if: always()
         run: |
           python3 - <<'PY'
-          import glob, xml.etree.ElementTree as ET
+          import glob, sys, xml.etree.ElementTree as ET
           total = fails = errs = skipped = 0
           bad = []
           for p in glob.glob('app/build/test-results/testDebugUnitTest/*.xml'):
@@ -106,4 +106,8 @@ jobs:
               if int(r.get('failures', 0)) + int(r.get('errors', 0)):
                   bad.append(r.get('name').split('.')[-1])
           print("::notice title=Unit tests::%d tests, %d failures, %d errors, %d skipped. Failing classes: %s" % (total, fails, errs, skipped, ', '.join(bad) or 'none'))
+          # the unit test step may fail without stopping the job (so this summary always runs); the summary itself turns the check red
+          if fails + errs > 0 or total == 0:
+              print("::error title=Unit tests::failing tests, or no test results at all")
+              sys.exit(1)
           PY

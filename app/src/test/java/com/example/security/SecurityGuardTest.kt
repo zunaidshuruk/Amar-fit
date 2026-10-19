@@ -82,8 +82,10 @@ class SecurityGuardTest {
             "service account key" to Regex("\"private_" + "key\"\\s*:")
         )
         val skipDirs = setOf(".git", "build", ".gradle", "node_modules", ".idea")
+        // files the build writes from GitHub secrets or the developer keeps locally; they are git-ignored (see the next test)
+        val generatedSecretFiles = setOf("google-services.json", "local.properties", "keystore.properties")
         val offenders = ArrayList<String>()
-        repoRoot().walkTopDown().onEnter { it.name !in skipDirs }.filter { it.isFile && it.extension in setOf("kt", "kts", "xml", "json", "yml", "yaml", "js", "md", "properties", "txt", "py", "sh", "gradle") }.forEach { file ->
+        repoRoot().walkTopDown().onEnter { it.name !in skipDirs }.filter { it.isFile && it.name !in generatedSecretFiles && it.extension in setOf("kt", "kts", "xml", "json", "yml", "yaml", "js", "md", "properties", "txt", "py", "sh", "gradle") }.forEach { file ->
             val text = file.readText()
             for ((name, pattern) in patterns) {
                 // the Firebase client key in strings.xml is public by design (it ships in every APK); it is restricted in Google Cloud instead
@@ -92,6 +94,14 @@ class SecurityGuardTest {
             }
         }
         assertEquals("secrets found in the repository: $offenders", emptyList<String>(), offenders)
+    }
+
+    @Test
+    fun secretAndSigningFilesCanNeverBeCommittedByAccident() {
+        val ignore = File(repoRoot(), ".gitignore").readLines().map { it.trim() }.toSet()
+        for (entry in listOf("google-services.json", "local.properties", ".env", "keystore.properties", "*.jks", "*.p12", "upload-keystore*", "service-account*.json")) {
+            assertTrue("$entry must be listed in .gitignore", entry in ignore)
+        }
     }
 
     @Test
