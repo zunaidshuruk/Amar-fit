@@ -19,13 +19,15 @@ Current as of `main` after Sprints 23 and 24 (2026-10-15). Statuses marked *code
 
 **Decisions (2026-10-17):** the Play Store account will be a personal one (so the 12 testers x 14 days closed test applies); the store work is parked until after the theme release. Theme sprint BK is built and released in 3.5.
 
+**Decision (2026-10-18, Zunaid): the Play Store and the rest of security sprint BI wait; fix more in the app first.**
+
 **Security sprint BI (2026-10-18):** phase 1 fixes done; open decisions and Zunaid's Google Cloud actions are listed in [security-review.md](../security-review.md).
 
 **Planned sprints (2026-10-17):** BI security review ([plan](PLAN-BI-security-review.md)), then BJ Google Play readiness ([plan](PLAN-BJ-play-store-readiness.md); [step-by-step guide](../play-store-guide.md)). BK app themes is done (3.5).
 
 **Next candidates (not started)**
 - [ ] **Notification timing:** the push-notification job is scheduled every 5 minutes but GitHub actually ran it only every 2 to 10 hours (median about 4.5 hours) over the last six days, so message, challenge and friend-request pushes can arrive hours late. Fix: a small free external timer that triggers the job every few minutes (needs a GitHub token with permission to run workflows, which Zunaid would create).
-- [ ] **Release 3.5:** the corrected leaderboard wording in the privacy policy and terms lives in the app, so users only see it after a release (the server part of the friend-request pushes is already live).
+- [x] **Release 3.5 and 3.5.1** are out (the leaderboard wording, themes, bottom padding and the editor fix). Security phase 1 (backup off and the other fixes) is merged on `main` and deliberately NOT released yet (Zunaid, 2026-10-18: not going to the Play Store now).
 - [ ] Optional social hardening (Part Q review): a leaderboard switch, block and report, a switch to stop sharing daily progress with friends, unit tests for the social logic.
 - [ ] Ideas: the bottom bar that pages scroll behind (NV-1 overlay variant); the release and push-notification workflows still use the old action versions (moved only in the compile check; the notifications run from a schedule, so change them carefully).
 
