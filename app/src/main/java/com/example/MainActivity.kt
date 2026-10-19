@@ -117,7 +117,7 @@ class MainActivity : ComponentActivity() {
   @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    pendingNavigationRoute = intent.getStringExtra("NAVIGATE_TO")
+    pendingNavigationRoute = intent.getStringExtra("NAVIGATE_TO")?.takeIf { NavTabs.isAllowedNotificationRoute(it) }
     
     NotificationHelper.createNotificationChannel(this)
 
@@ -616,6 +616,6 @@ class MainActivity : ComponentActivity() {
   override fun onNewIntent(intent: Intent) {
       super.onNewIntent(intent)
       setIntent(intent)
-      pendingNavigationRoute = intent.getStringExtra("NAVIGATE_TO")
+      pendingNavigationRoute = intent.getStringExtra("NAVIGATE_TO")?.takeIf { NavTabs.isAllowedNotificationRoute(it) }
   }
 }

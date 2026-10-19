@@ -17,7 +17,7 @@ class AmarFitMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        Log.d(TAG, "Refreshed FCM token: $token")
+        Log.d(TAG, "FCM token refreshed") // the token itself is never logged
         FirebaseManager.updateFcmToken(token)
     }
 

@@ -26,6 +26,16 @@ object NavTabs {
         "exercise_library", "foodlog", "scanner", "cycle", "cycle_settings", "universal_assistant"
     )
 
+    /** Screens a notification (or any other app that starts MainActivity) may open through the NAVIGATE_TO extra: the ones our own notifications use. */
+    private val NOTIFICATION_ROUTES = setOf(
+        "today", "fitness", "nutrition", "health", "sleep", "settings", "friends", "scanner", "cycle",
+        "weightlog", "glucoselog", "mindfulness_timer", "medicine_history", "leaderboard", "badges"
+    )
+    private val DM_ROUTE = Regex("""^dm/[A-Za-z0-9_-]{1,100}/[^/]{0,80}$""")
+
+    fun isAllowedNotificationRoute(route: String?): Boolean =
+        route != null && (route in NOTIFICATION_ROUTES || DM_ROUTE.matches(route))
+
     fun showsAssistantButton(route: String?): Boolean {
         if (route == null) return false
         if (route.startsWith("dm/") || route.startsWith("universal_assistant")) return false
