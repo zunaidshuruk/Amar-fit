@@ -19,7 +19,7 @@ object LegalContent {
 
     const val PRIVACY_POLICY = """# KardIQ Privacy Policy
 
-**Last updated:** October 15, 2026
+**Last updated:** October 18, 2026
 
 This Privacy Policy explains how KardIQ ("the App," "we," "us") collects, uses, stores, and protects your information. KardIQ is developed by Zunaid Hossain Shuruk, provided as a health and fitness tracking application designed for users in Bangladesh.
 
@@ -65,10 +65,10 @@ Most of this data comes from **Google Health Connect**, which syncs data from yo
 When you use food-scanning, food-chat, AI coaching, the AI Assistant or Health Review features, the text, photos, or voice input you provide is sent to **Google's Gemini API** for analysis (e.g., to estimate calories from a food description or photo). To give answers based on your own data, the Assistant and Health Review also send Gemini, over a secure connection, a summary computed on your device: your profile and goals, daily metrics (such as steps, sleep, blood glucose, blood pressure, heart rate, weight, water and calories), food logs, exercise sessions and, if you have entered them, your medical records (conditions, medications, allergies). This content is processed by Google's AI systems according to Google's own data handling terms for the Gemini API. AI features that run on your phone (Offline AI) process this data on your phone only. Your Assistant conversations are also saved to your account (see section 3) so that they appear on your other phones.
 
 ### 1.4 Social Features
-Every account appears on the public leaderboard. The rest of this list applies only if you use KardIQ's friend/social features. We collect:
+Accounts appear on the public leaderboard unless the person switches that off in Settings. The rest of this list applies only if you use KardIQ's friend/social features. We collect:
 - A friend code linked to your account
-- Your name, streak, points, and badges (visible to ALL other KardIQ users on the public leaderboard: every account appears there, and there is currently no setting to hide it, even if you never use the social features)
-- Daily step/water/sleep/calorie progress (visible only to accepted friends)
+- Your name, streak, points, and badges (shown to all other KardIQ users on the public leaderboard unless you turn off "Show me on the leaderboard" in Settings; friends and people who enter your friend code can still see your name)
+- Daily step/water/sleep/calorie progress (visible only to accepted friends; you can stop sharing it with "Share my daily progress with friends" in Settings, which also deletes the copy friends could see)
 - Messages you send to friends within the app
 - Challenge participation and results
 
@@ -98,7 +98,7 @@ We use your information to:
 - Provide the core functionality of the app (tracking, logging, insights, goal calculations)
 - Generate AI-powered food analysis, health insights, and coaching responses
 - Sync your data across your own devices via your account
-- Run the public leaderboard (every account appears on it) and enable the social features you choose to use (friends, challenges, messaging)
+- Run the public leaderboard (you can hide yourself from it in Settings) and enable the social features you choose to use (friends, challenges, messaging)
 - Send you the reminders and alerts you switch on (such as meals, water, workouts, sleep, blood glucose checks, weigh-ins, goal alerts and a weekly summary; these run on your phone) and notifications from friends (messages, friend requests, challenge results)
 - Maintain and improve the app
 
@@ -132,7 +132,7 @@ Each of these providers has its own privacy practices governing how they handle 
 - **Deleting items:** You can delete individual items in the app and clear your AI Assistant history. They are removed from your account and from your other phones (see section 3).
 - **Deleting your account:** Deleting your account from Settings removes your profile, health metrics, food logs, diet charts, saved workouts and programs, saved chats, AI Assistant conversations, workout history, medical records, cycle tracker logs, friend code, public profile, friend connections and progress, activity posts and the messages you sent to friends, and then deletes your sign-in account. Some records shared with other people can remain: challenge and kudos records (they contain only user IDs, dates and step counts) and messages in conversations whose friendship had already been removed before you deleted your account. A backup you saved to your own Google Drive is not touched; you can delete it from your Drive. Locally cached data is also cleared on logout.
 - **Health Connect permissions:** You can revoke KardIQ's access to specific health data types at any time via your device's Health Connect settings, without affecting other app functionality.
-- **Social visibility:** Friend-visible data (streak, points, badges, daily progress) is only shared with users you've mutually accepted as friends, and, for your name, streak, points and badges only, shown to all KardIQ users on the public leaderboard (every account appears there; there is currently no setting to hide it). You can remove a friend at any time, which ends their access to your shared data.
+- **Social visibility:** Friend-visible data (streak, points, badges, daily progress) is only shared with users you've mutually accepted as friends, and, for your name, streak, points and badges only, shown to all KardIQ users on the public leaderboard unless you turn that off in Settings. You can stop sharing daily progress with friends in Settings, and you can remove a friend at any time, which ends their access to your shared data.
 - **Notifications:** In Settings > Notifications you can switch every reminder, goal alert and friend notification on or off, choose their times and set quiet hours. You can also disable notifications at any time in your device settings.
 
 ## 6. Data Security
@@ -161,7 +161,7 @@ zunaid.shuruk@gmail.com
 
     const val TERMS_OF_SERVICE = """# KardIQ Terms of Service
 
-**Last updated:** October 15, 2026
+**Last updated:** October 18, 2026
 
 Welcome to KardIQ. These Terms of Service ("Terms") govern your use of the KardIQ mobile application, developed by Zunaid Hossain Shuruk. By creating an account or using KardIQ, you agree to these Terms.
 
@@ -202,7 +202,7 @@ You agree not to:
 ## 5. Social Features
 
 - Friend requests require mutual acceptance before any data is shared.
-- Adding a friend or starting a challenge means certain data (daily progress, and your name, streak, points and badges) becomes visible to that friend. Every account's name, streak, points and badges are also visible to other users generally on the public leaderboard (there is currently no setting to hide it).
+- Adding a friend or starting a challenge means certain data (daily progress, and your name, streak, points and badges) becomes visible to that friend. Your name, streak, points and badges are also visible to other users generally on the public leaderboard unless you turn that off in Settings; you can also stop sharing daily progress with friends there.
 - You can remove a friend or decline a request at any time to stop sharing this data with them going forward.
 - Challenges award in-app points and badges only; they carry no real-world monetary value.
 

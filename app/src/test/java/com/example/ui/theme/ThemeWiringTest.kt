@@ -22,10 +22,10 @@ class ThemeWiringTest {
     @Test
     fun theDatabaseMigratesTheNewColumnWithoutLosingData() {
         val db = source("data/local/AppDatabase.kt")
-        assertTrue(db.contains("version = 53"))
+        assertTrue(db.contains("version = 54"))
         assertTrue(db.contains("MIGRATION_52_53 = object : Migration(52, 53)"))
         assertTrue(db.contains("ALTER TABLE user_profile ADD COLUMN themeId TEXT NOT NULL DEFAULT '${ThemePalettes.DEFAULT_ID}'"))
-        assertTrue("the migration must be registered", db.contains("MIGRATION_51_52, MIGRATION_52_53)"))
+        assertTrue("the migration must be registered", db.contains("MIGRATION_52_53, MIGRATION_53_54)"))
     }
 
     @Test

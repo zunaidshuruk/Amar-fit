@@ -29,3 +29,10 @@ The security design is sound (consent, friends-only data, server-side challenge 
 * **Finding 2 (friend-request pushes):** built. `scripts/send_push_notifications.js` has a new step `processNewFriendRequests` (rules in `scripts/friend_request_push.js`): a pending friendship created in the last 7 days is announced to the OTHER person ("X wants to be your friend on KardIQ", opens Friends) and marked `notifiedRequest: true`; older or incomplete pending requests are marked without a push, so nobody gets stale notifications. The step runs last and in its own try/catch, so a failure cannot stop messages or challenges. The app shows it on the social channel and respects Settings > Notifications > Friend requests, quiet hours and the master switch. Old app versions show it as a generic notification that still opens Friends.
 * Tests: `scripts/test_friend_request_push.js` (rules) and `scripts/test_poller.js` (the whole poller against a fake Firestore: all three push kinds sent once, nothing twice, missing token, friend-request failure isolated); both run in the compile check.
 * Findings 3 to 5 (block/report, a switch for sharing daily progress, social unit tests) remain optional.
+
+## Update 2026-10-18: findings 1 and 4 resolved (Zunaid: "fix more")
+* **Show me on the leaderboard** (Settings): off keeps the person out of the leaderboard (`public_profiles.leaderboardVisible`; people without the flag stay visible; the list is read with twice the limit and cut after hiding). Friends and friend-code lookups still see the name. The policy and terms say so (they no longer claim there is no setting).
+* **Share my daily progress with friends** (Settings): off deletes `friend_stats/{uid}` at once and stops writing it; on publishes today's progress again; a friend's card says "X is not sharing their daily progress" instead of loading forever.
+* Database 53 to 54 (two columns, default on), `SocialPrivacy` (pure, tested), `SocialPrivacyWiringTest`. No Firestore rule change was needed.
+* Still open: finding 3 (block and report, part 2 of sprint BM), 5 (social unit tests).
+

@@ -489,8 +489,16 @@ class AppRepository(
                     currentStreak = profileToSave.currentStreak,
                     points = profileToSave.points,
                     badges = profileToSave.badges,
-                    friendCode = profileToSave.friendCode
+                    friendCode = profileToSave.friendCode,
+                    leaderboardVisible = profileToSave.showOnLeaderboard
                 )
+                // Share my daily progress: off removes the shared copy at once, on publishes today's progress again
+                when (com.example.data.social.SocialPrivacy.progressChange(existing?.shareProgressWithFriends, profileToSave.shareProgressWithFriends)) {
+                    com.example.data.social.SocialPrivacy.ProgressChange.REMOVE -> FirebaseManager.deleteFriendStats()
+                    com.example.data.social.SocialPrivacy.ProgressChange.PUBLISH ->
+                        metricsDao.getMetricsForDate(java.time.LocalDate.now().toString()).firstOrNull()?.let { FirebaseManager.syncFriendStats(it, profileToSave) }
+                    com.example.data.social.SocialPrivacy.ProgressChange.NONE -> Unit
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -549,7 +557,7 @@ class AppRepository(
             val merged = FirebaseManager.syncMetricMerged(row)
             if (merged != null) applyRemoteMetric(merged)
             val currentProfile = userDao.getUserProfile().firstOrNull()
-            if (currentProfile != null && date == java.time.LocalDate.now().toString()) {
+            if (currentProfile != null && currentProfile.shareProgressWithFriends && date == java.time.LocalDate.now().toString()) {
                 FirebaseManager.syncFriendStats(row, currentProfile)
             }
         } catch (e: Exception) {

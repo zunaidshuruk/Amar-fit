@@ -70,6 +70,10 @@ data class UserProfile(
     val weeklyWorkoutGoal: Int = 3,
     /** The color theme chosen under Settings > App theme (an id from ThemePalettes). Unknown ids fall back to the default. */
     val themeId: String = "chartreuse",
+    /** Settings > Show me on the leaderboard. Off: the leaderboard does not list this person (friends and friend-code lookups still see the name). */
+    val showOnLeaderboard: Boolean = true,
+    /** Settings > Share my daily progress with friends. Off: today's steps, water, sleep and calories are not shared and the shared copy is deleted. */
+    val shareProgressWithFriends: Boolean = true,
     val updatedAt: Long = 0L
 )
 

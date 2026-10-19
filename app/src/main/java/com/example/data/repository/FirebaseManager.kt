@@ -296,7 +296,7 @@ object FirebaseManager {
         return null
     }
 
-    fun syncPublicProfile(name: String, currentStreak: Int, points: Int, badges: String, friendCode: String) {
+    fun syncPublicProfile(name: String, currentStreak: Int, points: Int, badges: String, friendCode: String, leaderboardVisible: Boolean = true) {
         val auth = FirebaseAuth.getInstance()
         val user = auth.currentUser
         if (user != null) {
@@ -306,7 +306,8 @@ object FirebaseManager {
                 "currentStreak" to currentStreak,
                 "points" to points,
                 "badges" to badges,
-                "friendCode" to friendCode
+                "friendCode" to friendCode,
+                "leaderboardVisible" to leaderboardVisible
             )
             db.collection("public_profiles").document(user.uid).set(data, SetOptions.merge())
         }
@@ -348,6 +349,16 @@ object FirebaseManager {
                 "calorieGoal" to profile.dailyCalorieLimit
             )
             db.collection("friend_stats").document(user.uid).set(data, SetOptions.merge())
+        }
+    }
+
+    /** Removes today's shared progress (Settings: Share my daily progress with friends was switched off). */
+    suspend fun deleteFriendStats() {
+        val user = FirebaseAuth.getInstance().currentUser ?: return
+        try {
+            FirebaseFirestore.getInstance().collection("friend_stats").document(user.uid).delete().await()
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -479,9 +490,12 @@ object FirebaseManager {
         return try {
             val snap = db.collection("public_profiles")
                 .orderBy("points", com.google.firebase.firestore.Query.Direction.DESCENDING)
-                .limit(limit)
+                .limit(com.example.data.social.SocialPrivacy.queryLimit(limit))
                 .get().await()
-            snap.documents.map { doc ->
+            // people who switched "Show me on the leaderboard" off are left out
+            com.example.data.social.SocialPrivacy.visibleTop(snap.documents, limit.toInt()) { doc ->
+                com.example.data.social.SocialPrivacy.isVisibleOnLeaderboard(doc.getBoolean("leaderboardVisible"))
+            }.map { doc ->
                 LeaderboardEntry(
                     uid = doc.id,
                     name = doc.getString("name") ?: "Unknown",

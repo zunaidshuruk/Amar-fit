@@ -68,6 +68,7 @@ fun FriendsScreen(
     var selectedFriendUid by remember { mutableStateOf<String?>(null) }
     val friendsList by viewModel.friendsList.collectAsState()
     val selectedFriendStats by viewModel.selectedFriendStats.collectAsState()
+    val friendStatsMissing by viewModel.friendStatsMissing.collectAsState()
     val challenges by viewModel.challenges.collectAsState()
     val challengeActionMessage by viewModel.challengeActionMessage.collectAsState()
     val activityFeed by viewModel.activityFeed.collectAsState()
@@ -282,15 +283,19 @@ fun FriendsScreen(
                                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                                     Spacer(modifier = Modifier.height(12.dp))
                                     val stats = selectedFriendStats
-                                    if (stats == null) {
+                                    if (stats == null && !friendStatsMissing) {
                                         Text("Loading stats...", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     } else {
-                                        Text("Today's progress (${stats.date})", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Text("Steps: ${stats.steps} / ${stats.stepGoal}", fontSize = 13.sp)
-                                        Text("Water: ${stats.waterLiters}L / ${stats.waterGoal}L", fontSize = 13.sp)
-                                        Text("Sleep: ${stats.sleepHours}h / ${stats.sleepGoal}h", fontSize = 13.sp)
-                                        Text("Calories: ${stats.caloriesConsumed} / ${stats.calorieGoal}", fontSize = 13.sp)
+                                        if (stats != null) {
+                                            Text("Today's progress (${stats.date})", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Text("Steps: ${stats.steps} / ${stats.stepGoal}", fontSize = 13.sp)
+                                            Text("Water: ${stats.waterLiters}L / ${stats.waterGoal}L", fontSize = 13.sp)
+                                            Text("Sleep: ${stats.sleepHours}h / ${stats.sleepGoal}h", fontSize = 13.sp)
+                                            Text("Calories: ${stats.caloriesConsumed} / ${stats.calorieGoal}", fontSize = 13.sp)
+                                        } else {
+                                            Text("${friend.name} is not sharing their daily progress.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
                                         Spacer(modifier = Modifier.height(8.dp))
                                         Button(
                                             onClick = { viewModel.createChallengeWithFriend(friend.uid) },
