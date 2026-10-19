@@ -19,6 +19,8 @@ Current as of `main` after Sprints 23 and 24 (2026-10-15). Statuses marked *code
 
 **Decisions (2026-10-17):** the Play Store account will be a personal one (so the 12 testers x 14 days closed test applies); the store work is parked until after the theme release. Theme sprint BK is built and released in 3.5.
 
+**Security sprint BI (2026-10-18):** phase 1 fixes done; open decisions and Zunaid's Google Cloud actions are listed in [security-review.md](../security-review.md).
+
 **Planned sprints (2026-10-17):** BI security review ([plan](PLAN-BI-security-review.md)), then BJ Google Play readiness ([plan](PLAN-BJ-play-store-readiness.md); [step-by-step guide](../play-store-guide.md)). BK app themes is done (3.5).
 
 **Next candidates (not started)**
