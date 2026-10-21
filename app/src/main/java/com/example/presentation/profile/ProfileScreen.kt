@@ -350,10 +350,8 @@ fun ProfileScreen(
             val imperial = profile?.useImperialUnits ?: false
             val formattedHeight = formatHeight(profile?.heightCm ?: 0f, imperial)
             val formattedWeight = formatWeight(profile?.weightKg ?: 0f, imperial)
-            val heightM = (profile?.heightCm ?: 0f) / 100f
-            val bmiStr = if (heightM > 0f && (profile?.weightKg ?: 0f) > 0f) {
-                String.format(Locale.US, "%.1f", (profile?.weightKg ?: 0f) / (heightM * heightM))
-            } else "-"
+            val bmiStr = com.example.data.health.BodyMetrics.bmi(profile?.weightKg ?: 0f, profile?.heightCm ?: 0f)
+                .let { if (it > 0f) com.example.data.health.BodyMetrics.format(it) else "-" }
             val bodyFat = profile?.let { HealthGoalCalculator.calculateBodyFatPercent(it) }
             val bodyFatStr = if (bodyFat != null) String.format(Locale.US, "%.1f%%", bodyFat) else "Add waist and neck"
 

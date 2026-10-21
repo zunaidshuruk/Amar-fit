@@ -44,6 +44,16 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
     var heightInput by remember { mutableStateOf(profile?.heightCm?.takeIf { it > 0 }?.toString() ?: "170.0") }
     var showWeightDialog by remember { mutableStateOf(false) }
     var showHeightDialog by remember { mutableStateOf(false) }
+    var weightEdited by remember { mutableStateOf(false) }
+    var heightEdited by remember { mutableStateOf(false) }
+    // the profile can arrive (or change on another phone) after this screen opened: follow it until the person changes the number themselves,
+    // so the screen never shows (or saves) the 70 kg / 170 cm placeholders instead of the real values
+    LaunchedEffect(profile?.weightKg) {
+        if (!weightEdited) profile?.weightKg?.takeIf { it > 0 }?.let { weightInput = it.toString() }
+    }
+    LaunchedEffect(profile?.heightCm) {
+        if (!heightEdited) profile?.heightCm?.takeIf { it > 0 }?.let { heightInput = it.toString() }
+    }
 
     if (showWeightDialog) {
         com.example.ui.components.HeightWeightPickerDialog(
@@ -53,6 +63,7 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
             onDismiss = { showWeightDialog = false },
             onConfirm = { kg ->
                 weightInput = kg.toString()
+                weightEdited = true
                 showWeightDialog = false
             }
         )
@@ -66,25 +77,26 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
             onDismiss = { showHeightDialog = false },
             onConfirm = { cm ->
                 heightInput = cm.toString()
+                heightEdited = true
                 showHeightDialog = false
             }
         )
     }
 
     val currentWeight = weightInput.toFloatOrNull() ?: 0f
-    val currentHeightM = (heightInput.toFloatOrNull() ?: 0f) / 100f
-    val bmi = if (currentHeightM > 0) currentWeight / (currentHeightM * currentHeightM) else 0f
+    val currentHeightCm = heightInput.toFloatOrNull() ?: 0f
+    val bmi = com.example.data.health.BodyMetrics.bmi(currentWeight, currentHeightCm)
     
     // Ideal weight based on BMI 22
-    val idealWeight = if (currentHeightM > 0) 22f * currentHeightM * currentHeightM else 0f
+    val idealWeight = com.example.data.health.BodyMetrics.idealWeightKg(currentHeightCm)
     val weightDiff = currentWeight - idealWeight
 
-    val (bmiStatus, statusColor) = when {
-        bmi == 0f -> Pair("Enter Data", MaterialTheme.colorScheme.onSurfaceVariant)
-        bmi < 18.5f -> Pair("Underweight", MaterialTheme.colorScheme.tertiary)
-        bmi < 25f -> Pair("Normal", MaterialTheme.colorScheme.primary)
-        bmi < 30f -> Pair("Overweight", MaterialTheme.colorScheme.tertiary)
-        else -> Pair("Very Overweight", MaterialTheme.colorScheme.tertiary)
+    val (bmiStatus, statusColor) = when (com.example.data.health.BodyMetrics.category(bmi)) {
+        com.example.data.health.BodyMetrics.Category.NONE -> Pair("Enter Data", MaterialTheme.colorScheme.onSurfaceVariant)
+        com.example.data.health.BodyMetrics.Category.UNDERWEIGHT -> Pair("Underweight", MaterialTheme.colorScheme.tertiary)
+        com.example.data.health.BodyMetrics.Category.NORMAL -> Pair("Normal", MaterialTheme.colorScheme.primary)
+        com.example.data.health.BodyMetrics.Category.OVERWEIGHT -> Pair("Overweight", MaterialTheme.colorScheme.tertiary)
+        com.example.data.health.BodyMetrics.Category.OBESE -> Pair("Very Overweight", MaterialTheme.colorScheme.tertiary)
     }
 
     Column(
@@ -146,8 +158,12 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
                     onClick = {
                         val w = weightInput.toFloatOrNull()
                         val h = heightInput.toFloatOrNull()
-                        if (w != null && h != null) {
+                        if (profile == null) {
+                            android.widget.Toast.makeText(context, "Your profile is still loading, try again in a moment", android.widget.Toast.LENGTH_SHORT).show()
+                        } else if (w != null && h != null && com.example.data.health.BodyMetrics.isValid(w, h)) {
                             viewModel.setWeightAndHeight(w, h)
+                            weightEdited = false
+                            heightEdited = false
                             android.widget.Toast.makeText(context, "Weight & height saved", android.widget.Toast.LENGTH_SHORT).show()
                         } else {
                             android.widget.Toast.makeText(context, "Enter a valid weight and height", android.widget.Toast.LENGTH_SHORT).show()
@@ -175,7 +191,7 @@ fun WeightLogScreen(viewModel: ShasthoViewModel, onNavigateBack: () -> Unit = {}
                             Text("Your BMI", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             Text(bmiStatus, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = statusColor)
                         }
-                        Text(String.format("%.1f", bmi), fontSize = 32.sp, fontWeight = FontWeight.Bold, color = statusColor)
+                        Text(com.example.data.health.BodyMetrics.format(bmi), fontSize = 32.sp, fontWeight = FontWeight.Bold, color = statusColor)
                     }
                     
                     Spacer(modifier = Modifier.height(16.dp))

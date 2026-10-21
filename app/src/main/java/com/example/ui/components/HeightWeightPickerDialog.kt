@@ -42,30 +42,21 @@ fun HeightWeightPickerDialog(
     var currentCm by remember { mutableStateOf(if (initialValue > 0f) initialValue else 170f) }
     var currentKg by remember { mutableStateOf(if (initialValue > 0f) initialValue else 70f) }
 
-    var cmVal by remember { mutableStateOf(currentCm.toInt().coerceIn(50, 250)) }
-    var ftVal by remember {
-        mutableStateOf<Pair<Int, Int>>(
-            run {
-                val totalInches = (currentCm / 2.54f).toInt()
-                val ft = (totalInches / 12).coerceIn(3, 8)
-                val inches = (totalInches % 12).coerceIn(0, 11)
-                Pair(ft, inches)
-            }
-        )
-    }
+    var cmVal by remember { mutableStateOf(PickerMath.cmToWheel(currentCm)) }
+    var ftVal by remember { mutableStateOf(PickerMath.cmToFtIn(currentCm)) }
 
-    var kgVal by remember { mutableStateOf(currentKg.toInt().coerceIn(20, 300)) }
-    var lbVal by remember { mutableStateOf((currentKg * 2.20462f).toInt().coerceIn(44, 660)) }
-    var stVal by remember {
-        mutableStateOf<Pair<Int, Int>>(
-            run {
-                val totalLb = currentKg * 2.20462f
-                val st = (totalLb / 14f).toInt().coerceIn(3, 47)
-                val lb = (totalLb % 14f).toInt().coerceIn(0, 13)
-                Pair(st, lb)
-            }
-        )
-    }
+    var kgVal by remember { mutableStateOf(PickerMath.kgToWheel(currentKg)) }
+    var lbVal by remember { mutableStateOf(PickerMath.kgToLb(currentKg)) }
+    var stVal by remember { mutableStateOf(PickerMath.kgToStLb(currentKg)) }
+
+    // what the wheels showed when the dialog opened: pressing OK without moving anything must give back the exact value that came in
+    val startHeightUnit = remember { heightUnit }
+    val startWeightUnit = remember { weightUnit }
+    val startCm = remember { cmVal }
+    val startFtIn = remember { ftVal }
+    val startKg = remember { kgVal }
+    val startLb = remember { lbVal }
+    val startStLb = remember { stVal }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -103,17 +94,12 @@ fun HeightWeightPickerDialog(
                                     .clickable {
                                         when (heightUnit) {
                                             HeightUnit.CM -> currentCm = cmVal.toFloat()
-                                            HeightUnit.FT -> currentCm = (ftVal.first * 30.48f) + (ftVal.second * 2.54f)
+                                            HeightUnit.FT -> currentCm = PickerMath.ftInToCm(ftVal.first, ftVal.second)
                                         }
                                         heightUnit = unit
                                         when (unit) {
-                                            HeightUnit.CM -> cmVal = currentCm.toInt().coerceIn(50, 250)
-                                            HeightUnit.FT -> {
-                                                val totalInches = (currentCm / 2.54f).toInt()
-                                                val ft = (totalInches / 12).coerceIn(3, 8)
-                                                val inches = (totalInches % 12).coerceIn(0, 11)
-                                                ftVal = Pair(ft, inches)
-                                            }
+                                            HeightUnit.CM -> cmVal = PickerMath.cmToWheel(currentCm)
+                                            HeightUnit.FT -> ftVal = PickerMath.cmToFtIn(currentCm)
                                         }
                                     }
                                     .padding(vertical = 10.dp),
@@ -143,19 +129,14 @@ fun HeightWeightPickerDialog(
                                     .clickable {
                                         when (weightUnit) {
                                             WeightUnit.KG -> currentKg = kgVal.toFloat()
-                                            WeightUnit.LB -> currentKg = lbVal / 2.20462f
-                                            WeightUnit.ST -> currentKg = ((stVal.first * 14f) + stVal.second) / 2.20462f
+                                            WeightUnit.LB -> currentKg = PickerMath.lbToKg(lbVal)
+                                            WeightUnit.ST -> currentKg = PickerMath.stLbToKg(stVal.first, stVal.second)
                                         }
                                         weightUnit = unit
                                         when (unit) {
-                                            WeightUnit.KG -> kgVal = currentKg.toInt().coerceIn(20, 300)
-                                            WeightUnit.LB -> lbVal = (currentKg * 2.20462f).toInt().coerceIn(44, 660)
-                                            WeightUnit.ST -> {
-                                                val totalLb = currentKg * 2.20462f
-                                                val st = (totalLb / 14f).toInt().coerceIn(3, 47)
-                                                val lb = (totalLb % 14f).toInt().coerceIn(0, 13)
-                                                stVal = Pair(st, lb)
-                                            }
+                                            WeightUnit.KG -> kgVal = PickerMath.kgToWheel(currentKg)
+                                            WeightUnit.LB -> lbVal = PickerMath.kgToLb(currentKg)
+                                            WeightUnit.ST -> stVal = PickerMath.kgToStLb(currentKg)
                                         }
                                     }
                                     .padding(vertical = 10.dp),
@@ -288,16 +269,29 @@ fun HeightWeightPickerDialog(
                 val finalCanonical = if (mode == PickerMode.HEIGHT) {
                     when (heightUnit) {
                         HeightUnit.CM -> cmVal.toFloat()
-                        HeightUnit.FT -> (ftVal.first * 30.48f) + (ftVal.second * 2.54f)
+                        HeightUnit.FT -> PickerMath.ftInToCm(ftVal.first, ftVal.second)
                     }
                 } else {
                     when (weightUnit) {
                         WeightUnit.KG -> kgVal.toFloat()
-                        WeightUnit.LB -> lbVal / 2.20462f
-                        WeightUnit.ST -> ((stVal.first * 14f) + stVal.second) / 2.20462f
+                        WeightUnit.LB -> PickerMath.lbToKg(lbVal)
+                        WeightUnit.ST -> PickerMath.stLbToKg(stVal.first, stVal.second)
                     }
                 }
-                onConfirm(finalCanonical)
+                val untouched = initialValue > 0f && if (mode == PickerMode.HEIGHT) {
+                    heightUnit == startHeightUnit && when (heightUnit) {
+                        HeightUnit.CM -> cmVal == startCm
+                        HeightUnit.FT -> ftVal == startFtIn
+                    }
+                } else {
+                    weightUnit == startWeightUnit && when (weightUnit) {
+                        WeightUnit.KG -> kgVal == startKg
+                        WeightUnit.LB -> lbVal == startLb
+                        WeightUnit.ST -> stVal == startStLb
+                    }
+                }
+                // nothing was moved: give back exactly what came in (72.5 kg stays 72.5, not 72)
+                onConfirm(if (untouched) initialValue else finalCanonical)
             }) {
                 Text("OK", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             }

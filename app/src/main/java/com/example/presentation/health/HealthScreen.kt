@@ -97,8 +97,9 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
     val bloodPressure = metrics?.bloodPressure ?: ""
     val weight = profile?.weightKg ?: 70f
     val heightM = (profile?.heightCm ?: 170f) / 100f
-    val bmi = if (heightM > 0) weight / (heightM * heightM) else 0f
-    val bmiFillFraction = if (bmi > 0f) ((bmi - 15f) / (35f - 15f)).coerceIn(0f, 1f) else 0f
+    // from the saved profile only (not from the 70 kg / 170 cm placeholders), so it shows "--" until the real numbers are there
+    val bmi = com.example.data.health.BodyMetrics.bmi(profile?.weightKg ?: 0f, profile?.heightCm ?: 0f)
+    val bmiFillFraction = com.example.data.health.BodyMetrics.fillFraction(bmi)
     val bodyFatPercent = profile?.let { HealthGoalCalculator.calculateBodyFatPercent(it) }
     val cycleActive by viewModel.cycleActive.collectAsState()
     val cyclePrediction by viewModel.cyclePrediction.collectAsState()
@@ -207,7 +208,7 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
             Column {
                 Text(text = "BMI", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(text = String.format("%.1f", bmi), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = bmiAccent.onBg)
+                Text(text = com.example.data.health.BodyMetrics.format(bmi), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = bmiAccent.onBg)
                 Spacer(modifier = Modifier.height(6.dp))
                 Box(
                     modifier = Modifier
@@ -1231,9 +1232,12 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
         }
         
         val w = weightInput.toFloatOrNull() ?: 0f
-        val h = heightInput.toFloatOrNull()?.div(100f) ?: 0f
-        val calcBmi = if (h > 0) w / (h * h) else 0f
-        
+        val hCm = heightInput.toFloatOrNull() ?: 0f
+        val calcBmi = com.example.data.health.BodyMetrics.bmi(w, hCm)
+        // Save is offered only when the numbers differ from the saved ones and are sensible
+        val changed = profile?.let { p -> kotlin.math.abs(p.weightKg - w) > 0.001f || kotlin.math.abs(p.heightCm - hCm) > 0.001f } ?: false
+        val bmiContext = androidx.compose.ui.platform.LocalContext.current
+
         AlertDialog(
             onDismissRequest = { showBmiDialog = false },
             title = { Text("BMI Calculator") },
@@ -1242,6 +1246,11 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    Text(
+                        "Change your weight or height to see your BMI change. Tap Save to keep the new numbers in your profile.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Box(modifier = Modifier.fillMaxWidth()) {
                         OutlinedTextField(
                             value = formatWeight(weightInput.toFloatOrNull() ?: 70f, profile?.useImperialUnits ?: false),
@@ -1263,20 +1272,29 @@ fun HealthScreen(viewModel: ShasthoViewModel, navController: NavController) {
                         Box(modifier = Modifier.matchParentSize().clickable { showHeightDialog = true })
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = "BMI: ${String.format("%.1f", calcBmi)}", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    val status = when {
-                        calcBmi == 0f -> ""
-                        calcBmi < 18.5f -> "Underweight"
-                        calcBmi < 25f -> "Normal"
-                        calcBmi < 30f -> "Overweight"
-                        else -> "Obese"
-                    }
-                    Text(text = status, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text = "BMI: ${com.example.data.health.BodyMetrics.format(calcBmi)}", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        text = com.example.data.health.BodyMetrics.label(com.example.data.health.BodyMetrics.category(calcBmi)),
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             },
             confirmButton = {
+                TextButton(
+                    enabled = changed && com.example.data.health.BodyMetrics.isValid(w, hCm),
+                    onClick = {
+                        viewModel.setWeightAndHeight(w, hCm)
+                        android.widget.Toast.makeText(bmiContext, "Weight and height saved", android.widget.Toast.LENGTH_SHORT).show()
+                        showBmiDialog = false
+                    }
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
                 TextButton(onClick = { showBmiDialog = false }) {
-                    Text("Close")
+                    Text(if (changed) "Cancel" else "Close")
                 }
             }
         )
