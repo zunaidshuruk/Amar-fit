@@ -19,6 +19,8 @@ Current as of `main` after Sprints 23 and 24 (2026-10-15). Statuses marked *code
 
 **Decisions (2026-10-17):** the Play Store account will be a personal one (so the 12 testers x 14 days closed test applies); the store work is parked until after the theme release. Theme sprint BK is built and released in 3.5.
 
+**Release 37 (3.5.2) was cut from branch `hotfix/3.5.2` = 3.5.1 + the BMI fix only** (the security phase 1, social switches and notification-timing preparation on `main` are still unreleased). **The next release from `main` must be build 38 or higher.**
+
 **Decision (2026-10-18, Zunaid): the Play Store and the rest of security sprint BI wait; fix more in the app first.**
 
 **Security sprint BI (2026-10-18):** phase 1 fixes done; open decisions and Zunaid's Google Cloud actions are listed in [security-review.md](../security-review.md).
